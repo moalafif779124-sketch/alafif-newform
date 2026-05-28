@@ -150,7 +150,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             return Padding(
               padding: const EdgeInsets.only(left: 6),
               child: FilterChip(
-                label: Text(category.name),
+                label: Text(category?.name ?? ''),
                 selected: isSelected,
                 onSelected: (_) {
                   provider.setCategoryFilter(

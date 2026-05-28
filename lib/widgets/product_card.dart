@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../config/colors.dart';
+import '../../config/constants.dart';
 import '../../models/product.dart';
 
 /// بطاقة عرض المنتج في القوائم
