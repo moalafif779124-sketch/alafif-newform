@@ -86,7 +86,7 @@ class FirebaseService {
     query = query.orderBy(sortField, descending: sortBy == 'price_desc' || sortBy == 'popular' || sortBy == 'newest');
 
     return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
-          final data = doc.data();
+          final data = doc.data()!;
           data['id'] = doc.id;
           return data;
         }).toList());
