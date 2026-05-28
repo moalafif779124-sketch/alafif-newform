@@ -126,7 +126,7 @@ class FirebaseService {
 
     final snapshot = await query.get();
     return snapshot.docs.map((doc) {
-      final data = doc.data();
+      final data = doc.data()!;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -162,7 +162,7 @@ class FirebaseService {
         .orderBy('order')
         .get();
     return snapshot.docs.map((doc) {
-      final data = doc.data();
+      final data = doc.data()!;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -177,7 +177,7 @@ class FirebaseService {
         .orderBy('order')
         .get();
     return snapshot.docs.map((doc) {
-      final data = doc.data();
+      final data = doc.data()!;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -230,7 +230,7 @@ class FirebaseService {
         .orderBy('createdAt', descending: true)
         .get();
     return snapshot.docs.map((doc) {
-      final data = doc.data();
+      final data = doc.data()!;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -252,7 +252,7 @@ class FirebaseService {
         .where('userId', isEqualTo: userId)
         .get();
     return snapshot.docs.map((doc) {
-      final data = doc.data();
+      final data = doc.data()!;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -280,7 +280,7 @@ class FirebaseService {
     final ref = storage.ref().child('products/$fileName');
     // Note: In actual implementation, use putFile with File(path)
     // For now, this is a placeholder for the API
-    return ref.path;
+    return ref.fullPath;
   }
 
   // =================== المستخدم ===================
