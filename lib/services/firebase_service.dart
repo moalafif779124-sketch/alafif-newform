@@ -86,7 +86,7 @@ class FirebaseService {
     query = query.orderBy(sortField, descending: sortBy == 'price_desc' || sortBy == 'popular' || sortBy == 'newest');
 
     return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
-          final data = doc.data()!;
+          final data = doc.data()! as Map<String, dynamic>;
           data['id'] = doc.id;
           return data;
         }).toList());
@@ -126,7 +126,7 @@ class FirebaseService {
 
     final snapshot = await query.get();
     return snapshot.docs.map((doc) {
-      final data = doc.data()!;
+      final data = doc.data()! as Map<String, dynamic>;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -162,7 +162,7 @@ class FirebaseService {
         .orderBy('order')
         .get();
     return snapshot.docs.map((doc) {
-      final data = doc.data()!;
+      final data = doc.data()! as Map<String, dynamic>;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -177,7 +177,7 @@ class FirebaseService {
         .orderBy('order')
         .get();
     return snapshot.docs.map((doc) {
-      final data = doc.data()!;
+      final data = doc.data()! as Map<String, dynamic>;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -230,7 +230,7 @@ class FirebaseService {
         .orderBy('createdAt', descending: true)
         .get();
     return snapshot.docs.map((doc) {
-      final data = doc.data()!;
+      final data = doc.data()! as Map<String, dynamic>;
       data['id'] = doc.id;
       return data;
     }).toList();
@@ -252,7 +252,7 @@ class FirebaseService {
         .where('userId', isEqualTo: userId)
         .get();
     return snapshot.docs.map((doc) {
-      final data = doc.data()!;
+      final data = doc.data()! as Map<String, dynamic>;
       data['id'] = doc.id;
       return data;
     }).toList();
