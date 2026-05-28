@@ -1,47 +1,74 @@
-     1|name: Build ALAFIF NEWFORM APK
-     2|
-     3|on:
-     4|  push:
-     5|    branches: [ main, master ]
-     6|  workflow_dispatch:
-     7|
-     8|jobs:
-     9|  build:
-    10|    runs-on: ubuntu-latest
-    11|    
-    12|    steps:
-    13|      - uses: actions/checkout@v4
-    14|      
-    15|      - name: Setup Flutter
-    16|        uses: subosito/flutter-action@v2
-    17|        with:
-    18|          flutter-version: '3.29.x'
-    19|          channel: 'stable'
-    20|          cache: true
-    21|      
-    22|      - name: Setup Java
-    23|        uses: actions/setup-java@v4
-    24|        with:
-    25|          distribution: 'temurin'
-    26|          java-version: '17'
-    27|          cache: gradle
-    28|      
-    29|      - name: Create google-services.json
-    30|        run: |
-    31|          cat > android/app/google-services.json << 'EOF'
-    32|          {REPLACE_WITH_YOUR_GOOGLE_SERVICES_JSON}
-    33|          EOF
-    34|      
-    35|      - name: Install dependencies
-    36|        run: flutter pub get
-    37|      
-    38|      - name: Build release APK
-    39|        run: flutter build apk --release --split-per-abi
-    40|      
-    41|      - name: Upload APKs
-    42|        uses: actions/upload-artifact@v4
-    43|        with:
-    44|          name: alafif-newform-apks
-    45|          path: build/app/outputs/flutter-apk/*.apk
-    46|          compression-level: 0
-    47|
+name: Build ALAFIF NEWFORM APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.x'
+          channel: 'stable'
+          cache: true
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
+      
+      - name: Create google-services.json
+        run: |
+          cat > android/app/google-services.json << 'EOF'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "your-project-id",
+              "storage_bucket": "your-project.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.alafif.newform"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Build release APK
+        run: flutter build apk --release --split-per-abi
+      
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: alafif-newform-apks
+          path: build/app/outputs/flutter-apk/*.apk
+          compression-level: 0
