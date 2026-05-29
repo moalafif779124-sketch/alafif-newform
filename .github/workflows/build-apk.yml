@@ -37,6 +37,7 @@ jobs:
       - name: 🔑 إنشاء Keystore للتوقيع
         run: |
           cd android/app
+          rm -f keystore.jks
           keytool -genkey -v -keystore keystore.jks -keyalg RSA -keysize 2048 \
             -validity 10000 -alias alafif \
             -storepass alafif2026 -keypass alafif2026 \
