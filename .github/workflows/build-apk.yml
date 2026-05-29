@@ -2,9 +2,9 @@ name: Build ALAFIF NEWFORM APK
 
 on:
   push:
-    branches: [master]
+    branches: [main, master]
   pull_request:
-    branches: [master]
+    branches: [main, master]
   workflow_dispatch: # تشغيل يدوي
 
 # فرض Node.js 24 لتجنب تحذير الإهمال
@@ -34,14 +34,9 @@ jobs:
       - name: 🔧 تثبيت الاعتماديات
         run: flutter pub get
 
-      - name: 🔑 إنشاء Keystore للتوقيع
+      - name: 🔑 فك Keystore من Secret (ثابت لكل بناء)
         run: |
-          cd android/app
-          rm -f keystore.jks
-          keytool -genkey -v -keystore keystore.jks -keyalg RSA -keysize 2048 \
-            -validity 10000 -alias alafif \
-            -storepass alafif2026 -keypass alafif2026 \
-            -dname "CN=ALAFIF, OU=Dev, O=ALAFIF, L=Sanaa, ST=Sanaa, C=YE"
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
 
       - name: 📱 بناء APK (Debug)
         run: flutter build apk --debug
