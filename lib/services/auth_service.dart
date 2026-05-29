@@ -129,6 +129,7 @@ class AuthService {
         id: userCredential.user!.uid,
         fullName: 'مستخدم',
         email: email,
+        phone: '',
       );
     } catch (e) {
       throw Exception('فشل تسجيل الدخول: $e');

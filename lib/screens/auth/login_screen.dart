@@ -47,10 +47,9 @@ class _LoginScreenState extends State<LoginScreen>
     if (!_phoneFormKey.currentState!.validate()) return;
 
     final phone = _phoneController.text.trim();
-    // تنسيق الرقم
     String formattedPhone = phone;
     if (!phone.startsWith('+')) {
-      formattedPhone = '+967$phone'; // افتراضياً اليمن
+      formattedPhone = '+967$phone';
     }
 
     final authProvider = context.read<AuthProvider>();
@@ -58,9 +57,7 @@ class _LoginScreenState extends State<LoginScreen>
       if (success && mounted) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const OtpScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const OtpScreen()),
         );
       }
     });
@@ -82,13 +79,8 @@ class _LoginScreenState extends State<LoginScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // الشعار
             const SizedBox(height: 60),
-            const Icon(
-              Icons.store,
-              size: 80,
-              color: AppColors.accentLight,
-            ),
+            const Icon(Icons.store, size: 80, color: AppColors.accentLight),
             const SizedBox(height: 16),
             const Text(
               'العفيف نيوفورم',
@@ -108,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: 40),
 
-            // التبويبات
+            // Tabs
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
               decoration: BoxDecoration(
@@ -133,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.whatsapp, size: 20),
+                        Icon(Icons.phone_in_talk, size: 20),
                         SizedBox(width: 8),
                         Text('واتساب'),
                       ],
@@ -153,7 +145,6 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
 
-            // المحتوى
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -195,8 +186,6 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
             const SizedBox(height: 24),
-
-            // رقم الجوال
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
@@ -234,8 +223,6 @@ class _LoginScreenState extends State<LoginScreen>
               },
             ),
             const SizedBox(height: 24),
-
-            // زر الإرسال
             Consumer<AuthProvider>(
               builder: (context, auth, _) {
                 return SizedBox(
@@ -244,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen>
                   child: ElevatedButton(
                     onPressed: auth.isLoading ? null : _sendOtp,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF25D366), // واتساب
+                      backgroundColor: const Color(0xFF25D366),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -263,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen>
                         : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.whatsapp, size: 22),
+                              Icon(Icons.phone_in_talk, size: 22),
                               SizedBox(width: 10),
                               Text(
                                 'إرسال رمز التحقق',
@@ -278,8 +265,6 @@ class _LoginScreenState extends State<LoginScreen>
                 );
               },
             ),
-
-            // عرض الخطأ
             Consumer<AuthProvider>(
               builder: (context, auth, _) {
                 if (auth.error == null) return const SizedBox.shrink();
@@ -317,8 +302,6 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
             const SizedBox(height: 24),
-
-            // البريد الإلكتروني
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
@@ -341,10 +324,7 @@ class _LoginScreenState extends State<LoginScreen>
                     width: 2,
                   ),
                 ),
-                prefixIcon: const Icon(
-                  Icons.email,
-                  color: AppColors.accentLight,
-                ),
+                prefixIcon: const Icon(Icons.email, color: AppColors.accentLight),
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'الرجاء إدخال البريد الإلكتروني';
@@ -353,8 +333,6 @@ class _LoginScreenState extends State<LoginScreen>
               },
             ),
             const SizedBox(height: 16),
-
-            // كلمة المرور
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
@@ -377,10 +355,7 @@ class _LoginScreenState extends State<LoginScreen>
                     width: 2,
                   ),
                 ),
-                prefixIcon: const Icon(
-                  Icons.lock,
-                  color: AppColors.accentLight,
-                ),
+                prefixIcon: const Icon(Icons.lock, color: AppColors.accentLight),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword
@@ -402,8 +377,6 @@ class _LoginScreenState extends State<LoginScreen>
               },
             ),
             const SizedBox(height: 24),
-
-            // زر تسجيل الدخول
             Consumer<AuthProvider>(
               builder: (context, auth, _) {
                 return SizedBox(
@@ -439,10 +412,7 @@ class _LoginScreenState extends State<LoginScreen>
                 );
               },
             ),
-
             const SizedBox(height: 16),
-
-            // رابط التسجيل
             Center(
               child: TextButton(
                 onPressed: () {
@@ -461,8 +431,6 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
             ),
-
-            // عرض الخطأ
             Consumer<AuthProvider>(
               builder: (context, auth, _) {
                 if (auth.error == null) return const SizedBox.shrink();
