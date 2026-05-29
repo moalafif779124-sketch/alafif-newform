@@ -4,7 +4,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 
-/// مزود حالة المصادقة والمستخدم
+/// مزود حالة المصادقة - يدعم الجوال (OTP) والبريد الإلكتروني
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirebaseService _firebaseService = FirebaseService();
@@ -12,12 +12,14 @@ class AuthProvider with ChangeNotifier {
   AppUser? _user;
   bool _isLoading = false;
   String? _error;
+  ConfirmationResult? _confirmationResult;
 
   AppUser? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _user != null;
   String? get userId => _user?.id;
+  bool get otpSent => _confirmationResult != null;
 
   // =================== التهيئة ===================
 
@@ -48,22 +50,86 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // =================== التسجيل ===================
+  // =================== الدخول بالجوال (OTP) ===================
 
-  Future<bool> register({
-    required String fullName,
-    required String phone,
+  /// إرسال رمز التحقق إلى رقم الجوال
+  Future<bool> sendOtp(String phone) async {
+    _isLoading = true;
+    _error = null;
+    _confirmationResult = null;
+    notifyListeners();
+
+    try {
+      _confirmationResult = await _authService.verifyWithPhone(phone);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// تأكيد رمز OTP وإتمام تسجيل الدخول
+  Future<bool> confirmOtp({
+    required String otp,
+    String? fullName,
+  }) async {
+    if (_confirmationResult == null) {
+      _error = 'الرجاء إرسال رمز التحقق أولاً';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _user = await _authService.confirmOtp(
+        result: _confirmationResult!,
+        otp: otp,
+        fullName: fullName,
+      );
+      _confirmationResult = null;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// إلغاء عملية OTP
+  void cancelOtp() {
+    _confirmationResult = null;
+    _error = null;
+    notifyListeners();
+  }
+
+  // =================== التسجيل بالبريد الإلكتروني ===================
+
+  Future<bool> registerWithEmail({
+    required String email,
     required String password,
+    required String fullName,
+    String? phone,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _user = await _authService.registerWithPhone(
-        phone: phone,
-        fullName: fullName,
+      _user = await _authService.registerWithEmail(
+        email: email,
         password: password,
+        fullName: fullName,
+        phone: phone,
       );
       _isLoading = false;
       notifyListeners();
@@ -76,10 +142,10 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // =================== تسجيل الدخول ===================
+  // =================== تسجيل الدخول بالبريد الإلكتروني ===================
 
-  Future<bool> login({
-    required String phone,
+  Future<bool> loginWithEmail({
+    required String email,
     required String password,
   }) async {
     _isLoading = true;
@@ -87,8 +153,8 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _user = await _authService.loginWithPhone(
-        phone: phone,
+      _user = await _authService.loginWithEmail(
+        email: email,
         password: password,
       );
       _isLoading = false;
@@ -107,6 +173,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     _user = null;
+    _confirmationResult = null;
     notifyListeners();
   }
 

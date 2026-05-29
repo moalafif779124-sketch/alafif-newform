@@ -4,7 +4,7 @@ import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../shell_screen.dart';
 
-/// شاشة إنشاء حساب جديد
+/// شاشة إنشاء حساب جديد بالبريد الإلكتروني
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -15,6 +15,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -24,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -34,10 +36,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.register(
+    final success = await authProvider.registerWithEmail(
       fullName: _nameController.text.trim(),
-      phone: _phoneController.text.trim(),
+      email: _emailController.text.trim(),
       password: _passwordController.text,
+      phone: _phoneController.text.trim().isEmpty
+          ? null
+          : _phoneController.text.trim(),
     );
 
     if (!mounted) return;
@@ -88,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'أنشئ حسابك لتتمتع بتجربة تسوق فريدة',
+                    'أنشئ حسابك بالبريد الإلكتروني',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,
@@ -116,26 +121,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // رقم الجوال
+                  // البريد الإلكتروني
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'البريد الإلكتروني',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'يرجى إدخال البريد الإلكتروني';
+                      }
+                      if (!value.contains('@')) {
+                        return 'بريد إلكتروني غير صحيح';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // رقم الجوال (اختياري)
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     textDirection: TextDirection.ltr,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'رقم الجوال',
+                      labelText: 'رقم الجوال (اختياري)',
                       prefixText: '+967 ',
                       prefixIcon: Icon(Icons.phone_android),
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'يرجى إدخال رقم الجوال';
-                      }
-                      if (value.trim().length < 7) {
-                        return 'رقم جوال غير صحيح';
-                      }
-                      return null;
-                    },
                   ),
                   const SizedBox(height: 16),
 
@@ -154,7 +171,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               : Icons.visibility,
                         ),
                         onPressed: () {
-                          setState(() => _obscurePassword = !_obscurePassword);
+                          setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          );
                         },
                       ),
                     ),
@@ -185,7 +204,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               : Icons.visibility,
                         ),
                         onPressed: () {
-                          setState(() => _obscureConfirm = !_obscureConfirm);
+                          setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          );
                         },
                       ),
                     ),
@@ -206,6 +227,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         height: 52,
                         child: ElevatedButton(
                           onPressed: auth.isLoading ? null : _register,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           child: auth.isLoading
                               ? const SizedBox(
                                   width: 24,
