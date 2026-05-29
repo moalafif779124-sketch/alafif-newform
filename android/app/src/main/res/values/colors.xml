@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primaryColor">#0D1B3E</color>
-    <color name="accentColor">#C0C0C0</color>
-    <color name="backgroundColor">#F5F5F5</color>
+    <color name="alafif_primary">#1A237E</color>
+    <color name="alafif_foreground">#FFFFFF</color>
 </resources>
