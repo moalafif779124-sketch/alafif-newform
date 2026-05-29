@@ -53,7 +53,7 @@ android {
 
     signingConfigs {
         release {
-            storeFile file("keystore.jks")
+            storeFile file("keystore.p12")
             storePassword System.getenv("KEYSTORE_PASSWORD") ?: "alafif2026"
             keyAlias System.getenv("KEY_ALIAS") ?: "alafif"
             keyPassword System.getenv("KEY_PASSWORD") ?: "alafif2026"
