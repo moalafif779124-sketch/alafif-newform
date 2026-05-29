@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "your-project-id",
-    "storage_bucket": "your-project.appspot.com"
+    "project_number": "750165777250",
+    "project_id": "alafif-newform",
+    "storage_bucket": "alafif-newform.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+        "mobilesdk_app_id": "1:750165777250:android:278c571e80cdd60850ea3b",
         "android_client_info": {
           "package_name": "com.alafif.newform"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          "current_key": "AIzaSyD-6KWcq3SLRiFRpRWqSEbJ78QY2nUVbAI"
         }
       ],
       "services": {
