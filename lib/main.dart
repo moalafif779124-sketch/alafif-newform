@@ -26,7 +26,7 @@ class ALAFIFApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OrderProvider()),
       ],
       child: MaterialApp(
-        title: 'ألافيف نيوفورم',
+        title: 'العفيف نيوفورم',
         debugShowCheckedModeBanner: false,
         
         // =========== RTL ===========

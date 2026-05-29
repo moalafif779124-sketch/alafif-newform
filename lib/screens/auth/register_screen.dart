@@ -79,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'مرحباً بك في ألافيف نيوفورم',
+                    'مرحباً بك في العفيف نيوفورم',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,

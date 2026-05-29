@@ -89,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'ألافيف نيوفورم',
+                'العفيف نيوفورم',
                 style: TextStyle(
                   fontSize: 18,
                   color: AppColors.accentLight,

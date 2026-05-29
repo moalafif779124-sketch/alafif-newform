@@ -3,13 +3,13 @@ class AppConstants {
   AppConstants._();
 
   // =========== معلومات التطبيق ===========
-  static const String appName = 'ألافيف نيوفورم';
+  static const String appName = 'العفيف نيوفورم';
   static const String appNameEn = 'ALAFIF NEWFORM';
   static const String appVersion = '1.0.0';
   static const String appTagline = 'الأناقة الرجالية الفاخرة';
 
   // =========== معلومات المتجر ===========
-  static const String companyName = 'ألافيف نيوفورم للملابس الرجالية';
+  static const String companyName = 'العفيف نيوفورم للملابس الرجالية';
   static const String companyPhone = '+967123456789';
   static const String companyEmail = 'info@alafif-newform.com';
   static const String companyAddress = 'صنعاء، اليمن';

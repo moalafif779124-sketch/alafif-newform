@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('ألافيف نيوفورم'),
+          title: const Text('العفيف نيوفورم'),
           actions: [
             IconButton(
               icon: const Icon(Icons.shopping_cart),
@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: AppColors.primaryLight,
         child: const Center(
           child: Text(
-            'ألافيف نيوفورم',
+            'العفيف نيوفورم',
             style: TextStyle(
               color: Colors.white,
               fontSize: 24,

@@ -343,7 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () {
                     showAboutDialog(
                       context: context,
-                      applicationName: 'ألافيف نيوفورم',
+                      applicationName: 'العفيف نيوفورم',
                       applicationVersion: '1.0.0',
                       applicationIcon: Container(
                         width: 48,
@@ -363,11 +363,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       ),
-                      applicationLegalese: '© 2024 ألافيف نيوفورم\nجميع الحقوق محفوظة',
+                      applicationLegalese: '© 2024 العفيف نيوفورم\nجميع الحقوق محفوظة',
                       children: [
                         const SizedBox(height: 16),
                         const Text(
-                          'ألافيف نيوفورم - متجر إلكتروني متخصص في بيع الملابس الرجالية الفاخرة.',
+                          'العفيف نيوفورم - متجر إلكتروني متخصص في بيع الملابس الرجالية الفاخرة.',
                           textAlign: TextAlign.center,
                         ),
                       ],
