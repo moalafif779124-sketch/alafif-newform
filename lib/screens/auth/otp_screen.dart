@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 
-/// شاشة إدخال رمز التحقق (OTP)
+/// شاشة إدخال رمز التحقق (OTP) - عبر واتساب
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key});
 
@@ -16,6 +17,7 @@ class _OtpScreenState extends State<OtpScreen> {
   final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _needsName = false;
+  bool _otpVisible = false;
 
   @override
   void dispose() {
@@ -24,15 +26,48 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // عرض رمز OTP للمستخدم عند فتح الشاشة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.otpCode != null && mounted) {
+        _showOtpSnackbar(auth.otpCode!);
+      }
+    });
+  }
+
+  void _showOtpSnackbar(String otp) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('رمز التحقق: $otp'),
+        backgroundColor: const Color(0xFF25D366),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: 'نسخ',
+          textColor: Colors.white,
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: otp));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم نسخ الرمز'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   void _verifyOtp() {
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
 
     if (_needsName) {
-      // مستخدم جديد - نطلب الاسم أولاً
       if (_nameController.text.trim().isEmpty) {
-        setState(() => _needsName = true);
         return;
       }
       auth.confirmOtp(
@@ -40,7 +75,16 @@ class _OtpScreenState extends State<OtpScreen> {
         fullName: _nameController.text.trim(),
       );
     } else {
-      auth.confirmOtp(otp: _otpController.text.trim());
+      // نحاول تسجيل الدخول بالـ OTP
+      auth.confirmOtp(otp: _otpController.text.trim()).then((success) {
+        if (!success && mounted) {
+          // إذا فشل لأن المستخدم جديد ويحتاج اسم، نظهر حقل الاسم
+          final error = auth.error;
+          if (error != null && error.contains('الاسم')) {
+            setState(() => _needsName = true);
+          }
+        }
+      });
     }
   }
 
@@ -83,14 +127,57 @@ class _OtpScreenState extends State<OtpScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'أدخل رمز التحقق المرسل إلى جوالك',
+                  'أدخل رمز التحقق المرسل عبر واتساب',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 8),
+
+                // زر عرض الرمز
+                Consumer<AuthProvider>(
+                  builder: (context, auth, _) {
+                    if (auth.otpCode == null) return const SizedBox.shrink();
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _otpVisible = !_otpVisible);
+                        if (_otpVisible && auth.otpCode != null) {
+                          _showOtpSnackbar(auth.otpCode!);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _otpVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              size: 16,
+                              color: AppColors.accentLight.withValues(alpha: 0.8),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'عرض رمز التحقق',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.accentLight.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
 
                 // حقل رمز التحقق
                 TextFormField(
@@ -98,6 +185,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   maxLength: 6,
+                  autofocus: true,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -135,10 +223,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 // حقل الاسم (للمستخدم الجديد)
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
-                    if (!_needsName &&
-                        auth.error != null &&
-                        auth.error!.contains('الاسم')) {
-                      // إذا قال الخطأ أن الاسم مطلوب، نظهر الحقل
+                    if (!_needsName && auth.error != null && auth.error!.contains('الاسم')) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         setState(() => _needsName = true);
                       });
@@ -185,8 +270,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                   ),
                                 ),
                                 validator: (v) {
-                                  if (_needsName &&
-                                      (v == null || v.isEmpty)) {
+                                  if (_needsName && (v == null || v.isEmpty)) {
                                     return 'الاسم مطلوب';
                                   }
                                   return null;
@@ -235,6 +319,29 @@ class _OtpScreenState extends State<OtpScreen> {
                     );
                   },
                 ),
+
+                // زر إعادة الإرسال
+                Consumer<AuthProvider>(
+                  builder: (context, auth, _) {
+                    if (auth.isLoading) return const SizedBox.shrink();
+                    return TextButton(
+                      onPressed: () async {
+                        await auth.resendOtp();
+                        if (mounted && auth.otpCode != null) {
+                          _showOtpSnackbar(auth.otpCode!);
+                        }
+                      },
+                      child: const Text(
+                        'إعادة إرسال الرمز',
+                        style: TextStyle(
+                          color: AppColors.accentLight,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 8),
 
                 // عرض الخطأ
                 Consumer<AuthProvider>(

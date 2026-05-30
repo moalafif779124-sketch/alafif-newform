@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../shell_screen.dart';
@@ -44,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  void _sendOtp() {
+  void _sendOtp() async {
     if (!_phoneFormKey.currentState!.validate()) return;
 
     final phone = _phoneController.text.trim();
@@ -54,14 +55,29 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     final authProvider = context.read<AuthProvider>();
-    authProvider.sendOtp(formattedPhone).then((success) {
-      if (success && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const OtpScreen()),
-        );
+    final success = await authProvider.sendOtp(formattedPhone);
+
+    if (!success || !mounted) return;
+
+    // فتح واتساب برسالة OTP
+    final whatsappUrl = authProvider.whatsappUrl;
+    if (whatsappUrl != null) {
+      final uri = Uri.tryParse(whatsappUrl);
+      if (uri != null) {
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (e) {
+          debugPrint('⚠️ Could not open WhatsApp: $e');
+          // إذا فشل فتح واتساب، نروح عالـ OTP screen عادي
+        }
       }
-    });
+    }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const OtpScreen()),
+    );
   }
 
   void _loginWithEmail() {
@@ -207,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'سيتم إرسال رمز تحقق إلى رقم جوالك عبر واتساب أو رسالة نصية',
+              'سيتم فتح واتساب برسالة فيها رمز التحقق',
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.white.withValues(alpha: 0.7),

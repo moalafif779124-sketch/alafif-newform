@@ -5,7 +5,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 
-/// مزود حالة المصادقة - يدعم الجوال (OTP) والبريد الإلكتروني
+/// مزود حالة المصادقة - يدعم OTP عبر واتساب والبريد الإلكتروني
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirebaseService _firebaseService = FirebaseService();
@@ -13,15 +13,22 @@ class AuthProvider with ChangeNotifier {
   AppUser? _user;
   bool _isLoading = false;
   String? _error;
-  String? _verificationId;
+  
+  // حالة OTP
+  bool _otpSent = false;
+  String? _otpCode; // رمز الـ OTP (للعرض فقط)
+  String? _whatsappUrl; // رابط واتساب
+  String? _pendingPhone;
 
   AppUser? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _user != null;
   String? get userId => _user?.id;
-  bool get otpSent => _verificationId != null;
-  String? get verificationId => _verificationId;
+  bool get otpSent => _otpSent;
+  String? get otpCode => _otpCode;
+  String? get whatsappUrl => _whatsappUrl;
+  String? get pendingPhone => _pendingPhone;
 
   // =================== التهيئة ===================
 
@@ -52,46 +59,28 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // =================== الدخول بالجوال (OTP) ===================
+  // =================== الدخول بالجوال (OTP عبر واتساب) ===================
 
-  /// إرسال رمز التحقق إلى رقم الجوال (Android native)
+  /// توليد OTP وتحضير رابط واتساب (لا يرسل شيء، يفتح واتساب فقط)
   Future<bool> sendOtp(String phone) async {
     _isLoading = true;
     _error = null;
-    _verificationId = null;
+    _otpSent = false;
+    _otpCode = null;
+    _whatsappUrl = null;
+    _pendingPhone = phone;
     notifyListeners();
 
-    // استخدام Completer لتحويل الـ callback pattern إلى async/await
-    final completer = Completer<bool>();
-
     try {
-      await _authService.sendOtp(
-        phone: phone,
-        onCodeSent: (verificationId, resendToken) {
-          _verificationId = verificationId;
-          _isLoading = false;
-          notifyListeners();
-          if (!completer.isCompleted) completer.complete(true);
-        },
-        onError: (message) {
-          _error = message;
-          _isLoading = false;
-          notifyListeners();
-          if (!completer.isCompleted) completer.complete(false);
-        },
-      );
-
-      // إذا لم يكتمل الـ completer خلال 65 ثانية (زي مهلة Firebase)
-      Future.delayed(const Duration(seconds: 65), () {
-        if (!completer.isCompleted) {
-          _error = 'لم يتم استلام رمز التحقق، حاول مرة أخرى';
-          _isLoading = false;
-          notifyListeners();
-          completer.complete(false);
-        }
-      });
-
-      return await completer.future;
+      final result = await _authService.sendOtp(phone);
+      
+      _otpCode = result['otp'];
+      _whatsappUrl = result['whatsappUrl'];
+      _pendingPhone = result['phone'];
+      _otpSent = true;
+      _isLoading = false;
+      notifyListeners();
+      return true;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
@@ -100,27 +89,33 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// إعادة إرسال OTP
+  Future<bool> resendOtp() async {
+    if (_pendingPhone == null) {
+      _error = 'الرجاء إدخال رقم الجوال أولاً';
+      notifyListeners();
+      return false;
+    }
+    return sendOtp(_pendingPhone!);
+  }
+
   /// تأكيد رمز OTP وإتمام تسجيل الدخول
   Future<bool> confirmOtp({
     required String otp,
     String? fullName,
   }) async {
-    if (_verificationId == null) {
-      _error = 'الرجاء إرسال رمز التحقق أولاً';
-      notifyListeners();
-      return false;
-    }
-
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _user = await _authService.confirmOtp(
+      _user = await _authService.createOrLoginUser(
         otp: otp,
         fullName: fullName,
       );
-      _verificationId = null;
+      _otpSent = false;
+      _otpCode = null;
+      _whatsappUrl = null;
       _isLoading = false;
       notifyListeners();
       return true;
@@ -134,9 +129,12 @@ class AuthProvider with ChangeNotifier {
 
   /// إلغاء عملية OTP
   void cancelOtp() {
-    _verificationId = null;
+    _authService.cancelOtp();
+    _otpSent = false;
+    _otpCode = null;
+    _whatsappUrl = null;
+    _pendingPhone = null;
     _error = null;
-    _authService.clearVerificationId();
     notifyListeners();
   }
 
@@ -201,7 +199,10 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     _user = null;
-    _verificationId = null;
+    _otpSent = false;
+    _otpCode = null;
+    _whatsappUrl = null;
+    _pendingPhone = null;
     notifyListeners();
   }
 

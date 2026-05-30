@@ -1,125 +1,202 @@
+import 'dart:math';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart' as app;
 import 'firebase_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// خدمة المصادقة - تدعم الدخول بالجوال (OTP) والبريد الإلكتروني
+/// جلسة OTP مؤقتة
+class OtpSession {
+  final String code;
+  final DateTime expiresAt;
+  final String phone;
+
+  OtpSession({
+    required this.code,
+    required this.phone,
+    DateTime? expiresAt,
+  }) : expiresAt = expiresAt ?? DateTime.now().add(const Duration(minutes: 5));
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
+
+  bool verify(String input) => code == input && !isExpired;
+}
+
+/// خدمة المصادقة - OTP عبر واتساب + البريد الإلكتروني
 class AuthService {
   final FirebaseService _firebaseService = FirebaseService();
-  String? _verificationId;
+  
+  // تخزين OTP محلياً (في الذاكرة للمستخدم الحالي)
+  OtpSession? _currentOtpSession;
+  String? _pendingPhone;
 
-  String? get verificationId => _verificationId;
+  String? get pendingPhone => _pendingPhone;
 
-  // =================== التحقق من الجوال (OTP) ===================
+  // =================== OTP عبر واتساب ===================
 
-  /// إرسال رمز التحقق إلى رقم الجوال (Android/iOS native)
-  Future<void> sendOtp({
-    required String phone,
-    required Function(String verificationId, int? resendToken) onCodeSent,
-    required Function(String message) onError,
-  }) async {
+  /// توليد رمز OTP عشوائي 6 أرقام
+  String _generateOtpCode() {
+    final random = Random();
+    return (100000 + random.nextInt(900000)).toString();
+  }
+
+  /// رابط واتساب للرسالة المباشرة
+  String _buildWhatsAppUrl(String phone, String otpCode) {
+    // إزالة + من البداية
+    final cleanPhone = phone.replaceAll('+', '');
+    final message = Uri.encodeComponent(
+      'رمز التحقق الخاص بك في العفيف نيوفورم هو: $otpCode\n'
+      'يرجى عدم مشاركة هذا الرمز مع أي شخص.'
+    );
+    return 'https://api.whatsapp.com/send?phone=$cleanPhone&text=$message';
+  }
+
+  /// رابط واتساب لفتح محادثة مع المتجر
+  String _buildStoreWhatsAppUrl(String userPhone, String otpCode) {
+    final storePhone = '967717500431'; // رقم المتجر - غيّره حسب الحاجة
+    final message = Uri.encodeComponent(
+      'مستخدم جديد - الرقم: $userPhone\n'
+      'رمز التحقق: $otpCode'
+    );
+    return 'https://api.whatsapp.com/send?phone=$storePhone&text=$message';
+  }
+
+  /// إنشاء OTP وتحضير رابط واتساب
+  /// يرجع (otpCode, whatsappUrl) أو يرمي خطأ
+  Future<Map<String, String>> sendOtp(String phone) async {
     if (!_firebaseService.isInitialized) {
       await _firebaseService.initialize();
     }
 
-    try {
-      await _firebaseService.auth.verifyPhoneNumber(
-        phoneNumber: phone,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // تسجيل الدخول تلقائياً عند التحقق التلقائي
-          try {
-            await _firebaseService.auth.signInWithCredential(credential);
-          } catch (e) {
-            debugPrint('Auto verification sign-in error: $e');
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          String message;
-          switch (e.code) {
-            case 'invalid-phone-number':
-              message = 'رقم الجوال غير صحيح';
-              break;
-            case 'too-many-requests':
-              message = 'طلبات كثيرة، حاول لاحقاً';
-              break;
-            case 'quota-exceeded':
-              message = 'تم تجاوز الحد المسموح، حاول لاحقاً';
-              break;
-            default:
-              message = 'فشل إرسال رمز التحقق: ${e.message}';
-          }
-          onError(message);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          _verificationId = verificationId;
-          onCodeSent(verificationId, resendToken);
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-          debugPrint('Code auto-retrieval timeout');
-        },
-      );
-    } catch (e) {
-      onError('فشل إرسال رمز التحقق: $e');
-    }
+    final otpCode = _generateOtpCode();
+    _currentOtpSession = OtpSession(
+      code: otpCode,
+      phone: phone,
+    );
+    _pendingPhone = phone;
+
+    debugPrint('🔐 OTP generated for $phone: $otpCode');
+
+    // بناء رابط واتساب - يرسل الرمز لرقم المستخدم نفسه
+    final whatsappUrl = _buildWhatsAppUrl(phone, otpCode);
+    
+    return {
+      'otp': otpCode,
+      'phone': phone,
+      'whatsappUrl': whatsappUrl,
+    };
   }
 
-  /// التحقق من رمز OTP وإتمام تسجيل الدخول
-  Future<app.AppUser> confirmOtp({
+  /// إعادة إرسال OTP (يولّد رمز جديد)
+  Future<Map<String, String>> resendOtp() async {
+    if (_pendingPhone == null) {
+      throw Exception('الرجاء إدخال رقم الجوال أولاً');
+    }
+    return sendOtp(_pendingPhone!);
+  }
+
+  /// التحقق من رمز OTP محلياً
+  bool verifyOtp(String inputOtp) {
+    if (_currentOtpSession == null) {
+      debugPrint('⚠️ No OTP session found');
+      return false;
+    }
+
+    if (_currentOtpSession!.isExpired) {
+      debugPrint('⚠️ OTP expired');
+      _currentOtpSession = null;
+      return false;
+    }
+
+    final isValid = _currentOtpSession!.verify(inputOtp);
+    if (!isValid) {
+      debugPrint('⚠️ Invalid OTP: entered=$inputOtp, expected=${_currentOtpSession!.code}');
+    }
+    return isValid;
+  }
+
+  /// إنشاء حساب جديد أو تحميل حساب موجود بعد التحقق من OTP
+  Future<app.AppUser> createOrLoginUser({
     required String otp,
-    String? fullName, // مطلوب للمستخدم الجديد
+    String? fullName,
   }) async {
-    if (_verificationId == null) {
+    if (!verifyOtp(otp)) {
+      if (_currentOtpSession?.isExpired ?? false) {
+        throw Exception('انتهت صلاحية رمز التحقق، أرسل رمز جديد');
+      }
+      throw Exception('رمز التحقق غير صحيح');
+    }
+
+    final phone = _pendingPhone;
+    if (phone == null) {
       throw Exception('الرجاء إرسال رمز التحقق أولاً');
     }
 
     try {
-      // إنشاء credential باستخدام verificationId + رمز OTP
-      final credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
-        smsCode: otp,
-      );
-
-      final userCredential =
-          await _firebaseService.auth.signInWithCredential(credential);
-      final firebaseUser = userCredential.user;
-      if (firebaseUser == null) {
-        throw Exception('لم يتم التعرف على المستخدم');
+      // تسجيل دخول مجهول عبر Firebase Auth (للحصول على UID)
+      UserCredential? anonCredential;
+      try {
+        anonCredential = await _firebaseService.auth.signInAnonymously();
+      } catch (e) {
+        debugPrint('⚠️ Anonymous auth failed: $e');
+        // لو فشل anonymous auth، نستخدم رقم الجوال كـ ID
       }
 
-      // التحقق مما إذا كان المستخدم موجوداً في Firestore
-      final existingUser = await _firebaseService.getUser(firebaseUser.uid);
+      final uid = anonCredential?.user?.uid ?? 'phone_${phone.replaceAll('+', '')}';
+      
+      // البحث عن مستخدم موجود بنفس رقم الجوال
+      final existingUsers = await _firebaseService.firestore
+          .collection('users')
+          .where('phone', isEqualTo: phone)
+          .limit(1)
+          .get();
 
-      if (existingUser != null) {
-        return app.AppUser.fromMap(existingUser);
+      if (existingUsers.docs.isNotEmpty) {
+        // مستخدم موجود ← تسجيل دخول
+        final userData = existingUsers.docs.first.data();
+        userData['id'] = existingUsers.docs.first.id;
+        _clearOtpSession();
+        return app.AppUser.fromMap(userData);
       }
 
-      // مستخدم جديد - نحتاج اسم كامل
-      if (fullName == null || fullName.isEmpty) {
+      // مستخدم جديد
+      if (fullName == null || fullName.trim().isEmpty) {
         throw Exception('مطلوب الاسم الكامل للمستخدم الجديد');
       }
 
+      // تأكد من عدم وجود مستخدم بنفس UID
+      final existingByUid = await _firebaseService.getUser(uid);
+      if (existingByUid != null) {
+        _clearOtpSession();
+        return app.AppUser.fromMap(existingByUid);
+      }
+
       final user = app.AppUser(
-        id: firebaseUser.uid,
-        fullName: fullName,
-        phone: firebaseUser.phoneNumber ?? '',
-        email: firebaseUser.email ?? '',
+        id: uid,
+        fullName: fullName.trim(),
+        phone: phone,
         createdAt: DateTime.now(),
       );
 
       await _firebaseService.saveUser(user.toMap());
+      _clearOtpSession();
       return user;
     } catch (e) {
       if (e is Exception) rethrow;
-      throw Exception('فشل التحقق من الرمز: $e');
+      throw Exception('فشل إنشاء الحساب: $e');
     }
   }
 
-  void clearVerificationId() {
-    _verificationId = null;
+  void _clearOtpSession() {
+    _currentOtpSession = null;
+    _pendingPhone = null;
+  }
+
+  void cancelOtp() {
+    _clearOtpSession();
   }
 
   // =================== التسجيل بالبريد الإلكتروني ===================
@@ -195,6 +272,7 @@ class AuthService {
   // =================== تسجيل الخروج ===================
 
   Future<void> logout() async {
+    _clearOtpSession();
     await _firebaseService.auth.signOut();
   }
 
