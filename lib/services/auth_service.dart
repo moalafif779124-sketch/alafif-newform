@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -7,32 +8,83 @@ import 'firebase_service.dart';
 /// خدمة المصادقة - تدعم الدخول بالجوال (OTP) والبريد الإلكتروني
 class AuthService {
   final FirebaseService _firebaseService = FirebaseService();
+  String? _verificationId;
+
+  String? get verificationId => _verificationId;
 
   // =================== التحقق من الجوال (OTP) ===================
 
-  /// إرسال رمز التحقق إلى رقم الجوال
-  Future<ConfirmationResult> verifyWithPhone(String phone) async {
+  /// إرسال رمز التحقق إلى رقم الجوال (Android/iOS native)
+  Future<void> sendOtp({
+    required String phone,
+    required Function(String verificationId, int? resendToken) onCodeSent,
+    required Function(String message) onError,
+  }) async {
     if (!_firebaseService.isInitialized) {
       await _firebaseService.initialize();
     }
 
-    // استخدام إعادة التحقق (reCaptcha) التلقائي
     try {
-      final result = await _firebaseService.auth.signInWithPhoneNumber(phone);
-      return result;
+      await _firebaseService.auth.verifyPhoneNumber(
+        phoneNumber: phone,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // تسجيل الدخول تلقائياً عند التحقق التلقائي
+          try {
+            await _firebaseService.auth.signInWithCredential(credential);
+          } catch (e) {
+            debugPrint('Auto verification sign-in error: $e');
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          String message;
+          switch (e.code) {
+            case 'invalid-phone-number':
+              message = 'رقم الجوال غير صحيح';
+              break;
+            case 'too-many-requests':
+              message = 'طلبات كثيرة، حاول لاحقاً';
+              break;
+            case 'quota-exceeded':
+              message = 'تم تجاوز الحد المسموح، حاول لاحقاً';
+              break;
+            default:
+              message = 'فشل إرسال رمز التحقق: ${e.message}';
+          }
+          onError(message);
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          _verificationId = verificationId;
+          onCodeSent(verificationId, resendToken);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          _verificationId = verificationId;
+          debugPrint('Code auto-retrieval timeout');
+        },
+      );
     } catch (e) {
-      throw Exception('فشل إرسال رمز التحقق: $e');
+      onError('فشل إرسال رمز التحقق: $e');
     }
   }
 
   /// التحقق من رمز OTP وإتمام تسجيل الدخول
   Future<app.AppUser> confirmOtp({
-    required ConfirmationResult result,
     required String otp,
     String? fullName, // مطلوب للمستخدم الجديد
   }) async {
+    if (_verificationId == null) {
+      throw Exception('الرجاء إرسال رمز التحقق أولاً');
+    }
+
     try {
-      final userCredential = await result.confirm(otp);
+      // إنشاء credential باستخدام verificationId + رمز OTP
+      final credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: otp,
+      );
+
+      final userCredential =
+          await _firebaseService.auth.signInWithCredential(credential);
       final firebaseUser = userCredential.user;
       if (firebaseUser == null) {
         throw Exception('لم يتم التعرف على المستخدم');
@@ -64,6 +116,10 @@ class AuthService {
       if (e is Exception) rethrow;
       throw Exception('فشل التحقق من الرمز: $e');
     }
+  }
+
+  void clearVerificationId() {
+    _verificationId = null;
   }
 
   // =================== التسجيل بالبريد الإلكتروني ===================

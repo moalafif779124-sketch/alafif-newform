@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user.dart';
@@ -12,14 +13,15 @@ class AuthProvider with ChangeNotifier {
   AppUser? _user;
   bool _isLoading = false;
   String? _error;
-  ConfirmationResult? _confirmationResult;
+  String? _verificationId;
 
   AppUser? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _user != null;
   String? get userId => _user?.id;
-  bool get otpSent => _confirmationResult != null;
+  bool get otpSent => _verificationId != null;
+  String? get verificationId => _verificationId;
 
   // =================== التهيئة ===================
 
@@ -52,18 +54,44 @@ class AuthProvider with ChangeNotifier {
 
   // =================== الدخول بالجوال (OTP) ===================
 
-  /// إرسال رمز التحقق إلى رقم الجوال
+  /// إرسال رمز التحقق إلى رقم الجوال (Android native)
   Future<bool> sendOtp(String phone) async {
     _isLoading = true;
     _error = null;
-    _confirmationResult = null;
+    _verificationId = null;
     notifyListeners();
 
+    // استخدام Completer لتحويل الـ callback pattern إلى async/await
+    final completer = Completer<bool>();
+
     try {
-      _confirmationResult = await _authService.verifyWithPhone(phone);
-      _isLoading = false;
-      notifyListeners();
-      return true;
+      await _authService.sendOtp(
+        phone: phone,
+        onCodeSent: (verificationId, resendToken) {
+          _verificationId = verificationId;
+          _isLoading = false;
+          notifyListeners();
+          if (!completer.isCompleted) completer.complete(true);
+        },
+        onError: (message) {
+          _error = message;
+          _isLoading = false;
+          notifyListeners();
+          if (!completer.isCompleted) completer.complete(false);
+        },
+      );
+
+      // إذا لم يكتمل الـ completer خلال 65 ثانية (زي مهلة Firebase)
+      Future.delayed(const Duration(seconds: 65), () {
+        if (!completer.isCompleted) {
+          _error = 'لم يتم استلام رمز التحقق، حاول مرة أخرى';
+          _isLoading = false;
+          notifyListeners();
+          completer.complete(false);
+        }
+      });
+
+      return await completer.future;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
@@ -77,7 +105,7 @@ class AuthProvider with ChangeNotifier {
     required String otp,
     String? fullName,
   }) async {
-    if (_confirmationResult == null) {
+    if (_verificationId == null) {
       _error = 'الرجاء إرسال رمز التحقق أولاً';
       notifyListeners();
       return false;
@@ -89,11 +117,10 @@ class AuthProvider with ChangeNotifier {
 
     try {
       _user = await _authService.confirmOtp(
-        result: _confirmationResult!,
         otp: otp,
         fullName: fullName,
       );
-      _confirmationResult = null;
+      _verificationId = null;
       _isLoading = false;
       notifyListeners();
       return true;
@@ -107,8 +134,9 @@ class AuthProvider with ChangeNotifier {
 
   /// إلغاء عملية OTP
   void cancelOtp() {
-    _confirmationResult = null;
+    _verificationId = null;
     _error = null;
+    _authService.clearVerificationId();
     notifyListeners();
   }
 
@@ -173,7 +201,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     _user = null;
-    _confirmationResult = null;
+    _verificationId = null;
     notifyListeners();
   }
 
