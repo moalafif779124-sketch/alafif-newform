@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
+import '../shell_screen.dart';
 import 'otp_screen.dart';
 import 'register_screen.dart';
 
@@ -152,6 +153,33 @@ class _LoginScreenState extends State<LoginScreen>
                   _buildPhoneTab(),
                   _buildEmailTab(),
                 ],
+              ),
+            ),
+            // =========== زر تخطي التسجيل ===========
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => const MainShell(),
+                    ),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white.withValues(alpha: 0.6),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.skip_next, size: 20),
+                    SizedBox(width: 6),
+                    Text(
+                      'تخطي تسجيل الدخول',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
