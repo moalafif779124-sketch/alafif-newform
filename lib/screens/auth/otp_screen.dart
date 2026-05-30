@@ -5,6 +5,7 @@ import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 
 /// شاشة إدخال رمز التحقق (OTP) - عبر واتساب
+/// تظهر حقل الاسم للمستخدم الجديد مباشرة
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key});
 
@@ -17,7 +18,6 @@ class _OtpScreenState extends State<OtpScreen> {
   final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _needsName = false;
-  bool _otpVisible = false;
 
   @override
   void dispose() {
@@ -39,22 +39,25 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   void _showOtpSnackbar(String otp) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('رمز التحقق: $otp'),
+        content: Text('🔐 رمز التحقق: $otp'),
         backgroundColor: const Color(0xFF25D366),
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 10),
         action: SnackBarAction(
           label: 'نسخ',
           textColor: Colors.white,
           onPressed: () {
             Clipboard.setData(ClipboardData(text: otp));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('تم نسخ الرمز'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ تم نسخ الرمز'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
           },
         ),
       ),
@@ -66,25 +69,14 @@ class _OtpScreenState extends State<OtpScreen> {
 
     final auth = context.read<AuthProvider>();
 
-    if (_needsName) {
-      if (_nameController.text.trim().isEmpty) {
-        return;
-      }
+    // نمرر OTP + الاسم (إذا كان ظاهراً) دفعة واحدة
+    if (_needsName && _nameController.text.trim().isNotEmpty) {
       auth.confirmOtp(
         otp: _otpController.text.trim(),
         fullName: _nameController.text.trim(),
       );
     } else {
-      // نحاول تسجيل الدخول بالـ OTP
-      auth.confirmOtp(otp: _otpController.text.trim()).then((success) {
-        if (!success && mounted) {
-          // إذا فشل لأن المستخدم جديد ويحتاج اسم، نظهر حقل الاسم
-          final error = auth.error;
-          if (error != null && error.contains('الاسم')) {
-            setState(() => _needsName = true);
-          }
-        }
-      });
+      auth.confirmOtp(otp: _otpController.text.trim());
     }
   }
 
@@ -134,52 +126,9 @@ class _OtpScreenState extends State<OtpScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
-
-                // زر عرض الرمز
-                Consumer<AuthProvider>(
-                  builder: (context, auth, _) {
-                    if (auth.otpCode == null) return const SizedBox.shrink();
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() => _otpVisible = !_otpVisible);
-                        if (_otpVisible && auth.otpCode != null) {
-                          _showOtpSnackbar(auth.otpCode!);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _otpVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              size: 16,
-                              color: AppColors.accentLight.withValues(alpha: 0.8),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'عرض رمز التحقق',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.accentLight.withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
                 const SizedBox(height: 24),
 
-                // حقل رمز التحقق
+                // =========== حقل OTP ===========
                 TextFormField(
                   controller: _otpController,
                   keyboardType: TextInputType.number,
@@ -220,70 +169,85 @@ class _OtpScreenState extends State<OtpScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // حقل الاسم (للمستخدم الجديد)
+                // =========== حقل الاسم (للمستخدم الجديد) ===========
+                // يظهر فقط إذا كان المستخدم جديداً ويحتاج اسم
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
-                    if (!_needsName && auth.error != null && auth.error!.contains('الاسم')) {
+                    // نراقب الخطأ: إذا ظهر خطأ "الاسم مطلوب"، نضبط _needsName
+                    if (!_needsName &&
+                        auth.error != null &&
+                        auth.error!.contains('الاسم')) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        setState(() => _needsName = true);
+                        if (mounted) setState(() => _needsName = true);
                       });
                     }
-                    return _needsName
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'مستخدم جديد! أدخل اسمك الكامل:',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
+
+                    if (!_needsName) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Divider(color: Colors.white24),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_add,
+                                size: 20, color: Colors.white70),
+                            const SizedBox(width: 8),
+                            Text(
+                              'مستخدم جديد! أدخل اسمك الكامل:',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 14,
                               ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _nameController,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'الاسم الثلاثي',
-                                  hintStyle: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.4),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white.withValues(alpha: 0.1),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: AppColors.accentLight,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  prefixIcon: const Icon(
-                                    Icons.person,
-                                    color: AppColors.accentLight,
-                                  ),
-                                ),
-                                validator: (v) {
-                                  if (_needsName && (v == null || v.isEmpty)) {
-                                    return 'الاسم مطلوب';
-                                  }
-                                  return null;
-                                },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _nameController,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'الاسم الثلاثي',
+                            hintStyle: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.4),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.1),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: AppColors.accentLight,
+                                width: 2,
                               ),
-                              const SizedBox(height: 24),
-                            ],
-                          )
-                        : const SizedBox.shrink();
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.person,
+                              color: AppColors.accentLight,
+                            ),
+                          ),
+                          textInputAction: TextInputAction.done,
+                          validator: (v) {
+                            if (_needsName && (v == null || v.trim().isEmpty)) {
+                              return 'الاسم مطلوب';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    );
                   },
                 ),
 
-                // زر التأكيد
+                // =========== زر التأكيد ===========
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
                     return SizedBox(
@@ -320,7 +284,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   },
                 ),
 
-                // زر إعادة الإرسال
+                // =========== زر إعادة الإرسال ===========
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
                     if (auth.isLoading) return const SizedBox.shrink();
@@ -333,26 +297,43 @@ class _OtpScreenState extends State<OtpScreen> {
                       },
                       child: const Text(
                         'إعادة إرسال الرمز',
-                        style: TextStyle(
-                          color: AppColors.accentLight,
-                        ),
+                        style: TextStyle(color: AppColors.accentLight),
                       ),
                     );
                   },
                 ),
 
-                const SizedBox(height: 8),
-
-                // عرض الخطأ
+                // =========== عرض الخطأ ===========
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
                     if (auth.error == null) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(top: 16),
-                      child: Text(
-                        auth.error!,
-                        style: const TextStyle(color: Colors.redAccent),
-                        textAlign: TextAlign.center,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.redAccent.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Colors.redAccent, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                auth.error!,
+                                style: const TextStyle(
+                                  color: Colors.redAccent,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
