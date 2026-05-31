@@ -109,8 +109,11 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // نمرر رمز OTP المتوقع ورقم الجوال من حالة المزوّد
       _user = await _authService.createOrLoginUser(
         otp: otp,
+        expectedOtp: _otpCode ?? '',
+        phone: _pendingPhone ?? '',
         fullName: fullName,
       );
       _otpSent = false;

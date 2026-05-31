@@ -2,35 +2,15 @@ import 'dart:math';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart' as app;
 import 'firebase_service.dart';
-
-/// جلسة OTP مؤقتة
-class OtpSession {
-  final String code;
-  final DateTime expiresAt;
-  final String phone;
-
-  OtpSession({
-    required this.code,
-    required this.phone,
-    DateTime? expiresAt,
-  }) : expiresAt = expiresAt ?? DateTime.now().add(const Duration(minutes: 5));
-
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
-  bool verify(String input) => code == input && !isExpired;
-}
 
 /// خدمة المصادقة - OTP عبر واتساب + البريد الإلكتروني
 class AuthService {
   final FirebaseService _firebaseService = FirebaseService();
 
-  // تخزين OTP محلياً
-  OtpSession? _currentOtpSession;
   String? _pendingPhone;
-
   String? get pendingPhone => _pendingPhone;
 
   // =================== OTP عبر واتساب ===================
@@ -56,7 +36,6 @@ class AuthService {
     }
 
     final otpCode = _generateOtpCode();
-    _currentOtpSession = OtpSession(code: otpCode, phone: phone);
     _pendingPhone = phone;
 
     debugPrint('🔐 OTP generated for $phone: $otpCode');
@@ -70,7 +49,7 @@ class AuthService {
     };
   }
 
-  /// إعادة إرسال OTP (يولّد رمز جديد)
+  /// إعادة إرسال OTP (يولّد رمز جديد) — يُستخدم مع AuthProvider.resendOtp()
   Future<Map<String, String>> resendOtp() async {
     if (_pendingPhone == null) {
       throw Exception('الرجاء إدخال رقم الجوال أولاً');
@@ -79,26 +58,24 @@ class AuthService {
   }
 
   /// التحقق من OTP + إنشاء/تسجيل دخول - خطوة واحدة
+  /// [otp] رمز التحقق الذي أدخله المستخدم
+  /// [expectedOtp] رمز التحقق المتوقع (من AuthProvider)
+  /// [phone] رقم الجوال
+  /// [fullName] الاسم الكامل (مطلوب للمستخدم الجديد)
   Future<app.AppUser> createOrLoginUser({
     required String otp,
-    String? fullName, // مطلوب فقط للمستخدم الجديد
+    required String expectedOtp,
+    required String phone,
+    String? fullName,
   }) async {
     // 1️⃣ التحقق من صلاحية OTP
-    if (_currentOtpSession == null) {
+    if (expectedOtp.isEmpty) {
       throw Exception('الرجاء إرسال رمز التحقق أولاً');
     }
-    if (_currentOtpSession!.isExpired) {
-      _currentOtpSession = null;
-      throw Exception('انتهت صلاحية رمز التحقق، أرسل رمز جديد');
-    }
-    if (!_currentOtpSession!.verify(otp)) {
+    if (otp != expectedOtp) {
       throw Exception('رمز التحقق غير صحيح');
     }
-
-    final phone = _pendingPhone;
-    if (phone == null) {
-      throw Exception('الرجاء إرسال رمز التحقق أولاً');
-    }
+    // OTP صحيح — نكمل
 
     // 2️⃣ تسجيل دخول مجهول (مرة واحدة فقط)
     String uid;
@@ -148,7 +125,6 @@ class AuthService {
 
     if (userExists && existingUserData != null) {
       // مستخدم موجود ← تسجيل دخول
-      _currentOtpSession = null;
       _pendingPhone = null;
       return app.AppUser.fromMap(existingUserData);
     }
@@ -173,13 +149,11 @@ class AuthService {
       throw Exception('فشل إنشاء الحساب. حاول مرة أخرى.');
     }
 
-    _currentOtpSession = null;
     _pendingPhone = null;
     return user;
   }
 
   void cancelOtp() {
-    _currentOtpSession = null;
     _pendingPhone = null;
   }
 
