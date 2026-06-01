@@ -30,8 +30,10 @@ class _OtpScreenState extends State<OtpScreen> {
   void initState() {
     super.initState();
     // عرض رمز OTP للمستخدم عند فتح الشاشة
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = context.read<AuthProvider>();
+      // استرجاع جلسة OTP من SharedPreferences (إذا ضاعت من الذاكرة)
+      await auth.restoreOtpSession();
       if (auth.otpCode != null && mounted) {
         _showOtpSnackbar(auth.otpCode!);
       }
