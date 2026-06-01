@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 
 /// مزود حالة المصادقة - يدعم OTP عبر واتساب والبريد الإلكتروني
+/// يحفظ حالة OTP في SharedPreferences لضمان الصمود حتى لو انوقف التطبيق
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirebaseService _firebaseService = FirebaseService();
@@ -16,8 +18,8 @@ class AuthProvider with ChangeNotifier {
   
   // حالة OTP
   bool _otpSent = false;
-  String? _otpCode; // رمز الـ OTP (للعرض فقط)
-  String? _whatsappUrl; // رابط واتساب
+  String? _otpCode;
+  String? _whatsappUrl;
   String? _pendingPhone;
 
   AppUser? get user => _user;
@@ -29,6 +31,52 @@ class AuthProvider with ChangeNotifier {
   String? get otpCode => _otpCode;
   String? get whatsappUrl => _whatsappUrl;
   String? get pendingPhone => _pendingPhone;
+
+  // =================== حفظ/استرجاع OTP من SharedPreferences ===================
+
+  Future<void> _saveOtpSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_otpCode != null) await prefs.setString('otp_code', _otpCode!);
+      if (_pendingPhone != null) await prefs.setString('pending_phone', _pendingPhone!);
+      await prefs.setBool('otp_sent', _otpSent);
+      debugPrint('💾 OTP session saved to SharedPreferences');
+    } catch (e) {
+      debugPrint('⚠️ Failed to save OTP session: $e');
+    }
+  }
+
+  Future<void> _clearOtpSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('otp_code');
+      await prefs.remove('pending_phone');
+      await prefs.remove('otp_sent');
+      debugPrint('🗑️ OTP session cleared from SharedPreferences');
+    } catch (e) {
+      debugPrint('⚠️ Failed to clear OTP session: $e');
+    }
+  }
+
+  /// استرجاع جلسة OTP من SharedPreferences — يُستدعى عند فتح شاشة OTP
+  Future<void> restoreOtpSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final otpCode = prefs.getString('otp_code');
+      final pendingPhone = prefs.getString('pending_phone');
+      final otpSent = prefs.getBool('otp_sent');
+
+      if (otpCode != null && pendingPhone != null) {
+        _otpCode = otpCode;
+        _pendingPhone = pendingPhone;
+        _otpSent = otpSent ?? true;
+        notifyListeners();
+        debugPrint('♻️ OTP session restored: phone=$pendingPhone, code=$otpCode');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to restore OTP session: $e');
+    }
+  }
 
   // =================== التهيئة ===================
 
@@ -61,7 +109,6 @@ class AuthProvider with ChangeNotifier {
 
   // =================== الدخول بالجوال (OTP عبر واتساب) ===================
 
-  /// توليد OTP وتحضير رابط واتساب (لا يرسل شيء، يفتح واتساب فقط)
   Future<bool> sendOtp(String phone) async {
     _isLoading = true;
     _error = null;
@@ -79,6 +126,10 @@ class AuthProvider with ChangeNotifier {
       _pendingPhone = result['phone'];
       _otpSent = true;
       _isLoading = false;
+      
+      // 💾 حفظ جلسة OTP في SharedPreferences قبل فتح واتساب
+      await _saveOtpSession();
+      
       notifyListeners();
       return true;
     } catch (e) {
@@ -104,18 +155,26 @@ class AuthProvider with ChangeNotifier {
     required String otp,
     String? fullName,
   }) async {
+    // ♻️ استرجاع جلسة OTP من SharedPreferences إن كانت ضاعت من الذاكرة
+    if (_otpCode == null || _pendingPhone == null) {
+      await restoreOtpSession();
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      // نمرر رمز OTP المتوقع ورقم الجوال من حالة المزوّد
       _user = await _authService.createOrLoginUser(
         otp: otp,
         expectedOtp: _otpCode ?? '',
         phone: _pendingPhone ?? '',
         fullName: fullName,
       );
+      
+      // 🗑️ مسح جلسة OTP بعد نجاح تسجيل الدخول
+      await _clearOtpSession();
+      
       _otpSent = false;
       _otpCode = null;
       _whatsappUrl = null;
@@ -132,6 +191,7 @@ class AuthProvider with ChangeNotifier {
 
   /// إلغاء عملية OTP
   void cancelOtp() {
+    _clearOtpSession();
     _authService.cancelOtp();
     _otpSent = false;
     _otpCode = null;
@@ -200,6 +260,7 @@ class AuthProvider with ChangeNotifier {
   // =================== تسجيل الخروج ===================
 
   Future<void> logout() async {
+    await _clearOtpSession();
     await _authService.logout();
     _user = null;
     _otpSent = false;
