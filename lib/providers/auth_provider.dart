@@ -7,7 +7,8 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 
 /// مزود حالة المصادقة - يدعم OTP عبر واتساب والبريد الإلكتروني
-/// يحفظ حالة OTP في SharedPreferences لضمان الصمود حتى لو انوقف التطبيق
+/// يحفظ جلسة OTP في SharedPreferences ويقرأها منها مباشرة عند التحقق
+/// (لا يعتمد على الذاكرة المؤقتة لأن Android قد يقتل العملية)
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirebaseService _firebaseService = FirebaseService();
@@ -16,7 +17,7 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   
-  // حالة OTP
+  // حالة OTP — ملء احتياطي، المصدر الأساسي هو SharedPreferences
   bool _otpSent = false;
   String? _otpCode;
   String? _whatsappUrl;
@@ -78,12 +79,30 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// قراءة OTP من SharedPreferences مباشرة — المصدر الأساسي الموثوق
+  Future<Map<String, String>?> _readOtpFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final code = prefs.getString('otp_code');
+      final phone = prefs.getString('pending_phone');
+      if (code != null && phone != null) {
+        return {'otpCode': code, 'phone': phone};
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to read OTP from Prefs: $e');
+    }
+    return null;
+  }
+
   // =================== التهيئة ===================
 
   Future<void> initialize() async {
     if (!_firebaseService.isInitialized) {
       await _firebaseService.initialize();
     }
+
+    // استرجاع جلسة OTP عند بدء التطبيق (إذا كان في منتصف عملية تحقق)
+    await restoreOtpSession();
 
     _authService.authStateChanges.listen((User? firebaseUser) async {
       if (firebaseUser != null) {
@@ -109,6 +128,7 @@ class AuthProvider with ChangeNotifier {
 
   // =================== الدخول بالجوال (OTP عبر واتساب) ===================
 
+  /// توليد OTP وتحضير رابط واتساب (لا يرسل شيء، يفتح واتساب فقط)
   Future<bool> sendOtp(String phone) async {
     _isLoading = true;
     _error = null;
@@ -127,8 +147,16 @@ class AuthProvider with ChangeNotifier {
       _otpSent = true;
       _isLoading = false;
       
-      // 💾 حفظ جلسة OTP في SharedPreferences قبل فتح واتساب
+      // 💾 حفظ جلسة OTP في SharedPreferences قبل العودة
       await _saveOtpSession();
+      
+      // ✅ تحقق إضافي: نقرأ من SharedPreferences ونتأكد أن البيانات محفوظة
+      final saved = await _readOtpFromPrefs();
+      if (saved == null) {
+        debugPrint('⚠️ WARNING: OTP not persisted to SharedPreferences!');
+      } else {
+        debugPrint('✅ OTP confirmed in SharedPreferences: ${saved['otpCode']}');
+      }
       
       notifyListeners();
       return true;
@@ -151,13 +179,30 @@ class AuthProvider with ChangeNotifier {
   }
 
   /// تأكيد رمز OTP وإتمام تسجيل الدخول
+  /// يقرأ رمز OTP من SharedPreferences مباشرة (المصدر الأساسي)
   Future<bool> confirmOtp({
     required String otp,
     String? fullName,
   }) async {
-    // ♻️ استرجاع جلسة OTP من SharedPreferences إن كانت ضاعت من الذاكرة
-    if (_otpCode == null || _pendingPhone == null) {
-      await restoreOtpSession();
+    // ♻️ قراءة OTP من SharedPreferences مباشرة — المصدر الأساسي
+    final savedOtp = await _readOtpFromPrefs();
+    
+    String expectedCode;
+    String pendingPhoneNumber;
+    
+    if (savedOtp != null) {
+      // ✅ وجدنا OTP في SharedPreferences — نستخدمه
+      expectedCode = savedOtp['otpCode']!;
+      pendingPhoneNumber = savedOtp['phone']!;
+      // نحدّث الذاكرة احتياطياً
+      _otpCode = expectedCode;
+      _pendingPhone = pendingPhoneNumber;
+      debugPrint('📖 Read OTP from SharedPreferences: $expectedCode');
+    } else {
+      // ❌ لا يوجد OTP في SharedPreferences — نستخدم الذاكرة كاحتياط أخير
+      expectedCode = _otpCode ?? '';
+      pendingPhoneNumber = _pendingPhone ?? '';
+      debugPrint('⚠️ OTP not in SharedPreferences, using memory: $expectedCode');
     }
 
     _isLoading = true;
@@ -167,8 +212,8 @@ class AuthProvider with ChangeNotifier {
     try {
       _user = await _authService.createOrLoginUser(
         otp: otp,
-        expectedOtp: _otpCode ?? '',
-        phone: _pendingPhone ?? '',
+        expectedOtp: expectedCode,
+        phone: pendingPhoneNumber,
         fullName: fullName,
       );
       
