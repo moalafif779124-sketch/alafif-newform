@@ -75,18 +75,21 @@ class PaymentService {
   }) async {
     try {
       // 1️⃣ محاولة فتح تطبيق جيب عبر deep link
-      final jeebDeepLink = 'jeeb://payment?pos=$posNumber&amount=${amount.toInt()}&order_id=$orderId';
-      
+      final jeebDeepLink =
+          'jeeb://payment?pos=$posNumber&amount=${amount.toInt()}&order_id=$orderId';
+
       if (await canLaunchUrl(Uri.parse(jeebDeepLink))) {
-        await launchUrl(Uri.parse(jeebDeepLink), mode: LaunchMode.externalApplication);
+        await launchUrl(Uri.parse(jeebDeepLink),
+            mode: LaunchMode.externalApplication);
         debugPrint('✅ Jeeb Wallet opened via deep link: $jeebDeepLink');
         return true;
       }
 
       // 2️⃣ محاولة فتح عبر Android Intent
-      final intentUrl = 'intent://pay?pos=$posNumber&amount=${amount.toInt()}&order_id=$orderId#Intent;scheme=jeeb;package=${AppConstants.jeebPackageName};end';
+      final intentUrl =
+          'intent://pay?pos=$posNumber&amount=${amount.toInt()}&order_id=$orderId#Intent;scheme=jeeb;package=${AppConstants.jeebPackageName};end';
       final intentUri = Uri.parse(intentUrl);
-      
+
       if (await canLaunchUrl(intentUri)) {
         await launchUrl(intentUri, mode: LaunchMode.externalApplication);
         debugPrint('✅ Jeeb Wallet opened via intent: $intentUrl');
@@ -96,7 +99,7 @@ class PaymentService {
       // 3️⃣ إذا كان جيب غير مثبت، نفتح متجر بلاي لتحميله
       final marketUrl = 'market://details?id=${AppConstants.jeebPackageName}';
       final marketUri = Uri.parse(marketUrl);
-      
+
       if (await canLaunchUrl(marketUri)) {
         await launchUrl(marketUri, mode: LaunchMode.externalApplication);
         debugPrint('📲 Opening Play Store for Jeeb installation');
@@ -108,7 +111,7 @@ class PaymentService {
       await launchUrl(Uri.parse(webUrl), mode: LaunchMode.externalApplication);
       debugPrint('🌐 Opening Jeeb website');
       return false;
-      
+
     } catch (e) {
       debugPrint('❌ Jeeb Wallet launch error: $e');
       return false;
@@ -127,7 +130,7 @@ class PaymentService {
       amount: amount,
       orderId: orderId,
     );
-    
+
     if (launched) {
       return {
         'success': true,

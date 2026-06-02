@@ -82,6 +82,11 @@ class AppConstants {
     {'id': 'name', 'label': 'الاسم'},
   ];
 
+  // =========== جيب (Jeeb Wallet) ===========
+  static const String jeebPosNumber = '573157'; // رقم نقطة البيع لمحفظة جيب
+  static const String jeebPackageName = 'com.ahd.jaib'; // حزمة تطبيق جيب على أندرويد
+  static const String jeebIconPath = 'assets/images/jeeb_icon.png';
+
   // =========== طرق الدفع ===========
   static const String jeebPosNumber = '573157'; // رقم نقطة البيع لمحفظة جيب
   static const String jeebPackageName = 'com.ahd.jaib'; // حزمة تطبيق جيب على أندرويد

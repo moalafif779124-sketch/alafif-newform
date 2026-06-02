@@ -162,7 +162,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('✅ تم فتح محفظة جيب. قم بتأكيد الدفع في التطبيق.'),
+                  content: Text(
+                      '✅ تم فتح محفظة جيب. قم بتأكيد الدفع في التطبيق.'),
                   backgroundColor: AppColors.success,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -171,7 +172,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           } else {
             // لم يتم العثور على تطبيق جيب
             if (mounted) {
-              _showSnackBar( 'يرجى تثبيت تطبيق محفظة جيب من متجر بلاي أولاً');
+              _showSnackBar(
+                  'يرجى تثبيت تطبيق محفظة جيب من متجر بلاي أولاً');
             }
           }
         }
@@ -552,7 +554,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.textOnPrimary,
-                      disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
+                      disabledBackgroundColor:
+                          AppColors.primary.withValues(alpha: 0.6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
