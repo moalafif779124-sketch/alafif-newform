@@ -74,42 +74,41 @@ class PaymentService {
     String posNumber = AppConstants.jeebPosNumber,
   }) async {
     try {
-      // 1️⃣ محاولة فتح تطبيق جيب عبر deep link
-      final jeebDeepLink =
-          'jeeb://payment?pos=$posNumber&amount=${amount.toInt()}&order_id=$orderId';
+      // 1️⃣ محاولة فتح تطبيق جيب عبر deep link بصيغ متعددة
+      final deepLinks = [
+        'jeeb://payment?pos=$posNumber&amount=${amount.toInt()}',
+        'jeeb://pay?pos=$posNumber&amount=${amount.toInt()}',
+        'jeeb://$posNumber',
+      ];
 
-      if (await canLaunchUrl(Uri.parse(jeebDeepLink))) {
-        await launchUrl(Uri.parse(jeebDeepLink),
-            mode: LaunchMode.externalApplication);
-        debugPrint('✅ Jeeb Wallet opened via deep link: $jeebDeepLink');
-        return true;
+      for (final link in deepLinks) {
+        final uri = Uri.parse(link);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          debugPrint('✅ Jeeb Wallet opened via: $link');
+          return true;
+        }
       }
 
-      // 2️⃣ محاولة فتح عبر Android Intent
-      final intentUrl =
-          'intent://pay?pos=$posNumber&amount=${amount.toInt()}&order_id=$orderId#Intent;scheme=jeeb;package=${AppConstants.jeebPackageName};end';
-      final intentUri = Uri.parse(intentUrl);
-
+      // 2️⃣ فتح التطبيق مباشرة عبر Intent بالـ package name
+      final intentUri =
+          Uri.parse('intent://pay#Intent;package=${AppConstants.jeebPackageName};end');
       if (await canLaunchUrl(intentUri)) {
         await launchUrl(intentUri, mode: LaunchMode.externalApplication);
-        debugPrint('✅ Jeeb Wallet opened via intent: $intentUrl');
+        debugPrint('✅ Jeeb Wallet opened via package intent');
         return true;
       }
 
-      // 3️⃣ إذا كان جيب غير مثبت، نفتح متجر بلاي لتحميله
-      final marketUrl = 'market://details?id=${AppConstants.jeebPackageName}';
-      final marketUri = Uri.parse(marketUrl);
-
-      if (await canLaunchUrl(marketUri)) {
-        await launchUrl(marketUri, mode: LaunchMode.externalApplication);
-        debugPrint('📲 Opening Play Store for Jeeb installation');
-        return false;
+      // 3️⃣ آخر محاولة: فتح التطبيق مباشرة
+      final appUri = Uri.parse(
+          'intent:#Intent;package=${AppConstants.jeebPackageName};end');
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri, mode: LaunchMode.externalApplication);
+        debugPrint('✅ Jeeb Wallet opened via direct package');
+        return true;
       }
 
-      // 4️⃣ آخر خيار - رابط ويب
-      final webUrl = 'https://jeeb.io';
-      await launchUrl(Uri.parse(webUrl), mode: LaunchMode.externalApplication);
-      debugPrint('🌐 Opening Jeeb website');
+      debugPrint('❌ Jeeb Wallet is not installed on this device');
       return false;
 
     } catch (e) {
@@ -147,7 +146,7 @@ class PaymentService {
         'reference': orderId,
         'amount': amount,
         'status': 'failed',
-        'message': 'يرجى تثبيت تطبيق محفظة جيب من متجر بلاي',
+        'message': 'تطبيق محفظة جيب غير مثبت على الجهاز',
       };
     }
   }

@@ -173,7 +173,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             // لم يتم العثور على تطبيق جيب
             if (mounted) {
               _showSnackBar(
-                  'يرجى تثبيت تطبيق محفظة جيب من متجر بلاي أولاً');
+                  'تطبيق محفظة جيب غير مثبت على الجهاز');
             }
           }
         }
