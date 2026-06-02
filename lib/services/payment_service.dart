@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 
 /// خدمة الدفع - تدعم كريمي باي، جيب، والدفع عند الاستلام
@@ -59,43 +62,90 @@ class PaymentService {
     };
   }
 
-  // =================== جيب (Jeeb) ===================
+  // =================== جيب (Jeeb Wallet) ===================
 
-  /// إنشاء طلب دفع عبر جيب
+  /// فتح تطبيق محفظة جيب للدفع عبر البصمة
+  /// [posNumber] رقم نقطة البيع (573157)
+  /// [amount] المبلغ
+  /// [orderId] رقم الطلب
+  Future<bool> launchJeebWallet({
+    required double amount,
+    required String orderId,
+    String posNumber = AppConstants.jeebPosNumber,
+  }) async {
+    try {
+      // 1️⃣ محاولة فتح تطبيق جيب عبر deep link
+      final jeebDeepLink = 'jeeb://payment?pos=$posNumber&amount=${amount.toInt()}&order_id=$orderId';
+      
+      if (await canLaunchUrl(Uri.parse(jeebDeepLink))) {
+        await launchUrl(Uri.parse(jeebDeepLink), mode: LaunchMode.externalApplication);
+        debugPrint('✅ Jeeb Wallet opened via deep link: $jeebDeepLink');
+        return true;
+      }
+
+      // 2️⃣ محاولة فتح عبر Android Intent
+      final intentUrl = 'intent://pay?pos=$posNumber&amount=${amount.toInt()}&order_id=$orderId#Intent;scheme=jeeb;package=${AppConstants.jeebPackageName};end';
+      final intentUri = Uri.parse(intentUrl);
+      
+      if (await canLaunchUrl(intentUri)) {
+        await launchUrl(intentUri, mode: LaunchMode.externalApplication);
+        debugPrint('✅ Jeeb Wallet opened via intent: $intentUrl');
+        return true;
+      }
+
+      // 3️⃣ إذا كان جيب غير مثبت، نفتح متجر بلاي لتحميله
+      final marketUrl = 'market://details?id=${AppConstants.jeebPackageName}';
+      final marketUri = Uri.parse(marketUrl);
+      
+      if (await canLaunchUrl(marketUri)) {
+        await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+        debugPrint('📲 Opening Play Store for Jeeb installation');
+        return false;
+      }
+
+      // 4️⃣ آخر خيار - رابط ويب
+      final webUrl = 'https://jeeb.io';
+      await launchUrl(Uri.parse(webUrl), mode: LaunchMode.externalApplication);
+      debugPrint('🌐 Opening Jeeb website');
+      return false;
+      
+    } catch (e) {
+      debugPrint('❌ Jeeb Wallet launch error: $e');
+      return false;
+    }
+  }
+
+  /// إنشاء طلب دفع عبر جيب (API - للاستخدام المستقبلي)
   Future<Map<String, dynamic>> initiateJeebPayment({
     required double amount,
     required String orderId,
     required String customerPhone,
     required String customerName,
   }) async {
-    try {
-      // هذه واجهة API لجيب - تحتاج إلى إدخال المفاتيح الحقيقية
-      final response = await http.post(
-        Uri.parse('https://api.jeeb.io/v1/payments'), // URL تجريبي
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': 'YOUR_JEEB_API_KEY',
-        },
-        body: jsonEncode({
-          'amount': amount,
-          'currency': 'YER',
-          'reference': orderId,
-          'customer': {
-            'phone': customerPhone,
-            'name': customerName,
-          },
-          'redirect_url': 'https://alafif-newform.com/payment/jeeb-callback',
-        }),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('فشل الاتصال بجيب');
-      }
-    } catch (e) {
-      // في حالة فشل الاتصال، نعود إلى المحاكاة
-      return _simulateJeebPayment(amount, orderId);
+    // نفتح محفظة جيب مباشرة على الجهاز بدلاً من API
+    final launched = await launchJeebWallet(
+      amount: amount,
+      orderId: orderId,
+    );
+    
+    if (launched) {
+      return {
+        'success': true,
+        'transaction_id': 'JEB_${DateTime.now().millisecondsSinceEpoch}',
+        'reference': orderId,
+        'amount': amount,
+        'status': 'pending',
+        'message': 'تم فتح محفظة جيب. قم بتأكيد الدفع في التطبيق.',
+      };
+    } else {
+      return {
+        'success': false,
+        'transaction_id': '',
+        'reference': orderId,
+        'amount': amount,
+        'status': 'failed',
+        'message': 'يرجى تثبيت تطبيق محفظة جيب من متجر بلاي',
+      };
     }
   }
 
@@ -111,7 +161,7 @@ class PaymentService {
       'amount': amount,
       'status': 'completed',
       'payment_url': 'https://jeeb.io/pay/example',
-      'message': 'تم الدفع عبر جيب بنجاح',
+      'message': 'تم الدفع عبر محفظة جيب بنجاح',
     };
   }
 
