@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../services/firebase_service.dart';
+import '../../services/payment_service.dart';
 import '../home/home_screen.dart';
 
 /// شاشة إتمام الطلب (Checkout)
@@ -133,6 +134,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
 
+      // إنشاء الطلب
       final orderId = await orderProvider.createOrder(
         userId: authProvider.userId ?? '',
         cartItems: cartProvider.items,
@@ -146,6 +148,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       setState(() => _isSubmitting = false);
 
       if (orderId != null && mounted) {
+        // 🔵 إذا كانت طريقة الدفع هي محفظة جيب، نفتح التطبيق
+        if (_selectedPaymentMethod == 'jeeb') {
+          final paymentService = PaymentService();
+          final jeebResult = await paymentService.launchJeebWallet(
+            amount: cartProvider.total,
+            orderId: orderId,
+            posNumber: AppConstants.jeebPosNumber,
+          );
+
+          if (jeebResult) {
+            // تم فتح محفظة جيب - نخبر المستخدم بتأكيد الدفع
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ تم فتح محفظة جيب. قم بتأكيد الدفع في التطبيق.'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          } else {
+            // لم يتم العثور على تطبيق جيب
+            if (mounted) {
+              _showSnackBar( 'يرجى تثبيت تطبيق محفظة جيب من متجر بلاي أولاً');
+            }
+          }
+        }
+
         // تفريغ السلة
         cartProvider.clearCart();
 
@@ -600,13 +630,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _buildPaymentIcon(String iconName, bool isSelected) {
+    // أيقونة جيب: نستخدم الصورة المرفوعة
+    if (iconName == 'jeeb') {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : AppColors.background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: 1.5,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.asset(
+            AppConstants.jeebIconPath,
+            width: 36,
+            height: 36,
+            fit: BoxFit.contain,
+          ),
+        ),
+      );
+    }
+
     IconData iconData;
     switch (iconName) {
       case 'kuraimi':
         iconData = Icons.account_balance_wallet;
-        break;
-      case 'jeeb':
-        iconData = Icons.wallet;
         break;
       case 'cash':
         iconData = Icons.money;
