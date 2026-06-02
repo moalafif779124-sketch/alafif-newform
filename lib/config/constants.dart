@@ -83,6 +83,10 @@ class AppConstants {
   ];
 
   // =========== طرق الدفع ===========
+  static const String jeebPosNumber = '573157'; // رقم نقطة البيع لمحفظة جيب
+  static const String jeebPackageName = 'com.ahd.jaib'; // حزمة تطبيق جيب على أندرويد
+  static const String jeebIconPath = 'assets/images/jeeb_icon.png';
+
   static const List<Map<String, dynamic>> paymentMethods = [
     {
       'id': 'kuraimi',
@@ -96,7 +100,8 @@ class AppConstants {
       'name': 'جيب',
       'nameEn': 'Jeeb',
       'icon': 'jeeb',
-      'description': 'الدفع عبر محفظة جيب',
+      'iconPath': jeebIconPath,
+      'description': 'الدفع عبر محفظة جيب - فتح التطبيق مباشرة',
     },
     {
       'id': 'cod',
