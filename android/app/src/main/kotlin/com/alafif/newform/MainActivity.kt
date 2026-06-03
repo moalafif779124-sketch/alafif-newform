@@ -85,7 +85,6 @@ class MainActivity: FlutterActivity() {
             for (path in paths) {
                 for (paramKey in paramKeys) {
                     try {
-                        // حاول بكل combination
                         val queryParams = "$paramKey=$posNumber&amount=$amount"
                         val uriStr = "$scheme:$path?$queryParams"
                         val uri = Uri.parse(uriStr)
@@ -95,21 +94,60 @@ class MainActivity: FlutterActivity() {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                         }
                         startActivity(intent)
-                        // إذا وصلنا هنا يعني نجح
                         android.util.Log.d("JeebIntent", "✅ SUCCESS: $uriStr")
                         return true
                     } catch (e: Exception) {
-                        android.util.Log.d("JeebIntent", "❌ FAILED: $scheme:$path?$paramKey=... : $e")
+                        android.util.Log.d("JeebIntent", "❌ FAILED (scheme): $scheme:$path?... ")
                     }
                 }
             }
         }
 
-        // ===== 2. جرب getLaunchIntentForPackage مع extras =====
+        // ===== 2. جرب ACTION_VIEW بدون package (Android يختار التطبيق) =====
+        for (scheme in schemes) {
+            for (path in paths) {
+                try {
+                    val uriStr = "$scheme:$path?pos_number=$posNumber&amount=$amount"
+                    val uri = Uri.parse(uriStr)
+                    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    // تحقق إذا أي تطبيق يستطيع معالجة هذا الـ intent
+                    if (intent.resolveActivity(packageManager) != null ||
+                        packageManager.queryIntentActivities(intent, 0).isNotEmpty()) {
+                        startActivity(intent)
+                        android.util.Log.d("JeebIntent", "✅ SUCCESS (no pkg): $uriStr")
+                        return true
+                    }
+                } catch (e: Exception) { }
+            }
+        }
+
+        // ===== 3. جرب https://jeeb.io/... (ربما التطبيق يستخدم Android App Links) =====
+        val httpPaths = listOf(
+            "https://jeeb.io/payment?pos_number=$posNumber&amount=$amount",
+            "https://jeeb.io/pay?pos_number=$posNumber&amount=$amount",
+            "https://jeeb.io/pos?pos_number=$posNumber&amount=$amount",
+            "https://www.jeeb.io/payment?pos_number=$posNumber&amount=$amount"
+        )
+        for (httpUrl in httpPaths) {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(httpUrl)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (intent.resolveActivity(packageManager) != null ||
+                    packageManager.queryIntentActivities(intent, 0).isNotEmpty()) {
+                    startActivity(intent)
+                    android.util.Log.d("JeebIntent", "✅ SUCCESS (http): $httpUrl")
+                    return true
+                }
+            } catch (e: Exception) { }
+        }
+
+        // ===== 4. جرب getLaunchIntentForPackage مع extras =====
         try {
             val launchIntent = packageManager.getLaunchIntentForPackage(JEEB_PACKAGE)
             if (launchIntent != null) {
-                // جرب وضع pos_number في extras بعدة أسماء
                 val extraKeys = listOf(
                     "pos_number", "pos", "merchant_id", "terminal_id",
                     "store_id", "terminal", "extra_pos_number", "extra_pos"
@@ -124,28 +162,39 @@ class MainActivity: FlutterActivity() {
                         startActivity(intent)
                         android.util.Log.d("JeebIntent", "✅ SUCCESS (extras): $extraKey=$posNumber")
                         return true
-                    } catch (e: Exception) {
-                        android.util.Log.d("JeebIntent", "❌ FAILED (extras): $extraKey")
+                    } catch (e: Exception) { }
+                }
+            }
+        } catch (e: Exception) { }
+
+        // ===== 5. اطبع كل Activities التطبيق للتشخيص =====
+        try {
+            val pi = packageManager.getPackageInfo(JEEB_PACKAGE, PackageManager.GET_ACTIVITIES)
+            if (pi.activities != null) {
+                android.util.Log.d("JeebIntent", "=== Jeeb App Activities ===")
+                for (activity in pi.activities) {
+                    android.util.Log.d("JeebIntent", "  Activity: ${activity.name} exported=${activity.exported}")
+                    // جرب فتح كل Activity مصدرة
+                    if (activity.exported) {
+                        try {
+                            val intent = Intent().apply {
+                                setClassName(JEEB_PACKAGE, activity.name)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                putExtra("pos_number", posNumber)
+                                putExtra("amount", amount)
+                            }
+                            startActivity(intent)
+                            android.util.Log.d("JeebIntent", "✅ SUCCESS (activity): ${activity.name}")
+                            return true
+                        } catch (e: Exception) { }
                     }
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.d("JeebIntent", "❌ FAILED (launchIntent): $e")
+            android.util.Log.d("JeebIntent", "❌ Could not read package info: $e")
         }
 
-        // ===== 3. جرب ACTION_MAIN بدلاً من ACTION_VIEW =====
-        try {
-            val mainIntent = Intent(Intent.ACTION_MAIN).apply {
-                `package` = JEEB_PACKAGE
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                // جرب صيغ data مختلفة
-                data = Uri.parse("jeeb://payment?pos_number=$posNumber")
-            }
-            startActivity(mainIntent)
-            return true
-        } catch (e: Exception) { }
-
-        // ===== 4. فشل كل شيء → افتح التطبيق فقط عالاقل =====
+        // ===== 6. فشل كل شيء → افتح التطبيق فقط عالاقل =====
         try {
             val fallbackIntent = packageManager.getLaunchIntentForPackage(JEEB_PACKAGE)
             if (fallbackIntent != null) {
