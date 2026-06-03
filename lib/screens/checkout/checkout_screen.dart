@@ -174,6 +174,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             if (mounted) {
               _showSnackBar(
                   'تطبيق محفظة جيب غير مثبت على الجهاز');
+              // تشخيص تلقائي
+              paymentService.diagnoseJeebApp().then((diag) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(diag, style: const TextStyle(fontSize: 11)),
+                      backgroundColor: Colors.black87,
+                      duration: const Duration(seconds: 10),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              });
             }
           }
         }

@@ -10,6 +10,19 @@ import '../config/constants.dart';
 class PaymentService {
   static const _methodChannel = MethodChannel('com.alafif.newform/app_launcher');
 
+  /// تشخيص تطبيق محفظة جيب — قراءة كل الأنشطة والمقاصد
+  Future<String> diagnoseJeebApp() async {
+    try {
+      if (Platform.isAndroid) {
+        final result = await _methodChannel.invokeMethod<String>('diagnoseJeebApp');
+        return result ?? 'فشل التشخيص';
+      }
+      return 'التشخيص متاح فقط على Android';
+    } catch (e) {
+      return 'خطأ في التشخيص: $e';
+    }
+  }
+
   /// التحقق مما إذا كان تطبيق محفظة جيب مثبتاً على الجهاز
   /// (Android فقط - يستخدم PackageManager مباشرة)
   Future<bool> isJeebAppInstalled() async {
