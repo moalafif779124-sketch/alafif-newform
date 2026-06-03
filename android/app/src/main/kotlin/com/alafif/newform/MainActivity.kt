@@ -118,7 +118,7 @@ class MainActivity: FlutterActivity() {
 
     /** يجرب كل الصيغ الممكنة لفتح شاشة الدفع في محفظة جيب */
     private fun tryAllJeebIntents(posNumber: String, amount: String, orderId: String): Boolean {
-        // ===== 1. الأفضل: جرب https://jeeb.app (هذا الـ domain اللي يسجله التطبيق) =====
+        // ===== 1. https://jeeb.app مع package (جبري — ما يفتح في المتصفح) =====
         val jeebAppUrls = listOf(
             "https://jeeb.app/pay?pos_number=$posNumber&amount=$amount&order_id=$orderId",
             "https://jeeb.app/payment?pos_number=$posNumber&amount=$amount",
@@ -132,134 +132,61 @@ class MainActivity: FlutterActivity() {
         for (url in jeebAppUrls) {
             try {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                    `package` = JEEB_PACKAGE  // إجباري — يمنع المتصفح من اعتراض الرابط
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                // تحقق إذا التطبيق يقدر يعالج هذا الرابط
-                if (intent.resolveActivity(packageManager) != null ||
-                    packageManager.queryIntentActivities(intent, 0).isNotEmpty()) {
-                    startActivity(intent)
-                    android.util.Log.d("JeebIntent", "✅ jeeb.app: $url")
-                    return true
-                }
-                // جرب بدون resolve (في حال التطبيق ما يظهر في query)
                 startActivity(intent)
-                android.util.Log.d("JeebIntent", "✅ jeeb.app (direct): $url")
+                android.util.Log.d("JeebIntent", "✅ jeeb.app: $url")
                 return true
             } catch (e: Exception) { }
         }
 
-        // ===== 2. جرب jeeb:// (الـ scheme الأصلي للتطبيق) =====
-        val jeebSchemes = listOf("jeeb")
+        // ===== 2. jeeb:// مع package =====
         val paths = listOf("/payment", "/pay", "/purchase", "/pos", "/scan", "/qrcode", "/merchant", "/terminal", "")
         val paramKeys = listOf("pos_number", "pos", "merchant_id", "terminal_id", "store_id", "terminal", "m_id", "t_id")
-        
-        // مع package
-        for (scheme in jeebSchemes) {
-            for (path in paths) {
-                for (paramKey in paramKeys) {
-                    try {
-                        val queryParams = "$paramKey=$posNumber&amount=$amount"
-                        val uriStr = "$scheme:$path?$queryParams"
-                        val uri = Uri.parse(uriStr)
-                        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                            `package` = JEEB_PACKAGE
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        }
-                        startActivity(intent)
-                        android.util.Log.d("JeebIntent", "✅ PACKAGE: $uriStr")
-                        return true
-                    } catch (e: Exception) { }
-                }
-            }
-        }
-        
-        // بدون package
-        for (scheme in jeebSchemes) {
-            for (path in paths) {
+
+        for (path in paths) {
+            for (paramKey in paramKeys) {
                 try {
-                    val uriStr = "$scheme:$path?pos_number=$posNumber&amount=$amount"
+                    val uriStr = "jeeb:$path?$paramKey=$posNumber&amount=$amount"
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr)).apply {
+                        `package` = JEEB_PACKAGE
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
-                    if (intent.resolveActivity(packageManager) != null) {
-                        startActivity(intent)
-                        android.util.Log.d("JeebIntent", "✅ NO_PKG: $uriStr")
-                        return true
-                    }
+                    startActivity(intent)
+                    android.util.Log.d("JeebIntent", "✅ jeeb://: $uriStr")
+                    return true
                 } catch (e: Exception) { }
             }
         }
 
-        // ===== 3. جرب https://jeeb.io (قديم - للتوافق) =====
-        val httpUrls = listOf(
-            "https://jeeb.io/payment?pos_number=$posNumber&amount=$amount",
-            "https://jeeb.io/pay?pos_number=$posNumber&amount=$amount",
-            "https://jeeb.io/pos?pos_number=$posNumber&amount=$amount",
-            "https://jeeb.io/qr?pos_number=$posNumber&amount=$amount",
-            "https://jeeb.io/merchant?pos_number=$posNumber&amount=$amount",
-            "https://www.jeeb.io/payment?pos_number=$posNumber&amount=$amount",
-            "https://pay.jeeb.io?pos_number=$posNumber&amount=$amount",
-            "https://app.jeeb.io/payment?pos_number=$posNumber&amount=$amount"
-        )
-        for (url in httpUrls) {
+        // ===== 3. jeeb:// بدون package (أي تطبيق) =====
+        for (path in paths) {
             try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                val uriStr = "jeeb:$path?pos_number=$posNumber&amount=$amount"
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr)).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                if (intent.resolveActivity(packageManager) != null) {
+                if (intent.resolveActivity(packageManager) != null ||
+                    packageManager.queryIntentActivities(intent, 0).isNotEmpty()) {
                     startActivity(intent)
-                    android.util.Log.d("JeebIntent", "✅ HTTP: $url")
+                    android.util.Log.d("JeebIntent", "✅ jeeb:// (any app): $uriStr")
                     return true
                 }
             } catch (e: Exception) { }
         }
 
-        // ===== 3. جرب ACTION_SEND =====
-        try {
-            val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                `package` = JEEB_PACKAGE
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, "pos_number=$posNumber&amount=$amount")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(sendIntent)
-            return true
-        } catch (e: Exception) { }
-
-        // ===== 4. جرب http:// بدلاً من https:// =====
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://jeeb.io/payment?pos_number=$posNumber&amount=$amount")).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
-                return true
-            }
-        } catch (e: Exception) { }
-
-        // ===== 5. افتح التطبيق على الأقل + سجل التشخيص =====
+        // ===== 4. افتح التطبيق فقط (home screen) + تشخيص =====
         try {
             val fallbackIntent = packageManager.getLaunchIntentForPackage(JEEB_PACKAGE)
             if (fallbackIntent != null) {
                 fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 startActivity(fallbackIntent)
-                
-                // اطبع التشخيص في Logcat
-                android.util.Log.d("JeebIntent", "=== DIAGNOSTIC ===")
-                try {
-                    val pi = packageManager.getPackageInfo(JEEB_PACKAGE, PackageManager.GET_ACTIVITIES)
-                    if (pi.activities != null) {
-                        for (a in pi.activities) {
-                            android.util.Log.d("JeebIntent", "Activity: ${a.name} exported=${a.exported}")
-                        }
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.d("JeebIntent", "Diagnosis failed: $e")
-                }
+                android.util.Log.d("JeebIntent", "ℹ️ Opened Jeeb home screen (no deep link worked)")
+                return true
             }
-            return false
-        } catch (e: Exception) {
-            return false
-        }
+        } catch (e: Exception) { }
+
+        return false
     }
 }
