@@ -90,25 +90,27 @@ class PaymentService {
         }
       }
 
-      // 2️⃣ فتح التطبيق مباشرة عبر Intent بالـ package name
-      final intentUri =
-          Uri.parse('intent://pay#Intent;package=${AppConstants.jeebPackageName};end');
-      if (await canLaunchUrl(intentUri)) {
-        await launchUrl(intentUri, mode: LaunchMode.externalApplication);
-        debugPrint('✅ Jeeb Wallet opened via package intent');
-        return true;
+      // 2️⃣ محاولة فتح التطبيق مباشرة (دون canLaunchUrl — لأنها قد تفشل حتى لو التطبيق مثبت)
+      //    نستخدم Intent مع action.MAIN لفتح التطبيق
+      final intentUris = [
+        // صيغ متعددة لزيادة فرصة النجاح
+        'intent://#Intent;action=android.intent.action.MAIN;package=${AppConstants.jeebPackageName};end',
+        'intent://#Intent;package=${AppConstants.jeebPackageName};end',
+      ];
+
+      for (final intentStr in intentUris) {
+        try {
+          await launchUrl(Uri.parse(intentStr),
+              mode: LaunchMode.externalApplication);
+          debugPrint('✅ Jeeb Wallet launched via intent: $intentStr');
+          return true;
+        } catch (_) {
+          // تجاهل الخطأ وجرب الصيغة التالية
+          debugPrint('⚠️ Intent failed: $intentStr');
+        }
       }
 
-      // 3️⃣ آخر محاولة: فتح التطبيق مباشرة
-      final appUri = Uri.parse(
-          'intent:#Intent;package=${AppConstants.jeebPackageName};end');
-      if (await canLaunchUrl(appUri)) {
-        await launchUrl(appUri, mode: LaunchMode.externalApplication);
-        debugPrint('✅ Jeeb Wallet opened via direct package');
-        return true;
-      }
-
-      debugPrint('❌ Jeeb Wallet is not installed on this device');
+      debugPrint('❌ Jeeb Wallet could not be opened');
       return false;
 
     } catch (e) {
