@@ -23,10 +23,10 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="jaib" />
         </intent>
-        <!-- رابط https://jeeb.io (Android App Links) -->
+        <!-- رابط https://jeeb.app (Android App Links) -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="https" android:host="jeeb.io" />
+            <data android:scheme="https" android:host="jeeb.app" />
         </intent>
         <!-- intent:// scheme -->
         <intent>

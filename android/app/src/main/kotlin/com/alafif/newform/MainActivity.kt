@@ -118,8 +118,38 @@ class MainActivity: FlutterActivity() {
 
     /** يجرب كل الصيغ الممكنة لفتح شاشة الدفع في محفظة جيب */
     private fun tryAllJeebIntents(posNumber: String, amount: String, orderId: String): Boolean {
-        // ===== 1. جرب ACTION_VIEW مع كل الـ schemes =====
-        val allSchemes = listOf("jeeb", "jaib", "jeb", "jyeb", "jib", "wallet", "pay", "payment", "mtn", "yemen", "ye", "pos", "qrcode", "scan")
+        // ===== 1. الأفضل: جرب https://jeeb.app (هذا الـ domain اللي يسجله التطبيق) =====
+        val jeebAppUrls = listOf(
+            "https://jeeb.app/pay?pos_number=$posNumber&amount=$amount&order_id=$orderId",
+            "https://jeeb.app/payment?pos_number=$posNumber&amount=$amount",
+            "https://jeeb.app/pos?pos_number=$posNumber&amount=$amount",
+            "https://jeeb.app/merchant?pos_number=$posNumber&amount=$amount",
+            "https://jeeb.app/$posNumber/pay?amount=$amount",
+            "https://jeeb.app/pay/$posNumber/$amount",
+            "https://jeeb.app/payment/$posNumber/$amount",
+            "https://www.jeeb.app/pay?pos_number=$posNumber&amount=$amount"
+        )
+        for (url in jeebAppUrls) {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                // تحقق إذا التطبيق يقدر يعالج هذا الرابط
+                if (intent.resolveActivity(packageManager) != null ||
+                    packageManager.queryIntentActivities(intent, 0).isNotEmpty()) {
+                    startActivity(intent)
+                    android.util.Log.d("JeebIntent", "✅ jeeb.app: $url")
+                    return true
+                }
+                // جرب بدون resolve (في حال التطبيق ما يظهر في query)
+                startActivity(intent)
+                android.util.Log.d("JeebIntent", "✅ jeeb.app (direct): $url")
+                return true
+            } catch (e: Exception) { }
+        }
+
+        // ===== 2. جرب jeeb:// (الـ scheme الأصلي للتطبيق) =====
+        val schemes = listOf("jeeb")
         val paths = listOf("/payment", "/pay", "/purchase", "/pos", "/scan", "/qrcode", "/merchant", "/terminal", "")
         val paramKeys = listOf("pos_number", "pos", "merchant_id", "terminal_id", "store_id", "terminal", "m_id", "t_id")
         
