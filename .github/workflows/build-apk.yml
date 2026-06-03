@@ -7,7 +7,6 @@ on:
     branches: [main, master]
   workflow_dispatch: # تشغيل يدوي
 
-# فرض Node.js 24 لتجنب تحذير الإهمال
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -51,11 +50,15 @@ jobs:
 
       - name: 🚀 رفع APK إلى GitHub Release
         run: |
-          # حذف الملف القديم من الـ release
-          gh release view jeeb-v1 --json assets -q '.assets[] | select(.name=="app-arm64-v8a-release.apk") | .id' 2>/dev/null | while read id; do
-            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$id"
+          # لا تفشل لو delete فشل
+          echo "🗑️ محاولة حذف الملف القديم..."
+          ASSET_IDS=$(gh release view jeeb-v1 --json assets -q '.assets[] | select(.name=="app-arm64-v8a-release.apk") | .id' 2>/dev/null || echo "")
+          for id in $ASSET_IDS; do
+            echo "حذف asset $id..."
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$id" 2>/dev/null || echo "⚠️ لا يمكن حذف asset $id"
           done
           # رفع الـ APK الجديد
+          echo "📤 رفع APK إلى jeeb-v1..."
           gh release upload jeeb-v1 build/app/outputs/flutter-apk/app-arm64-v8a-release.apk --clobber
           echo "✅ APK uploaded to release jeeb-v1"
         env:
