@@ -58,25 +58,28 @@ class MainActivity: FlutterActivity() {
             sb.append("✅ Jeeb app installed: ${pi.versionName}")
             
             // الأنشطة (Activities)
-            if (pi.activities != null) {
-                sb.append("\n\n=== Activities (${pi.activities.size}) ===")
-                for (a in pi.activities) {
+            val activities = pi.activities
+            if (activities != null) {
+                sb.append("\n\n=== Activities (${activities.size}) ===")
+                for (a in activities) {
                     sb.append("\n• ${a.name} exported=${a.exported}")
                 }
             }
             
             // المستقبلات (Receivers)
-            if (pi.receivers != null) {
-                sb.append("\n\n=== Receivers (${pi.receivers.size}) ===")
-                for (r in pi.receivers) {
+            val receivers = pi.receivers
+            if (receivers != null) {
+                sb.append("\n\n=== Receivers (${receivers.size}) ===")
+                for (r in receivers) {
                     sb.append("\n• ${r.name} exported=${r.exported}")
                 }
             }
             
             // الخدمات (Services)
-            if (pi.services != null) {
-                sb.append("\n\n=== Services (${pi.services.size}) ===")
-                for (s in pi.services) {
+            val services = pi.services
+            if (services != null) {
+                sb.append("\n\n=== Services (${services.size}) ===")
+                for (s in services) {
                     sb.append("\n• ${s.name} exported=${s.exported}")
                 }
             }
