@@ -45,11 +45,30 @@ class PaymentService {
       }
       debugPrint('✅ Jeeb Wallet IS installed');
 
-      // 2️⃣ محاولة فتح تطبيق جيب عبر deep link بصيغ متعددة
-      //    ملاحظة: لا نستخدم canLaunchUrl — نجرب launchUrl مباشرة
+      // 2️⃣ الأفضل: استخدام MethodChannel مع ACTION_VIEW Intent (Android native)
+      //    هذا يفتح شاشة الدفع مباشرة مع pos_number
+      if (Platform.isAndroid) {
+        try {
+          final result = await _methodChannel.invokeMethod<bool>('launchJeebPayment', {
+            'posNumber': posNumber,
+            'amount': amount.toInt().toString(),
+            'orderId': orderId,
+          });
+          if (result == true) {
+            debugPrint('✅ Jeeb Wallet opened via ACTION_VIEW Intent');
+            return true;
+          }
+        } catch (e) {
+          debugPrint('⚠️ launchJeebPayment failed: $e');
+        }
+      }
+
+      // 3️⃣ محاولة فتح تطبيق جيب عبر deep link بصيغ متعددة
+      //    ملاحظة: المعامل pos_number (وليس pos) — هذا ما تقبله محفظة جيب
       final deepLinks = [
+        'jeeb://payment?pos_number=$posNumber&amount=${amount.toInt()}',
+        'jeeb://pay?pos_number=$posNumber&amount=${amount.toInt()}',
         'jeeb://payment?pos=$posNumber&amount=${amount.toInt()}',
-        'jeeb://pay?pos=$posNumber&amount=${amount.toInt()}',
         'jeeb://$posNumber',
       ];
 
@@ -64,28 +83,27 @@ class PaymentService {
         }
       }
 
-      // 3️⃣ محاولة فتح التطبيق مباشرة عبر MethodChannel (Android PackageManager)
+      // 4️⃣ محاولة فتح التطبيق عن طريق MethodChannel العام (مع URI)
       if (Platform.isAndroid) {
         try {
+          final uri = 'jeeb://payment?pos_number=$posNumber&amount=${amount.toInt()}';
           final result = await _methodChannel.invokeMethod<bool>('launchAppByPackage', {
             'packageName': AppConstants.jeebPackageName,
-            'posNumber': posNumber,
-            'amount': amount.toInt().toString(),
-            'orderId': orderId,
+            'uri': uri,
           });
           if (result == true) {
-            debugPrint('✅ Jeeb Wallet opened via MethodChannel');
+            debugPrint('✅ Jeeb Wallet opened via launchAppByPackage with URI');
             return true;
           }
         } catch (e) {
-          debugPrint('⚠️ MethodChannel launch failed: $e');
+          debugPrint('⚠️ launchAppByPackage failed: $e');
         }
       }
 
-      // 4️⃣ آخر محاولة: Intent string عبر url_launcher
+      // 5️⃣ آخر محاولة: Intent string عبر url_launcher
       final intentUris = [
-        'intent://#Intent;action=android.intent.action.MAIN;package=${AppConstants.jeebPackageName};end',
-        'intent://#Intent;package=${AppConstants.jeebPackageName};end',
+        'intent://#Intent;action=android.intent.action.VIEW;package=${AppConstants.jeebPackageName};S.browser_fallback_url=https://jeeb.io/payment?pos_number=$posNumber;end',
+        'intent://#Intent;action=android.intent.action.VIEW;package=${AppConstants.jeebPackageName};end',
       ];
 
       for (final intentStr in intentUris) {
