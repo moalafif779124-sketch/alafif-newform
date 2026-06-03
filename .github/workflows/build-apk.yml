@@ -50,22 +50,18 @@ jobs:
 
       - name: 🚀 رفع APK إلى GitHub Release
         run: |
-          # رفع الـ APK إلى الـ release (إنشاء release إذا ما موجود)
+          # رفع APK باستخدام GitHub API مباشرة (بدون gh CLI)
           echo "📤 رفع APK إلى jeeb-v1..."
-          if gh release view jeeb-v1 &>/dev/null; then
-            # release موجود → ارفع عليه
-            gh release upload jeeb-v1 build/app/outputs/flutter-apk/app-arm64-v8a-release.apk --clobber
-          else
-            # release ما موجود → أنشئه
-            gh release create jeeb-v1 build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-              --title "Jeeb Wallet APK" \
-              --notes "تطبيق العفيف نيوفورم مع دمج محفظة جيب"
-          fi
-          echo "✅ APK uploaded to release jeeb-v1"
-          echo "📎 Download URL: https://github.com/$GITHUB_REPOSITORY/releases/download/jeeb-v1/app-arm64-v8a-release.apk"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          UPLOAD_URL="https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/333416472/assets?name=app-arm64-v8a-release.apk"
+          curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary @build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            "$UPLOAD_URL" \
+            -w "\nHTTP:%{http_code}\n" | tail -1
+          echo ""
+          echo "✅ APK uploaded"
+          echo "📎 https://github.com/$GITHUB_REPOSITORY/releases/download/jeeb-v1/app-arm64-v8a-release.apk"
 
       - name: 📋 عرض المخرجات
         run: |
