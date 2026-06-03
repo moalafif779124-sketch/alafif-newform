@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +8,106 @@ import '../config/constants.dart';
 
 /// خدمة الدفع - تدعم كريمي باي، جيب، والدفع عند الاستلام
 class PaymentService {
+  static const _methodChannel = MethodChannel('com.alafif.newform/app_launcher');
+
+  /// التحقق مما إذا كان تطبيق محفظة جيب مثبتاً على الجهاز
+  /// (Android فقط - يستخدم PackageManager مباشرة)
+  Future<bool> isJeebAppInstalled() async {
+    try {
+      if (Platform.isAndroid) {
+        final result = await _methodChannel.invokeMethod<bool>('isAppInstalled', {
+          'packageName': AppConstants.jeebPackageName,
+        });
+        return result ?? false;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('⚠️ isJeebAppInstalled error: $e');
+      return false;
+    }
+  }
+
+  /// فتح تطبيق محفظة جيب للدفع عبر البصمة
+  /// [posNumber] رقم نقطة البيع (573157)
+  /// [amount] المبلغ
+  /// [orderId] رقم الطلب
+  Future<bool> launchJeebWallet({
+    required double amount,
+    required String orderId,
+    String posNumber = AppConstants.jeebPosNumber,
+  }) async {
+    try {
+      // 1️⃣ التحقق أولاً: هل التطبيق مثبت أصلاً؟
+      final isInstalled = await isJeebAppInstalled();
+      if (!isInstalled) {
+        debugPrint('❌ Jeeb Wallet is NOT installed');
+        return false;
+      }
+      debugPrint('✅ Jeeb Wallet IS installed');
+
+      // 2️⃣ محاولة فتح تطبيق جيب عبر deep link بصيغ متعددة
+      //    ملاحظة: لا نستخدم canLaunchUrl — نجرب launchUrl مباشرة
+      final deepLinks = [
+        'jeeb://payment?pos=$posNumber&amount=${amount.toInt()}',
+        'jeeb://pay?pos=$posNumber&amount=${amount.toInt()}',
+        'jeeb://$posNumber',
+      ];
+
+      for (final link in deepLinks) {
+        try {
+          final uri = Uri.parse(link);
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          debugPrint('✅ Jeeb Wallet opened via deep link: $link');
+          return true;
+        } catch (_) {
+          debugPrint('⚠️ Deep link failed: $link');
+        }
+      }
+
+      // 3️⃣ محاولة فتح التطبيق مباشرة عبر MethodChannel (Android PackageManager)
+      if (Platform.isAndroid) {
+        try {
+          final result = await _methodChannel.invokeMethod<bool>('launchAppByPackage', {
+            'packageName': AppConstants.jeebPackageName,
+            'posNumber': posNumber,
+            'amount': amount.toInt().toString(),
+            'orderId': orderId,
+          });
+          if (result == true) {
+            debugPrint('✅ Jeeb Wallet opened via MethodChannel');
+            return true;
+          }
+        } catch (e) {
+          debugPrint('⚠️ MethodChannel launch failed: $e');
+        }
+      }
+
+      // 4️⃣ آخر محاولة: Intent string عبر url_launcher
+      final intentUris = [
+        'intent://#Intent;action=android.intent.action.MAIN;package=${AppConstants.jeebPackageName};end',
+        'intent://#Intent;package=${AppConstants.jeebPackageName};end',
+      ];
+
+      for (final intentStr in intentUris) {
+        try {
+          await launchUrl(Uri.parse(intentStr),
+              mode: LaunchMode.externalApplication);
+          debugPrint('✅ Jeeb Wallet opened via intent: $intentStr');
+          return true;
+        } catch (_) {
+          debugPrint('⚠️ Intent failed: $intentStr');
+        }
+      }
+
+      debugPrint('❌ All Jeeb Wallet launch methods failed');
+      return false;
+
+    } catch (e) {
+      debugPrint('❌ Jeeb Wallet launch error: $e');
+      return false;
+    }
+  }
+
   // =================== كريمي باي (Kuraimi Pay) ===================
 
   /// إنشاء طلب دفع عبر كريمي باي
@@ -63,61 +164,6 @@ class PaymentService {
   }
 
   // =================== جيب (Jeeb Wallet) ===================
-
-  /// فتح تطبيق محفظة جيب للدفع عبر البصمة
-  /// [posNumber] رقم نقطة البيع (573157)
-  /// [amount] المبلغ
-  /// [orderId] رقم الطلب
-  Future<bool> launchJeebWallet({
-    required double amount,
-    required String orderId,
-    String posNumber = AppConstants.jeebPosNumber,
-  }) async {
-    try {
-      // 1️⃣ محاولة فتح تطبيق جيب عبر deep link بصيغ متعددة
-      final deepLinks = [
-        'jeeb://payment?pos=$posNumber&amount=${amount.toInt()}',
-        'jeeb://pay?pos=$posNumber&amount=${amount.toInt()}',
-        'jeeb://$posNumber',
-      ];
-
-      for (final link in deepLinks) {
-        final uri = Uri.parse(link);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          debugPrint('✅ Jeeb Wallet opened via: $link');
-          return true;
-        }
-      }
-
-      // 2️⃣ محاولة فتح التطبيق مباشرة (دون canLaunchUrl — لأنها قد تفشل حتى لو التطبيق مثبت)
-      //    نستخدم Intent مع action.MAIN لفتح التطبيق
-      final intentUris = [
-        // صيغ متعددة لزيادة فرصة النجاح
-        'intent://#Intent;action=android.intent.action.MAIN;package=${AppConstants.jeebPackageName};end',
-        'intent://#Intent;package=${AppConstants.jeebPackageName};end',
-      ];
-
-      for (final intentStr in intentUris) {
-        try {
-          await launchUrl(Uri.parse(intentStr),
-              mode: LaunchMode.externalApplication);
-          debugPrint('✅ Jeeb Wallet launched via intent: $intentStr');
-          return true;
-        } catch (_) {
-          // تجاهل الخطأ وجرب الصيغة التالية
-          debugPrint('⚠️ Intent failed: $intentStr');
-        }
-      }
-
-      debugPrint('❌ Jeeb Wallet could not be opened');
-      return false;
-
-    } catch (e) {
-      debugPrint('❌ Jeeb Wallet launch error: $e');
-      return false;
-    }
-  }
 
   /// إنشاء طلب دفع عبر جيب (API - للاستخدام المستقبلي)
   Future<Map<String, dynamic>> initiateJeebPayment({

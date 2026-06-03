@@ -9,6 +9,22 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
+    <!-- مطلوب لـ Android 11+ للسماح بالاستعلام عن تطبيقات أخرى -->
+    <queries>
+        <!-- حزمة محفظة جيب -->
+        <package android:name="com.ahd.jaib" />
+        <!-- رابط jeeb:// scheme -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="jeeb" />
+        </intent>
+        <!-- intent:// scheme -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="intent" />
+        </intent>
+    </queries>
+
     <application
         android:label="العفيف نيوفورم"
         android:name="${applicationName}"
