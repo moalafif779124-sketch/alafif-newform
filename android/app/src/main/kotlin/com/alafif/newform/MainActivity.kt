@@ -85,9 +85,9 @@ class MainActivity: FlutterActivity() {
             }
             
             // محاولة فتح الأنشطة المصدرة
-            if (pi.activities != null) {
+            if (activities != null) {
                 var triedAny = false
-                for (a in pi.activities) {
+                for (a in activities) {
                     if (a.exported && !a.name.contains("launcher", true) && !a.name.contains("splash", true) && !a.name.contains("main", true)) {
                         triedAny = true
                         try {
@@ -149,12 +149,12 @@ class MainActivity: FlutterActivity() {
         }
 
         // ===== 2. جرب jeeb:// (الـ scheme الأصلي للتطبيق) =====
-        val schemes = listOf("jeeb")
+        val jeebSchemes = listOf("jeeb")
         val paths = listOf("/payment", "/pay", "/purchase", "/pos", "/scan", "/qrcode", "/merchant", "/terminal", "")
         val paramKeys = listOf("pos_number", "pos", "merchant_id", "terminal_id", "store_id", "terminal", "m_id", "t_id")
         
         // مع package
-        for (scheme in allSchemes) {
+        for (scheme in jeebSchemes) {
             for (path in paths) {
                 for (paramKey in paramKeys) {
                     try {
@@ -174,7 +174,7 @@ class MainActivity: FlutterActivity() {
         }
         
         // بدون package
-        for (scheme in allSchemes) {
+        for (scheme in jeebSchemes) {
             for (path in paths) {
                 try {
                     val uriStr = "$scheme:$path?pos_number=$posNumber&amount=$amount"
@@ -190,7 +190,7 @@ class MainActivity: FlutterActivity() {
             }
         }
 
-        // ===== 2. جرب https://jeeb.io (App Links) =====
+        // ===== 3. جرب https://jeeb.io (قديم - للتوافق) =====
         val httpUrls = listOf(
             "https://jeeb.io/payment?pos_number=$posNumber&amount=$amount",
             "https://jeeb.io/pay?pos_number=$posNumber&amount=$amount",
