@@ -10,6 +10,7 @@ import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
 import '../home/home_screen.dart';
 import '../payment/jeeb_payment_screen.dart';
+import '../payment/kuraimi_payment_screen.dart';
 
 /// شاشة إتمام الطلب (Checkout)
 class CheckoutScreen extends StatefulWidget {
@@ -161,6 +162,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           );
           return; // JeebPaymentScreen تتعامل مع rest
+        }
+
+        // 🔵 إذا كانت طريقة الدفع هي كريمي حاسب — ننتقل لشاشة الدفع
+        if (_selectedPaymentMethod == 'kuraimi') {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => KuraimiPaymentScreen(
+                orderId: orderId,
+                amount: cartProvider.total,
+                posNumber: AppConstants.kuraimiPosNumber,
+              ),
+            ),
+          );
+          return;
         }
 
         // تفريغ السلة
@@ -620,36 +635,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildPaymentIcon(String iconName, bool isSelected) {
     // أيقونة جيب: نستخدم الصورة المرفوعة
     if (iconName == 'jeeb') {
-      return Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : AppColors.background,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
-            width: 1.5,
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
-            AppConstants.jeebIconPath,
-            width: 36,
-            height: 36,
-            fit: BoxFit.contain,
-          ),
-        ),
-      );
+      return _buildImageIcon(AppConstants.jeebIconPath, isSelected);
+    }
+    // أيقونة كريمي حاسب: نستخدم الصورة المرفوعة
+    if (iconName == 'kuraimi') {
+      return _buildImageIcon(AppConstants.kuraimiIconPath, isSelected);
     }
 
     IconData iconData;
     switch (iconName) {
-      case 'kuraimi':
-        iconData = Icons.account_balance_wallet;
-        break;
       case 'cash':
         iconData = Icons.money;
         break;
@@ -657,6 +651,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         iconData = Icons.payment;
     }
 
+    return _buildMaterialIcon(iconData, isSelected);
+  }
+
+  /// أيقونة بصورة مرفوعة (جيب، كريمي، إلخ)
+  Widget _buildImageIcon(String assetPath, bool isSelected) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: isSelected
+            ? AppColors.primary.withValues(alpha: 0.1)
+            : AppColors.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isSelected ? AppColors.primary : AppColors.border,
+          width: 1.5,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.asset(
+          assetPath,
+          width: 36,
+          height: 36,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+
+  /// أيقونة مادية (رمز Material Design)
+  Widget _buildMaterialIcon(IconData iconData, bool isSelected) {
     return Container(
       width: 40,
       height: 40,

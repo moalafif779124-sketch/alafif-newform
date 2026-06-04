@@ -87,6 +87,11 @@ class AppConstants {
   static const String jeebPackageName = 'com.ahd.jaib'; // حزمة تطبيق جيب على أندرويد
   static const String jeebIconPath = 'assets/images/jeeb_icon.png';
 
+  // =========== كريمي حاسب (Kuraimi Pay) ===========
+  static const String kuraimiPosNumber = '1134395'; // رقم نقطة البيع لكريمي حاسب
+  static const String kuraimiPackageName = 'com.kuraimi.pay'; // حزمة تطبيق كريمي حاسب (تقديري)
+  static const String kuraimiIconPath = 'assets/images/kuraimi_icon.png';
+
   // =========== طرق الدفع ===========
   static const List<Map<String, dynamic>> paymentMethods = [
     {
@@ -94,6 +99,7 @@ class AppConstants {
       'name': 'كريمي باي',
       'nameEn': 'Kuraimi Pay',
       'icon': 'kuraimi',
+      'iconPath': kuraimiIconPath,
       'description': 'الدفع عبر محفظة كريمي',
     },
     {
