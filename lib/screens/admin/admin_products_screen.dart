@@ -206,7 +206,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                             itemCount: _filteredProducts.length,
                             itemBuilder: (context, index) {
                               final product = _filteredProducts[index];
-                              return _buildProductCard(product);
+                              return _buildProductCard(product, index);
                             },
                           ),
                         ),
@@ -217,7 +217,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
     );
   }
 
-  Widget _buildProductCard(Map<String, dynamic> product) {
+  Widget _buildProductCard(Map<String, dynamic> product, int index) {
     final isActive = product['isActive'] as bool? ?? true;
     final name = product['name'] as String? ?? '';
     final price = (product['price'] ?? 0).toDouble();

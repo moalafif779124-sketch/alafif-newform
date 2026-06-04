@@ -315,8 +315,8 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
                   : DropdownButtonFormField<String>(
                       value: _categoryId,
                       decoration: _inputDecoration('الفئة *', Icons.category),
-                      items: _categories.map((c) {
-                        return DropdownMenuItem(
+                      items: _categories.map<DropdownMenuItem<String>>((c) {
+                        return DropdownMenuItem<String>(
                           value: c['id'],
                           child: Text(c['name'] ?? ''),
                         );

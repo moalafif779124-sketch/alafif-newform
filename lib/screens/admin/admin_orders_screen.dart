@@ -199,7 +199,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                     _infoRow(Icons.location_on, 'العنوان', order.shippingAddress.fullAddress),
                     if (order.shippingAddress.landmark != null &&
                         order.shippingAddress.landmark!.isNotEmpty)
-                      _infoRow(Icons.landmark, 'معلم', order.shippingAddress.landmark!),
+                      _infoRow(Icons.location_city, 'معلم', order.shippingAddress.landmark!),
 
                     const SizedBox(height: 16),
                     const Divider(height: 1, color: AppColors.divider),
