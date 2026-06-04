@@ -372,9 +372,10 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
                 decoration: _inputDecoration(
                   'روابط الصور (رابط لكل سطر)',
                   Icons.image,
+                ).copyWith(
+                  helperText: 'أدخل رابط كل صورة في سطر منفصل',
                 ),
                 maxLines: 4,
-                helperText: 'أدخل رابط كل صورة في سطر منفصل',
               ),
               const SizedBox(height: 20),
 
@@ -421,8 +422,9 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
                 decoration: _inputDecoration(
                   'الوسوم (مفصولة بفواصل)',
                   Icons.tag,
+                ).copyWith(
+                  helperText: 'مثال: ثوب, كلاسيك, قطني',
                 ),
-                helperText: 'مثال: ثوب, كلاسيك, قطني',
               ),
               const SizedBox(height: 32),
 
