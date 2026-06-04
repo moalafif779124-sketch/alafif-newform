@@ -9,6 +9,7 @@ import '../../providers/order_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
 import '../home/home_screen.dart';
+import '../payment/jeeb_payment_screen.dart';
 
 /// شاشة إتمام الطلب (Checkout)
 class CheckoutScreen extends StatefulWidget {
@@ -148,47 +149,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       setState(() => _isSubmitting = false);
 
       if (orderId != null && mounted) {
-        // 🔵 إذا كانت طريقة الدفع هي محفظة جيب، نفتح التطبيق
+        // 🔵 إذا كانت طريقة الدفع هي محفظة جيب — ننتقل لشاشة الدفع (QR + تعليمات)
         if (_selectedPaymentMethod == 'jeeb') {
-          final paymentService = PaymentService();
-          final jeebResult = await paymentService.launchJeebWallet(
-            amount: cartProvider.total,
-            orderId: orderId,
-            posNumber: AppConstants.jeebPosNumber,
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => JeebPaymentScreen(
+                orderId: orderId,
+                amount: cartProvider.total,
+                posNumber: AppConstants.jeebPosNumber,
+              ),
+            ),
           );
-
-          if (jeebResult) {
-            // تم فتح محفظة جيب - نخبر المستخدم بتأكيد الدفع
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                      '✅ تم فتح محفظة جيب. قم بتأكيد الدفع في التطبيق.'),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          } else {
-            // لم يتم العثور على تطبيق جيب
-            if (mounted) {
-              _showSnackBar(
-                  'تطبيق محفظة جيب غير مثبت على الجهاز');
-              // تشخيص تلقائي
-              paymentService.diagnoseJeebApp().then((diag) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(diag, style: const TextStyle(fontSize: 11)),
-                      backgroundColor: Colors.black87,
-                      duration: const Duration(seconds: 10),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              });
-            }
-          }
+          return; // JeebPaymentScreen تتعامل مع rest
         }
 
         // تفريغ السلة

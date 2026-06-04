@@ -37,6 +37,9 @@ dependencies:
   # Payments
   http: ^1.2.2
   
+  # QR Code
+  qr_flutter: ^4.1.0
+  
   # Local Storage
   shared_preferences: ^2.3.4
 
