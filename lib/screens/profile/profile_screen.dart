@@ -7,6 +7,7 @@ import '../../providers/order_provider.dart';
 import '../auth/login_screen.dart';
 import 'orders_screen.dart';
 import 'addresses_screen.dart';
+import '../admin/admin_dashboard_screen.dart';
 
 /// شاشة الملف الشخصي وحساب المستخدم
 class ProfileScreen extends StatefulWidget {
@@ -379,6 +380,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
 
           const SizedBox(height: 16),
+
+          // 🔐 لوحة التحكم (للمدير فقط)
+          if (user.isAdmin)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.primary),
+                ),
+                child: ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.admin_panel_settings,
+                        color: AppColors.primary),
+                  ),
+                  title: const Text(
+                    'لوحة التحكم',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'إدارة المنتجات، الفئات، الطلبات',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_left,
+                    color: AppColors.textSecondary,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminDashboard()),
+                  ),
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 8),
 
           // تسجيل الخروج
           Padding(

@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart';
 
 /// خدمة Firebase المركزية
 class FirebaseService {
@@ -276,11 +278,129 @@ class FirebaseService {
 
   // =================== رفع الصور ===================
 
-  Future<String> uploadImage(String path, String fileName) async {
-    final ref = storage.ref().child('products/$fileName');
-    // Note: In actual implementation, use putFile with File(path)
-    // For now, this is a placeholder for the API
-    return ref.fullPath;
+  /// رفع صورة إلى Firebase Storage
+  Future<String> uploadImage(String localPath, String fileName) async {
+    try {
+      final file = io.File(localPath);
+      if (!await file.exists()) {
+        throw Exception('الملف غير موجود: $localPath');
+      }
+      final ref = storage.ref().child('products/$fileName');
+      await ref.putFile(file);
+      final downloadUrl = await ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('⚠️ uploadImage error: $e');
+      rethrow;
+    }
+  }
+
+  // =================== إدارة المنتجات (Admin) ===================
+
+  /// إضافة منتج جديد
+  Future<String> addProduct(Map<String, dynamic> data) async {
+    data.remove('id'); // لا نريد id مكرر
+    data['isActive'] = true;
+    data['createdAt'] = DateTime.now().millisecondsSinceEpoch;
+    final docRef = await firestore.collection('products').add(data);
+    return docRef.id;
+  }
+
+  /// تحديث منتج موجود
+  Future<void> updateProduct(String productId, Map<String, dynamic> data) async {
+    data.remove('id');
+    await firestore.collection('products').doc(productId).update(data);
+  }
+
+  /// حذف منتج (إخفاء فقط للحفاظ على البيانات)
+  Future<void> deleteProduct(String productId) async {
+    await firestore.collection('products').doc(productId).update({
+      'isActive': false,
+    });
+  }
+
+  /// جلب كل المنتجات (بما فيها غير النشطة)
+  Future<List<Map<String, dynamic>>> getAllProducts() async {
+    final snapshot = await firestore
+        .collection('products')
+        .orderBy('createdAt', descending: true)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data()! as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  // =================== إدارة الفئات (Admin) ===================
+
+  /// إضافة فئة جديدة
+  Future<String> addCategory(Map<String, dynamic> data) async {
+    data.remove('id');
+    data['isActive'] = true;
+    final docRef = await firestore.collection('categories').add(data);
+    return docRef.id;
+  }
+
+  /// تحديث فئة موجودة
+  Future<void> updateCategory(String categoryId, Map<String, dynamic> data) async {
+    data.remove('id');
+    await firestore.collection('categories').doc(categoryId).update(data);
+  }
+
+  /// حذف فئة
+  Future<void> deleteCategory(String categoryId) async {
+    await firestore.collection('categories').doc(categoryId).update({
+      'isActive': false,
+    });
+  }
+
+  /// جلب كل الفئات
+  Future<List<Map<String, dynamic>>> getAllCategories() async {
+    final snapshot = await firestore
+        .collection('categories')
+        .orderBy('order')
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data()! as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  // =================== إدارة الطلبات (Admin) ===================
+
+  /// جلب كل الطلبات
+  Stream<List<Map<String, dynamic>>> getAllOrdersStream() {
+    return firestore
+        .collection('orders')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList());
+  }
+
+  Future<List<Map<String, dynamic>>> getAllOrders() async {
+    final snapshot = await firestore
+        .collection('orders')
+        .orderBy('createdAt', descending: true)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data()! as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  /// تحديث حالة الطلب
+  Future<void> updateOrderStatus(String orderId, String status) async {
+    await firestore.collection('orders').doc(orderId).update({
+      'status': status,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+    });
   }
 
   // =================== المستخدم ===================
