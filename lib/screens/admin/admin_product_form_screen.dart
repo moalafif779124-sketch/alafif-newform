@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/firebase_service.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
@@ -34,6 +36,10 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
   bool _isFeatured = false;
   bool _isNewArrival = false;
   bool _hasDiscount = false;
+
+  // الصور
+  final List<String> _imageUrls = [];
+  bool _uploadingImage = false;
 
   List<Map<String, dynamic>> _categories = [];
   bool _loadingCategories = true;
@@ -99,7 +105,8 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
     _oldPriceController.text = p['oldPrice']?.toString() ?? '';
     _categoryId = p['categoryId'];
     _selectedSizes = List<String>.from(p['sizes'] ?? []);
-    _imagesController.text = (p['images'] as List<dynamic>?)?.join('\n') ?? '';
+    _imageUrls.clear();
+    _imageUrls.addAll(List<String>.from(p['images'] ?? []));
     _isFeatured = p['isFeatured'] ?? false;
     _isNewArrival = p['isNewArrival'] ?? false;
     _hasDiscount = p['hasDiscount'] ?? false;
@@ -125,11 +132,7 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
 
     setState(() => _saving = true);
 
-    final imageList = _imagesController.text
-        .split('\n')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final imageList = List<String>.from(_imageUrls);
 
     final tagList = _tagsController.text
         .split(',')
@@ -202,6 +205,53 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  // =================== اختيار ورفع الصور ===================
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() => _uploadingImage = true);
+
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final downloadUrl = await _firebase.uploadImage(pickedFile.path, fileName);
+
+      setState(() {
+        _imageUrls.add(downloadUrl);
+        _uploadingImage = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ تم رفع الصورة بنجاح'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _uploadingImage = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ فشل رفع الصورة: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -367,17 +417,103 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
               // الصور
               _buildSectionTitle('الصور'),
               const SizedBox(height: 12),
+              
+              // الصور المرفوعة
+              if (_imageUrls.isNotEmpty)
+                SizedBox(
+                  height: 100,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _imageUrls.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              _imageUrls[index],
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 100,
+                                height: 100,
+                                color: AppColors.border,
+                                child: const Icon(Icons.broken_image, color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _imageUrls.removeAt(index));
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.error,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 8),
+              
+              // أزرار إضافة الصور
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _uploadingImage ? null : _pickAndUploadImage,
+                      icon: _uploadingImage
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.photo_library_outlined),
+                      label: Text(_uploadingImage ? 'جاري الرفع...' : 'اختر من المعرض'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // أو إدخال رابط يدوي
               TextFormField(
                 controller: _imagesController,
                 decoration: _inputDecoration(
-                  'روابط الصور (رابط لكل سطر)',
-                  Icons.image,
+                  'أو أدخل رابط الصورة (اختياري)',
+                  Icons.link,
                 ).copyWith(
-                  helperText: 'أدخل رابط كل صورة في سطر منفصل',
+                  helperText: 'يمكنك إدخال رابط صورة بدلاً من الرفع',
                 ),
-                maxLines: 4,
+                maxLines: 2,
+                onFieldSubmitted: (value) {
+                  final url = value.trim();
+                  if (url.isNotEmpty && !_imageUrls.contains(url)) {
+                    setState(() => _imageUrls.add(url));
+                    _imagesController.clear();
+                  }
+                },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // خيارات إضافية
               _buildSectionTitle('خيارات العرض'),
