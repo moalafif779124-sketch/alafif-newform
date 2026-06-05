@@ -77,56 +77,28 @@ class AuthService {
     }
     // OTP صحيح — نكمل
 
-    // 2️⃣ تسجيل دخول مجهول (مرة واحدة فقط)
-    String uid;
-    try {
-      final anonCredential = await _firebaseService.auth.signInAnonymously();
-      uid = anonCredential.user!.uid;
-      debugPrint('🔑 Anonymous UID: $uid');
-    } catch (e) {
-      debugPrint('⚠️ Anonymous auth failed: $e');
-      // إذا فشل anonymous auth (مثلاً فيه مستخدم مجهول موجود)، نستخدم معرف ثابت
-      final currentUser = _firebaseService.auth.currentUser;
-      if (currentUser != null) {
-        uid = currentUser.uid;
-      } else {
-        // اخر احتمال: نسجل دخول جديد
-        try {
-          await _firebaseService.auth.signOut();
-          final anonCredential = await _firebaseService.auth.signInAnonymously();
-          uid = anonCredential.user!.uid;
-        } catch (e2) {
-          uid = 'phone_${phone.replaceAll('+', '')}';
-        }
-      }
-    }
+    // 2️⃣ استخدام معرف ثابت يعتمد على رقم الجوال (بدلاً من anonymous auth)
+    final cleanPhone = phone.replaceAll('+', '');
+    final uid = 'phone_$cleanPhone';
+    debugPrint('🔑 Deterministic UID: $uid for phone: $phone');
 
-    // 3️⃣ البحث عن مستخدم موجود بنفس رقم الجوال
-    //  (نحتاج نسأل Firestore بعد ما صار عندنا auth)
-    bool userExists = false;
-    Map<String, dynamic>? existingUserData;
+    // 3️⃣ البحث عن مستخدم موجود بنفس المعرف الثابت
     try {
-      final existingUsers = await _firebaseService.firestore
+      final existingUserDoc = await _firebaseService.firestore
           .collection('users')
-          .where('phone', isEqualTo: phone)
-          .limit(1)
+          .doc(uid)
           .get()
           .timeout(const Duration(seconds: 10));
 
-      if (existingUsers.docs.isNotEmpty) {
-        userExists = true;
-        existingUserData = existingUsers.docs.first.data();
-        existingUserData!['id'] = existingUsers.docs.first.id;
+      if (existingUserDoc.exists) {
+        final existingUserData = existingUserDoc.data()!;
+        existingUserData['id'] = existingUserDoc.id;
+        _pendingPhone = null;
+        debugPrint('✅ Existing user found: ${existingUserData['fullName']}');
+        return app.AppUser.fromMap(existingUserData);
       }
     } catch (e) {
       debugPrint('⚠️ Firestore search error: $e');
-      // لو فشل البحث، نتعامل كأنه مستخدم جديد
-    }
-
-    if (userExists && existingUserData != null) {
-      // مستخدم موجود ← تسجيل دخول
-      _pendingPhone = null;
-      return app.AppUser.fromMap(existingUserData);
     }
 
     // 4️⃣ مستخدم جديد - نحتاج اسم

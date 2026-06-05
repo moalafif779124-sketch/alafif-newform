@@ -59,6 +59,35 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// حفظ بيانات المستخدم في SharedPreferences للحفاظ على الجلسة
+  Future<void> _saveUserSession() async {
+    if (_user == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('saved_user_id', _user!.id);
+      await prefs.setString('saved_user_name', _user!.fullName);
+      await prefs.setString('saved_user_phone', _user!.phone);
+      await prefs.setBool('saved_user_admin', _user!.isAdmin);
+      debugPrint('💾 User session saved to SharedPreferences');
+    } catch (e) {
+      debugPrint('⚠️ Failed to save user session: $e');
+    }
+  }
+
+  /// مسح جلسة المستخدم المحفوظة
+  Future<void> _clearUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('saved_user_id');
+      await prefs.remove('saved_user_name');
+      await prefs.remove('saved_user_phone');
+      await prefs.remove('saved_user_admin');
+      debugPrint('🗑️ User session cleared');
+    } catch (e) {
+      debugPrint('⚠️ Failed to clear user session: $e');
+    }
+  }
+
   /// استرجاع جلسة OTP من SharedPreferences — يُستدعى عند فتح شاشة OTP
   Future<void> restoreOtpSession() async {
     try {
@@ -101,17 +130,50 @@ class AuthProvider with ChangeNotifier {
       await _firebaseService.initialize();
     }
 
-    // استرجاع جلسة OTP عند بدء التطبيق (إذا كان في منتصف عملية تحقق)
+    // 1️⃣ محاولة استرجاع الجلسة المحفوظة من SharedPreferences
+    final restored = await _restoreSavedSession();
+    if (restored) {
+      debugPrint('♻️ User session restored from SharedPreferences');
+    }
+
+    // 2️⃣ استرجاع جلسة OTP عند بدء التطبيق (إذا كان في منتصف عملية تحقق)
     await restoreOtpSession();
 
+    // 3️⃣ الاستماع لتغييرات حالة Firebase Auth (تحديث البيانات في الخلفية)
     _authService.authStateChanges.listen((User? firebaseUser) async {
       if (firebaseUser != null) {
         await _loadUser(firebaseUser.uid);
-      } else {
-        _user = null;
-        notifyListeners();
       }
+      // لا نمسح الجلسة عند غياب Firebase Auth (لأننا نستخدم SP)
     });
+  }
+
+  /// استرجاع الجلسة المحفوظة من SharedPreferences
+  Future<bool> _restoreSavedSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedId = prefs.getString('saved_user_id');
+      if (savedId == null || savedId.isEmpty) return false;
+
+      final savedName = prefs.getString('saved_user_name') ?? '';
+      final savedPhone = prefs.getString('saved_user_phone') ?? '';
+      final savedAdmin = prefs.getBool('saved_user_admin') ?? false;
+
+      if (savedId.isNotEmpty) {
+        _user = AppUser(
+          id: savedId,
+          fullName: savedName,
+          phone: savedPhone,
+          isAdmin: savedAdmin,
+        );
+        notifyListeners();
+        debugPrint('♻️ Session restored: $savedName (admin: $savedAdmin)');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to restore session: $e');
+    }
+    return false;
   }
 
   Future<void> _loadUser(String uid) async {
@@ -119,6 +181,7 @@ class AuthProvider with ChangeNotifier {
       final userData = await _firebaseService.getUser(uid);
       if (userData != null) {
         _user = AppUser.fromMap(userData);
+        await _saveUserSession();
         notifyListeners();
       }
     } catch (e) {
@@ -217,6 +280,9 @@ class AuthProvider with ChangeNotifier {
         fullName: fullName,
       );
       
+      // 💾 حفظ الجلسة بعد تسجيل الدخول
+      await _saveUserSession();
+      
       // 🗑️ مسح جلسة OTP بعد نجاح تسجيل الدخول
       await _clearOtpSession();
       
@@ -305,6 +371,7 @@ class AuthProvider with ChangeNotifier {
   // =================== تسجيل الخروج ===================
 
   Future<void> logout() async {
+    await _clearUserSession();
     await _clearOtpSession();
     await _authService.logout();
     _user = null;
