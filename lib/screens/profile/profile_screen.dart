@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/colors.dart';
@@ -272,6 +273,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontSize: 14,
                       color: Colors.white70,
                     ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // معرف المستخدم (UID) للدعم الفني
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: auth.userId ?? ''));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تم نسخ المعرف'),
+                        behavior: SnackBarBehavior.floating,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.copy_rounded,
+                        size: 14,
+                        color: Colors.white54,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'المعرف: ${auth.userId ?? ''}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white54,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
