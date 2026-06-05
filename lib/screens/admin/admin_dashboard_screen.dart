@@ -6,6 +6,7 @@ import '../../config/colors.dart';
 import 'admin_products_screen.dart';
 import 'admin_categories_screen.dart';
 import 'admin_orders_screen.dart';
+import 'admin_users_screen.dart';
 
 /// لوحة تحكم المدير — الصفحة الرئيسية للإدارة
 class AdminDashboard extends StatefulWidget {
@@ -163,6 +164,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const AdminOrdersScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _AdminMenuItem(
+                      icon: Icons.people,
+                      title: 'المستخدمين',
+                      subtitle: 'إدارة صلاحيات المستخدمين',
+                      color: AppColors.info,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
                       ),
                     ),
                     const SizedBox(height: 32),

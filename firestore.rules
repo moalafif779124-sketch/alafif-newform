@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =================== قواعد الوظيفة المساعدة ===================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // =================== المستخدمين ===================
+    // يمكن لأي شخص مصادق قراءة بيانات مستخدم معين
+    // يمكن للمستخدم كتابة بياناته فقط
+    // المدير يمكنه قراءة جميع المستخدمين وتعديل صلاحياتهم
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId
+        // المدير يمكنه تحديث أي حقل (بما في ذلك isAdmin)
+        || isAdmin()
+      );
+      allow delete: if false; // لا يمكن حذف المستخدمين من التطبيق
+    }
+
+    // =================== المنتجات ===================
+    // يمكن للجميع (حتى غير المسجلين) قراءة المنتجات
+    // فقط المدير يمكنه إنشاء/تعديل/حذف
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // =================== الفئات ===================
+    // يمكن للجميع قراءة الفئات
+    // فقط المدير يمكنه إدارة الفئات
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // =================== الطلبات ===================
+    // المستخدم يمكنه قراءة/إنشاء طلباته فقط
+    // المدير يمكنه قراءة/تحديث جميع الطلبات
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId
+        || isAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId
+        || isAdmin()
+      );
+      allow delete: if false;
+    }
+
+    // =================== العربة ===================
+    // كل مستخدم يملك عربة واحدة فقط (معرفها = userId)
+    match /carts/{cartId} {
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == cartId
+        || isAdmin()
+      );
+    }
+
+    // =================== العناوين ===================
+    // كل مستخدم يملك عنوانه الخاص
+    match /addresses/{addressId} {
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId
+        || isAdmin()
+      );
+    }
+
+    // =================== البانرات ===================
+    // يمكن للجميع قراءة البانرات
+    // فقط المدير يمكنه إدارة البانرات
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -403,7 +403,7 @@ class FirebaseService {
     });
   }
 
-  // =================== المستخدم ===================
+  // =================== المستخدم (Admin) ===================
 
   Future<void> saveUser(Map<String, dynamic> userData) async {
     await firestore.collection('users').doc(userData['id']).set(userData, SetOptions(merge: true));
@@ -415,5 +415,37 @@ class FirebaseService {
     final data = doc.data()!;
     data['id'] = doc.id;
     return data;
+  }
+
+  /// جلب جميع المستخدمين (للمدير)
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    final snapshot = await firestore
+        .collection('users')
+        .orderBy('createdAt', descending: true)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data()! as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  /// تبديل صلاحية المدير لمستخدم
+  Future<void> toggleAdmin(String userId, bool isAdmin) async {
+    await firestore.collection('users').doc(userId).update({
+      'isAdmin': isAdmin,
+    });
+  }
+
+  /// تحديث أي حقل لمستخدم (للمدير)
+  Future<void> updateUserField(String userId, Map<String, dynamic> updates) async {
+    updates.remove('id');
+    await firestore.collection('users').doc(userId).update(updates);
+  }
+
+  /// الحصول على عدد المستخدمين
+  Future<int> getUserCount() async {
+    final snapshot = await firestore.collection('users').count().get();
+    return snapshot.count ?? 0;
   }
 }
