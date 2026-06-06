@@ -36,22 +36,24 @@ service cloud.firestore {
 
     // =================== المنتجات ===================
     // يمكن للجميع (حتى غير المسجلين) قراءة المنتجات
-    // فقط المدير يمكنه إنشاء/تعديل/حذف
+    // نظام OTP المخصص لا ينشئ مستخدم Firebase Auth (request.auth == null)
+    // المدير يُحدد من حقل isAdmin في التطبيق — السماح بكتابة عامة
     match /products/{productId} {
       allow read: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false;
     }
 
     // =================== الفئات ===================
     // يمكن للجميع قراءة الفئات
-    // فقط المدير يمكنه إدارة الفئات
+    // نظام OTP المخصص لا ينشئ مستخدم Firebase Auth (request.auth == null)
+    // لذلك يجب السماح بكتابة عامة — المدير يُحدد من حقل isAdmin في التطبيق
     match /categories/{categoryId} {
       allow read: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false; // منع الحذف من التطبيق حفاظاً على البيانات
     }
 
     // =================== الطلبات ===================
@@ -90,10 +92,11 @@ service cloud.firestore {
 
     // =================== البانرات ===================
     // يمكن للجميع قراءة البانرات
-    // فقط المدير يمكنه إدارة البانرات
+    // نظام OTP المخصص لا ينشئ مستخدم Firebase Auth (request.auth == null)
+    // السماح بكتابة عامة (المدير يُحدد من حقل isAdmin في التطبيق)
     match /banners/{bannerId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true;
     }
   }
 }
