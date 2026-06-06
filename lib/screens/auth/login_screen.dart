@@ -80,13 +80,21 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  void _loginWithEmail() {
+  void _loginWithEmail() async {
     if (!_emailFormKey.currentState!.validate()) return;
 
-    context.read<AuthProvider>().loginWithEmail(
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.loginWithEmail(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
+
+    if (success && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainShell()),
+        (route) => false,
+      );
+    }
   }
 
   @override

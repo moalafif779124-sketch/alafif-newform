@@ -331,6 +331,7 @@ class AuthProvider with ChangeNotifier {
         fullName: fullName,
         phone: phone,
       );
+      await _saveUserSession();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -357,6 +358,7 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
       );
+      await _saveUserSession();
       _isLoading = false;
       notifyListeners();
       return true;

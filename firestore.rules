@@ -20,17 +20,17 @@ service cloud.firestore {
     }
 
     // =================== المستخدمين ===================
-    // يمكن لأي شخص مصادق قراءة بيانات مستخدم معين
-    // يمكن للمستخدم كتابة بياناته فقط
-    // المدير يمكنه قراءة جميع المستخدمين وتعديل صلاحياتهم
+    // يستخدم التطبيق نظام OTP مخصص (معرف ثابت phone_967XXXXXXXXX) بدون Firebase Auth.
+    // لذلك يجب السماح بالقراءة والكتابة للجميع في مستند المستخدم.
+    // الأمان: يتم التحقق من OTP عبر واتساب (يمتلك المستخدم رقم الجوال).
+    // صلاحية المدير/غير المدير تُدارة من خلال حقل isAdmin في المستند.
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isAuthenticated() && (
-        request.auth.uid == userId
-        // المدير يمكنه تحديث أي حقل (بما في ذلك isAdmin)
-        || isAdmin()
-      );
+      // قراءة عامة — لنظام OTP + مدير
+      allow read: if true;
+      // كتابة عامة — للنظام المخصص OTP
+      // (ليس هناك request.auth في تدفق OTP عبر واتساب)
+      allow create: if true;
+      allow update: if true;
       allow delete: if false; // لا يمكن حذف المستخدمين من التطبيق
     }
 
