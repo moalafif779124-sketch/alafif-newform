@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 
@@ -278,17 +279,29 @@ class FirebaseService {
 
   // =================== رفع الصور ===================
 
-  /// رفع صورة إلى Firebase Storage
+  /// رفع صورة إلى Firebase Storage (أو تخزينها كـ base64 إذا كان التخزين غير مفعل)
   Future<String> uploadImage(String localPath, String fileName) async {
     try {
       final file = io.File(localPath);
       if (!await file.exists()) {
         throw Exception('الملف غير موجود: $localPath');
       }
-      final ref = storage.ref().child('products/$fileName');
-      await ref.putFile(file);
-      final downloadUrl = await ref.getDownloadURL();
-      return downloadUrl;
+      
+      // محاولة رفع الصورة إلى Firebase Storage أولاً
+      try {
+        final ref = storage.ref().child('products/$fileName');
+        await ref.putFile(file);
+        final downloadUrl = await ref.getDownloadURL();
+        return downloadUrl;
+      } catch (storageError) {
+        // إذا فشل التخزين السحابي (غير مفعل أو بدون billing)،
+        // نخزن الصورة كـ base64 داخل Firestore مباشرة
+        debugPrint('⚠️ Firebase Storage failed, using base64 fallback: $storageError');
+        
+        final bytes = await file.readAsBytes();
+        final b64 = base64Encode(bytes);
+        return 'data:image/jpeg;base64,$b64';
+      }
     } catch (e) {
       debugPrint('⚠️ uploadImage error: $e');
       rethrow;

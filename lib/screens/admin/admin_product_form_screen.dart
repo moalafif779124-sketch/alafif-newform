@@ -5,6 +5,7 @@ import '../../services/firebase_service.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
+import '../../widgets/app_image.dart';
 
 /// شاشة إضافة/تعديل منتج
 class AdminProductFormScreen extends StatefulWidget {
@@ -431,17 +432,11 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              _imageUrls[index],
+                            child: AppImage(
+                              imageUrl: _imageUrls[index],
                               width: 100,
                               height: 100,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 100,
-                                height: 100,
-                                color: AppColors.border,
-                                child: const Icon(Icons.broken_image, color: AppColors.textSecondary),
-                              ),
                             ),
                           ),
                           Positioned(

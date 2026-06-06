@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
+import 'app_image.dart';
 
 /// بطاقة عرض المنتج في القوائم
 class ProductCard extends StatelessWidget {
@@ -42,23 +41,14 @@ class ProductCard extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: Stack(
                 children: [
-                  CachedNetworkImage(
+                  AppImage(
                     imageUrl: product.images.isNotEmpty
                         ? product.images.first
                         : 'https://picsum.photos/seed/${product.id}/200/250',
                     height: 180,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      height: 180,
-                      color: AppColors.accentLight,
-                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      height: 180,
-                      color: AppColors.accentLight,
-                      child: const Icon(Icons.image, color: AppColors.textSecondary, size: 40),
-                    ),
+                    backgroundColor: AppColors.accentLight,
                   ),
                   // شارة الخصم
                   if (product.hasDiscount)

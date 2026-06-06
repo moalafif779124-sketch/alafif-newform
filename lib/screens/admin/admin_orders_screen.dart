@@ -3,6 +3,7 @@ import '../../services/firebase_service.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/order.dart';
+import '../../widgets/app_image.dart';
 
 /// شاشة إدارة الطلبات
 class AdminOrdersScreen extends StatefulWidget {
@@ -258,18 +259,10 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                                 width: 48,
                                 height: 48,
                                 child: item.productImage.isNotEmpty
-                                    ? Image.network(
-                                        item.productImage,
+                                    ? AppImage(
+                                        imageUrl: item.productImage,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) =>
-                                            Container(
-                                          color: AppColors.accentLight,
-                                          child: Icon(
-                                            Icons.image_outlined,
-                                            color: AppColors.textSecondary
-                                                .withValues(alpha: 0.5),
-                                          ),
-                                        ),
+                                        backgroundColor: AppColors.accentLight,
                                       )
                                     : Container(
                                         color: AppColors.accentLight,

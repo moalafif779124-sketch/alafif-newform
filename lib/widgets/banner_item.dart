@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../config/colors.dart';
 import '../../models/banner.dart';
 import '../config/constants.dart';
+import 'app_image.dart';
 
 /// عنصر عرض البانر في الكاروسيل
 class BannerItem extends StatelessWidget {
@@ -24,32 +24,12 @@ class BannerItem extends StatelessWidget {
           // صورة الخلفية
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: CachedNetworkImage(
+            child: AppImage(
               imageUrl: banner.imageUrl,
               height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.8),
-                      AppColors.primaryLight,
-                    ],
-                  ),
-                ),
-              ),
-              errorWidget: (_, __, ___) => Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryLight],
-                  ),
-                ),
-              ),
+              backgroundColor: AppColors.primary,
             ),
           ),
           // طبقة التدرج فوق الصورة

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
@@ -9,6 +8,7 @@ import '../../models/cart_item.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/app_image.dart';
 
 /// شاشة تفاصيل المنتج
 class ProductDetailScreen extends StatefulWidget {
@@ -194,25 +194,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 final imageUrl = product.images.isNotEmpty
                     ? product.images[index]
                     : 'https://picsum.photos/seed/${product.id}/400/500';
-                return CachedNetworkImage(
+                return AppImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
-                  placeholder: (_, __) => Container(
-                    color: AppColors.accentLight,
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: AppColors.accentLight,
-                    child: const Icon(
-                      Icons.image,
-                      color: AppColors.textSecondary,
-                      size: 60,
-                    ),
-                  ),
+                  backgroundColor: AppColors.accentLight,
                 );
               },
             ),

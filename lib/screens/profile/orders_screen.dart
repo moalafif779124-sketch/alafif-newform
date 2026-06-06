@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../widgets/app_image.dart';
 
 /// شاشة طلباتي
 class OrdersScreen extends StatefulWidget {
@@ -400,18 +401,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             width: 56,
                             height: 56,
                             child: item.productImage.isNotEmpty
-                                ? Image.network(
-                                    item.productImage,
+                                ? AppImage(
+                                    imageUrl: item.productImage,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        Container(
-                                      color: AppColors.accentLight,
-                                      child: Icon(
-                                        Icons.image_outlined,
-                                        color: AppColors.textSecondary
-                                            .withValues(alpha: 0.5),
-                                      ),
-                                    ),
+                                    backgroundColor: AppColors.accentLight,
                                   )
                                 : Container(
                                     color: AppColors.accentLight,
@@ -749,20 +742,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   width: 48,
                                   height: 48,
                                   child: item.productImage.isNotEmpty
-                                      ? Image.network(
-                                          item.productImage,
+                                      ? AppImage(
+                                          imageUrl: item.productImage,
                                           fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  Container(
-                                            color: AppColors.accentLight,
-                                            child: Icon(
-                                              Icons.image_outlined,
-                                              size: 24,
-                                              color: AppColors.textSecondary
-                                                  .withValues(alpha: 0.5),
-                                            ),
-                                          ),
+                                          backgroundColor: AppColors.accentLight,
                                         )
                                       : Container(
                                           color: AppColors.accentLight,
