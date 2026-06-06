@@ -49,18 +49,42 @@ class ProductProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try {
-      await Future.wait([
-        _loadProducts(),
-        _loadCategories(),
-        _loadBanners(),
-      ]);
-      _error = null;
-    } catch (e) {
-      _error = 'فشل تحميل البيانات: $e';
-      debugPrint('Error loading data: $e');
-      // إذا فشل الاتصال بقاعدة البيانات، استخدم البيانات الافتراضية
+    // تحميل كل مجموعة بشكل مستقل — فشل الفئات أو البانرات لا يمنع عرض المنتجات
+    final results = await Future.wait([
+      _loadProducts().then((_) => 'ok').catchError((e) {
+        debugPrint('Error loading products from Firebase: $e');
+        return 'fail: $e';
+      }),
+      _loadCategories().then((_) => 'ok').catchError((e) {
+        debugPrint('Error loading categories from Firebase: $e');
+        return 'fail: $e';
+      }),
+      _loadBanners().then((_) => 'ok').catchError((e) {
+        debugPrint('Error loading banners from Firebase: $e');
+        return 'fail: $e';
+      }),
+    ]);
+
+    if (results[0] != 'ok') {
+      // إذا فشلت المنتجات، استخدم البيانات الافتراضية كاملة
+      debugPrint('Products failed, using sample data');
       _loadSampleData();
+    } else {
+      // المنتجات نجحت — استخدمها مع بيانات افتراضية للفئات والبانرات إذا فشلت
+      if (results[1] != 'ok') {
+        _categories = AppConstants.categories
+            .map((data) => Category(
+                  id: data['id'],
+                  name: data['name'],
+                  nameEn: data['nameEn'],
+                  icon: data['icon'],
+                ))
+            .toList();
+      }
+      if (results[2] != 'ok') {
+        _banners = _generateSampleBanners();
+      }
+      _error = null;
     }
 
     _isLoading = false;
