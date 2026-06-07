@@ -6,6 +6,7 @@ import '../../config/colors.dart';
 import 'admin_products_screen.dart';
 import 'admin_categories_screen.dart';
 import 'admin_orders_screen.dart';
+import 'admin_banners_screen.dart';
 import 'admin_users_screen.dart';
 
 /// لوحة تحكم المدير — الصفحة الرئيسية للإدارة
@@ -164,6 +165,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const AdminOrdersScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _AdminMenuItem(
+                      icon: Icons.view_carousel,
+                      title: 'البانرات',
+                      subtitle: 'إدارة الإعلانات والبانرات الدوارة',
+                      color: AppColors.info,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminBannersScreen()),
                       ),
                     ),
                     const SizedBox(height: 8),

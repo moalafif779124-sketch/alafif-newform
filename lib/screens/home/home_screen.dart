@@ -11,6 +11,7 @@ import '../../models/banner.dart';
 import '../../providers/product_provider.dart';
 import '../cart/cart_screen.dart';
 import '../catalog/product_detail_screen.dart';
+import '../catalog/catalog_screen.dart';
 
 /// الشاشة الرئيسية للتطبيق
 class HomeScreen extends StatefulWidget {
@@ -191,6 +192,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 }
+              } else if (banner.categoryId != null) {
+                // التنقل إلى فئة معينة
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CatalogScreen(initialCategoryId: banner.categoryId),
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(

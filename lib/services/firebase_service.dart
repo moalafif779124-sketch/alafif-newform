@@ -162,7 +162,6 @@ class FirebaseService {
     final snapshot = await firestore
         .collection('categories')
         .where('isActive', isEqualTo: true)
-        .orderBy('order')
         .get();
     return snapshot.docs.map((doc) {
       final data = doc.data()! as Map<String, dynamic>;
@@ -177,13 +176,34 @@ class FirebaseService {
     final snapshot = await firestore
         .collection('banners')
         .where('isActive', isEqualTo: true)
-        .orderBy('order')
         .get();
     return snapshot.docs.map((doc) {
       final data = doc.data()! as Map<String, dynamic>;
       data['id'] = doc.id;
       return data;
     }).toList();
+  }
+
+  // =================== إدارة البانرات (لوحة المدير) ===================
+
+  Future<List<Map<String, dynamic>>> getAllBanners() async {
+    final snapshot = await firestore
+        .collection('banners')
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data()! as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  Future<String> addBanner(Map<String, dynamic> data) async {
+    final docRef = await firestore.collection('banners').add(data);
+    return docRef.id;
+  }
+
+  Future<void> updateBanner(String bannerId, Map<String, dynamic> data) async {
+    await firestore.collection('banners').doc(bannerId).update(data);
   }
 
   // =================== السلة ===================

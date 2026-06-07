@@ -10,13 +10,25 @@ import 'product_detail_screen.dart';
 
 /// شاشة الكتالوج / كافة المنتجات
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({super.key});
+  final String? initialCategoryId;
+
+  const CatalogScreen({super.key, this.initialCategoryId});
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialCategoryId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<ProductProvider>().setCategoryFilter(widget.initialCategoryId!);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
