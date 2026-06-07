@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
+import '../../providers/wishlist_provider.dart';
 import 'app_image.dart';
 
 /// بطاقة عرض المنتج في القوائم
@@ -92,6 +94,31 @@ class ProductCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                  // زر المفضلة
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Consumer<WishlistProvider>(
+                      builder: (context, wishlist, _) {
+                        final isFav = wishlist.isWishlisted(product.id);
+                        return GestureDetector(
+                          onTap: () => wishlist.toggleWishlist(product.id),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              size: 20,
+                              color: isFav ? Colors.red : AppColors.textSecondary,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),

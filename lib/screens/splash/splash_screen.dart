@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/wishlist_provider.dart';
 import '../auth/login_screen.dart';
 import '../shell_screen.dart';
 
@@ -35,10 +36,12 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       final authProvider = context.read<AuthProvider>();
       final productProvider = context.read<ProductProvider>();
+      final wishlistProvider = context.read<WishlistProvider>();
 
       await Future.wait([
         authProvider.initialize(),
         productProvider.initialize(),
+        wishlistProvider.loadWishlist(),
       ]);
     } catch (e) {
       debugPrint('SplashScreen initialization error: $e');

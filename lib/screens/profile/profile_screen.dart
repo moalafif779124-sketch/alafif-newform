@@ -8,6 +8,7 @@ import '../../providers/order_provider.dart';
 import '../auth/login_screen.dart';
 import 'orders_screen.dart';
 import 'addresses_screen.dart';
+import '../wishlist/wishlist_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
 /// شاشة الملف الشخصي وحساب المستخدم
@@ -354,11 +355,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.favorite_outline,
                   title: 'المفضلة',
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('قريباً'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const WishlistScreen()),
                     );
                   },
                 ),
