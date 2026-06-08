@@ -341,7 +341,7 @@ class _ArTryOnScreenState extends State<ArTryOnScreen> {
               SizedBox(
                 width: double.infinity,
                 height: double.infinity,
-                child: CameraPreview(_cameraController!),
+                child: _cameraController!.buildPreview(),
               )
             else
               const Center(
