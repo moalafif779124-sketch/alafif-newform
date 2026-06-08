@@ -46,6 +46,7 @@ class AiTryOnService {
     required String personImagePath,
     required String garmentImageUrl,
     String category = 'upper_body',
+    void Function(String status)? onStatusUpdate,
   }) async {
     if (huggingFaceApiKey.isEmpty) {
       return PredictionResult(
@@ -84,6 +85,7 @@ class AiTryOnService {
         personPath: personPath,
         garmentImageUrl: garmentImageUrl,
         category: category,
+        onStatusUpdate: onStatusUpdate,
       );
     } catch (e) {
       debugPrint('⚠️ AI Try-On (HF Space) خطأ: $e');
@@ -124,9 +126,11 @@ class AiTryOnService {
     required String personPath,
     required String garmentImageUrl,
     required String category,
+    void Function(String status)? onStatusUpdate,
   }) async {
     try {
       final sessionHash = _generateSessionHash();
+      onStatusUpdate?.call('جارٍ الاتصال بالذكاء الاصطناعي...');
       debugPrint('🔑 Session: $sessionHash');
 
       // ----------------------------------------
@@ -154,12 +158,18 @@ class AiTryOnService {
         'session_hash': sessionHash,
       });
 
+      final headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Alafif-Newform/1.0',
+      };
+      // إضافة مفتاح HF للسرعة (إذا كان المستخدم Pro)
+      if (huggingFaceApiKey.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $huggingFaceApiKey';
+      }
+
       final joinResponse = await http.post(
         Uri.parse('$idmVtonSpaceUrl/queue/join'),
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Alafif-Newform/1.0',
-        },
+        headers: headers,
         body: joinPayload,
       ).timeout(const Duration(seconds: 30));
 
@@ -169,6 +179,8 @@ class AiTryOnService {
           error: 'فشل الاتصال بالذكاء الاصطناعي (${joinResponse.statusCode})',
         );
       }
+
+      onStatusUpdate?.call('في طابور الانتظار...');
 
       final joinData = jsonDecode(joinResponse.body);
       debugPrint('📋 انضم للطابور: ${joinData['event_id']}');
@@ -180,21 +192,21 @@ class AiTryOnService {
       final sseClient = http.Client();
       try {
         final sseRequest = http.Request('GET', sseUri);
-        sseRequest.headers['User-Agent'] = 'Alafif-Newform/1.0';
+        sseRequest.headers.addAll(headers);
 
         final sseResponse = await sseClient.send(sseRequest);
         final stream = sseResponse.stream.transform(utf8.decoder);
         final completer = Completer<PredictionResult>();
         String buffer = '';
 
-        // استقصاء لمدة أقصاها 5 دقائق
+        // استقصاء لمدة أقصاها 10 دقائق
         await Future.any([
           completer.future,
-          Future.delayed(const Duration(minutes: 5), () {
+          Future.delayed(const Duration(minutes: 10), () {
             if (!completer.isCompleted) {
               completer.complete(PredictionResult(
                 status: PredictionStatus.failed,
-                error: 'انتهت مهلة الانتظار (5 دقائق)',
+                error: 'انتهت مهلة الانتظار (10 دقائق). قد يكون الخادم مشغولاً، حاول مرة أخرى.',
               ));
             }
           }),
@@ -252,11 +264,15 @@ class AiTryOnService {
                 }
 
                 if (msg == 'process_starts') {
+                  onStatusUpdate?.call('يجري المعالجة على GPU...');
                   debugPrint('⏳ بدأت المعالجة...');
                 }
 
                 if (msg == 'log') {
                   final logMsg = data['log'] as String? ?? '';
+                  if (logMsg.contains('GPU')) {
+                    onStatusUpdate?.call(logMsg);
+                  }
                   debugPrint('📋 Space: $logMsg');
                 }
               } catch (_) {
