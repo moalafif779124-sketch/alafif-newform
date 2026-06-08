@@ -97,10 +97,22 @@ class AiTryOnService {
         }
       }
 
+      // معالجة أخطاء HTTP
+      String errorMsg;
+      if (response.statusCode == 429) {
+        errorMsg = 'تم تجاوز حد الطلبات. انتظر دقيقة وحاول مرة أخرى، أو قم بترقية خطة Replicate.';
+      } else if (response.statusCode == 402) {
+        errorMsg = 'حساب Replicate يحتاج إلى رصيد. أضف بطاقة دفع في replicate.com/account/billing';
+      } else if (response.statusCode == 401) {
+        errorMsg = 'مفتاح API غير صالح. تأكد من صحة المفتاح في replicate.com/account/api-tokens';
+      } else {
+        errorMsg = 'فشل الاتصال بالذكاء الاصطناعي (${response.statusCode})';
+      }
+
       debugPrint('⚠️ AI Try-On فشل: ${response.statusCode} ${response.body}');
       return PredictionResult(
         status: PredictionStatus.failed,
-        error: 'فشل الاتصال بالذكاء الاصطناعي (${response.statusCode})',
+        error: errorMsg,
       );
     } catch (e) {
       debugPrint('⚠️ AI Try-On خطأ: $e');
