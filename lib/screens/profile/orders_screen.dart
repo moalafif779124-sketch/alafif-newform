@@ -601,11 +601,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
               ],
             ),
-          ),
+          ],
+          _buildTrackButton(order),
         ),
-        // زر تتبع الطلب
-        _buildTrackButton(order),
-      ],
+      ),
     );
   }
 
