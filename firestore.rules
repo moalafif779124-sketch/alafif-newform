@@ -88,7 +88,7 @@ service cloud.firestore {
     // السماح بكتابة عامة (المدير يُحدد من حقل isAdmin في التطبيق)
     match /banners/{bannerId} {
       allow read: if true;
-      allow write: if true;    # ← relaxed: OTP admin needs this
+      allow write: if true;
     }
 
     match /reviews/{reviewId} {
