@@ -3,41 +3,41 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+// ----------------------------------------------------------------
+// 🎯 قم بتغيير مفتاح API هذا إلى المفتاح الخاص بك
+// سجل في https://replicate.com للحصول على مفتاح مجاني
+// ----------------------------------------------------------------
+String replicateApiKey = '';
+
+/// حالة طلب الذكاء الاصطناعي
+enum PredictionStatus { starting, processing, succeeded, failed }
+
+/// نتيجة طلب الذكاء الاصطناعي
+class PredictionResult {
+  final String? id;
+  final PredictionStatus status;
+  final String? outputUrl;
+  final String? error;
+
+  PredictionResult({
+    this.id,
+    required this.status,
+    this.outputUrl,
+    this.error,
+  });
+
+  bool get isDone => status == PredictionStatus.succeeded || status == PredictionStatus.failed;
+  bool get isSuccess => status == PredictionStatus.succeeded;
+}
+
 /// خدمة التجربة الافتراضية بالذكاء الاصطناعي
 /// تستخدم واجهة برمجة التطبيقات لتوليد صورة المستخدم وهو يرتدي المنتج
 class AiTryOnService {
-  // ----------------------------------------------------------------
-  // 🎯 قم بتغيير مفتاح API هذا إلى المفتاح الخاص بك
-  // سجل في https://replicate.com للحصول على مفتاح مجاني
-  // ----------------------------------------------------------------
-  static String replicateApiKey = '';
-
   static const String _baseUrl = 'https://api.replicate.com/v1';
 
   // معرف نموذج IDM-VTON للتجربة الافتراضية
   static const String _modelVersion =
       '906425dbca90663ff5427624839572cc56ea7d380343d13e2a4c4b09d3f0c30f';
-
-  /// حالة الطلب
-  enum PredictionStatus { starting, processing, succeeded, failed }
-
-  /// نتيجة الطلب
-  class PredictionResult {
-    final String? id;
-    final PredictionStatus status;
-    final String? outputUrl;
-    final String? error;
-
-    PredictionResult({
-      this.id,
-      required this.status,
-      this.outputUrl,
-      this.error,
-    });
-
-    bool get isDone => status == PredictionStatus.succeeded || status == PredictionStatus.failed;
-    bool get isSuccess => status == PredictionStatus.succeeded;
-  }
 
   /// إنشاء طلب تجربة افتراضية
   /// [personImagePath] مسار صورة الشخص (محلي)
@@ -56,7 +56,6 @@ class AiTryOnService {
     }
 
     try {
-      // تحويل صورة الشخص إلى base64
       final file = File(personImagePath);
       if (!await file.exists()) {
         return PredictionResult(
@@ -181,8 +180,6 @@ class AiTryOnService {
       case 'thobes':
       case 'bisht':
         return 'dresses';
-      case 'perfumes':
-        return 'upper_body';
       default:
         return 'upper_body';
     }
