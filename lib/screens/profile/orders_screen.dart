@@ -601,8 +601,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
               ],
             ),
+            _buildTrackButton(order),
           ],
-          _buildTrackButton(order),
         ),
       ),
     );
