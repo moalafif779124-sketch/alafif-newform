@@ -3,6 +3,7 @@ import '../../services/firebase_service.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
+import '../../widgets/app_image.dart';
 import 'admin_product_form_screen.dart';
 
 /// شاشة إدارة المنتجات
@@ -217,6 +218,27 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
     );
   }
 
+  /// عرض صورة المنتج مع fallback
+  Widget _buildProductImage(Map<String, dynamic> product) {
+    final images = product['images'] as List<dynamic>? ?? [];
+    final imageUrl = images.isNotEmpty ? images.first as String : null;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return AppImage(
+        imageUrl: imageUrl,
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        borderRadius: 0,
+      );
+    }
+
+    return Container(
+      color: AppColors.accentLight,
+      child: const Icon(Icons.inventory_2, color: AppColors.primary),
+    );
+  }
+
   Widget _buildProductCard(Map<String, dynamic> product, int index) {
     final isActive = product['isActive'] as bool? ?? true;
     final name = product['name'] as String? ?? '';
@@ -260,10 +282,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
             child: SizedBox(
               width: 48,
               height: 48,
-              child: Container(
-                color: AppColors.accentLight,
-                child: const Icon(Icons.inventory_2, color: AppColors.primary),
-              ),
+              child: _buildProductImage(product),
             ),
           ),
           title: Text(
