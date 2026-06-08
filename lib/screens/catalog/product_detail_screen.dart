@@ -14,6 +14,7 @@ import '../../widgets/product_card.dart';
 import '../../widgets/app_image.dart';
 import '../cart/cart_screen.dart';
 import '../checkout/checkout_screen.dart';
+import '../try_on/ar_try_on_screen.dart';
 import 'add_review_screen.dart';
 
 /// شاشة تفاصيل المنتج
@@ -318,6 +319,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             const Divider(color: AppColors.divider, thickness: 1),
             const SizedBox(height: 16),
 
+            // تجربة افتراضية
+            _buildTryOnButton(),
+            const SizedBox(height: 16),
+            const Divider(color: AppColors.divider, thickness: 1),
+            const SizedBox(height: 16),
+
             // اختيار المقاس
             _buildSizeSelector(),
             const SizedBox(height: 20),
@@ -428,6 +435,87 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ],
       ],
+    );
+  }
+
+  // ======================== تجربة افتراضية (AR Try-On) ========================
+
+  /// زر التجربة الافتراضية للثياب والمشالح والشماغ
+  Widget _buildTryOnButton() {
+    // الفئات التي تدعم التجربة الافتراضية
+    const tryOnCategories = ['thobes', 'bisht', 'shemagh'];
+    final supportsTryOn = tryOnCategories.contains(product.categoryId);
+
+    if (!supportsTryOn) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.visibility_rounded, color: AppColors.primary, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'تجربة افتراضية',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'شاهد المنتج عليك مباشرة باستخدام الكاميرا',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _openTryOn,
+              icon: const Icon(Icons.camera_alt_rounded, size: 20),
+              label: const Text('جربه الآن'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openTryOn() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ArTryOnScreen(
+          productId: product.id,
+          productName: product.name,
+          productImage: product.images.isNotEmpty ? product.images.first : null,
+          categoryId: product.categoryId,
+        ),
+      ),
     );
   }
 
