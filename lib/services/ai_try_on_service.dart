@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -34,9 +36,9 @@ class PredictionResult {
 }
 
 /// خدمة التجربة الافتراضية بالذكاء الاصطناعي
-/// تستخدم Hugging Face Spaces (IDM-VTON) بدلاً من Replicate
+/// تستخدم Hugging Face Spaces (IDM-VTON) عبر Gradio 4.x SSE API
 class AiTryOnService {
-  /// إنشاء طلب تجربة افتراضية عبر Hugging Face Spaces (IDM-VTON Gradio API)
+  /// إنشاء طلب تجربة افتراضية عبر IDM-VTON Space
   /// [personImagePath] مسار صورة الشخص (محلي)
   /// [garmentImageUrl] رابط صورة المنتج
   /// [category] فئة المنتج (upper_body, lower_body, dresses)
@@ -61,40 +63,30 @@ class AiTryOnService {
         );
       }
 
-      debugPrint('🤖 AI Try-On (HF): بدء التجربة الافتراضية...');
+      debugPrint('🤖 AI Try-On (HF Space): بدء التجربة الافتراضية...');
 
       // ================================================================
-      // الطريقة 1: محاولة Hugging Face Inference API مباشرة
+      // تحميل صورة الشخص إلى الـ Space
       // ================================================================
-      final bytes = await file.readAsBytes();
-      final personB64 = base64Encode(bytes);
-      final personDataUri = 'data:image/jpeg;base64,$personB64';
+      final personPath = await _uploadImage(file);
+      if (personPath == null) {
+        return PredictionResult(
+          status: PredictionStatus.failed,
+          error: 'فشل رفع الصورة. تحقق من الاتصال.',
+        );
+      }
+      debugPrint('📤 تم رفع صورة الشخص: $personPath');
 
-      // محاولة استدعاء Hugging Face Inference API مباشرة
-      final hfResult = await _callHuggingFaceInference(
-        personDataUri: personDataUri,
+      // ================================================================
+      // استدعاء واجهة Gradio 4.x عبر SSE
+      // ================================================================
+      return await _callGradioSse(
+        personPath: personPath,
         garmentImageUrl: garmentImageUrl,
         category: category,
-      );
-      if (hfResult != null) return hfResult;
-
-      // ================================================================
-      // الطريقة 2: Gradio API (IDM-VTON Space)
-      // ================================================================
-      final gradioResult = await _callGradioApi(
-        personDataUri: personDataUri,
-        garmentImageUrl: garmentImageUrl,
-        category: category,
-      );
-      if (gradioResult != null) return gradioResult;
-
-      // كل الطرق فشلت
-      return PredictionResult(
-        status: PredictionStatus.failed,
-        error: 'فشلت جميع محاولات الاتصال بالذكاء الاصطناعي. تحقق من المفتاح والاتصال بالإنترنت.',
       );
     } catch (e) {
-      debugPrint('⚠️ AI Try-On (HF) خطأ: $e');
+      debugPrint('⚠️ AI Try-On (HF Space) خطأ: $e');
       return PredictionResult(
         status: PredictionStatus.failed,
         error: 'خطأ في الاتصال: $e',
@@ -102,297 +94,250 @@ class AiTryOnService {
     }
   }
 
-  /// محاولة استدعاء Hugging Face Inference API مباشرة
-  static Future<PredictionResult?> _callHuggingFaceInference({
-    required String personDataUri,
+  /// رفع صورة إلى الـ Space
+  static Future<String?> _uploadImage(File file) async {
+    try {
+      final uploadUri = Uri.parse('$idmVtonSpaceUrl/upload');
+      final request = http.MultipartRequest('POST', uploadUri);
+      request.files.add(
+        await http.MultipartFile.fromPath('files', file.path),
+      );
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 200) {
+        final List<dynamic> paths = jsonDecode(responseBody);
+        if (paths.isNotEmpty) {
+          return paths.first.toString();
+        }
+      }
+      debugPrint('⚠️ فشل رفع الصورة: ${streamedResponse.statusCode}');
+    } catch (e) {
+      debugPrint('⚠️ فشل رفع الصورة: $e');
+    }
+    return null;
+  }
+
+  /// استدعاء Gradio 4.x عبر SSE (queue/join + queue/data)
+  static Future<PredictionResult> _callGradioSse({
+    required String personPath,
     required String garmentImageUrl,
     required String category,
   }) async {
     try {
-      debugPrint('🤖 HF Inference API: محاولة...');
+      final sessionHash = _generateSessionHash();
+      debugPrint('🔑 Session: $sessionHash');
 
-      final response = await http.post(
-        Uri.parse('https://api-inference.huggingface.co/models/yisol/IDM-VTON'),
-        headers: {
-          'Authorization': 'Bearer $huggingFaceApiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'inputs': {
-            'human_image': personDataUri,
-            'garment_image': garmentImageUrl,
-            'category': category,
+      // ----------------------------------------
+      // الخطوة 1: الانضمام إلى الطابور
+      // ----------------------------------------
+      final joinPayload = jsonEncode({
+        'data': [
+          {
+            'background': {
+              'path': personPath,
+              'meta': {'_type': 'gradio.FileData'},
+            },
+            'layers': <dynamic>[],
+            'composite': null,
           },
-        }),
-        // Timeout قصير لأن الـ API قد لا يدعم هذا النموذج
+          garmentImageUrl,
+          category,
+          true,  // auto-mask
+          false, // crop
+          30,    // denoising steps
+          42,    // seed
+        ],
+        'fn_index': 2,
+        'trigger_id': 25,
+        'session_hash': sessionHash,
+      });
+
+      final joinResponse = await http.post(
+        Uri.parse('$idmVtonSpaceUrl/queue/join'),
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Alafif-Newform/1.0',
+        },
+        body: joinPayload,
       ).timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
-        debugPrint('🤖 HF Inference API: نجاح');
-        final data = jsonDecode(response.body);
-        String? outputUrl;
-
-        // الـ API يعيد الصورة مباشرة أو كرابط
-        if (data is Map && data['image'] != null) {
-          outputUrl = data['image'];
-        } else if (data is String) {
-          outputUrl = data;
-        } else if (data is List && data.isNotEmpty) {
-          outputUrl = data.first.toString();
-        }
-
-        if (outputUrl != null) {
-          return PredictionResult(
-            status: PredictionStatus.succeeded,
-            outputUrl: outputUrl,
-          );
-        }
-      } else if (response.statusCode != 503 && response.statusCode != 400) {
-        // 503 = model loading, سنحاول Gradio API
-        debugPrint('⚠️ HF Inference API: ${response.statusCode} - ${response.body}');
-      } else {
-        debugPrint('⚠️ HF Inference API: ${response.statusCode} - النموذج قد لا يكون متاحاً عبر Inference API');
-      }
-    } catch (e) {
-      debugPrint('⚠️ HF Inference API فشل (سأحاول Gradio API): $e');
-    }
-    return null;
-  }
-
-  /// محاولة استدعاء Gradio API الخاص بـ IDM-VTON Space
-  static Future<PredictionResult?> _callGradioApi({
-    required String personDataUri,
-    required String garmentImageUrl,
-    required String category,
-  }) async {
-    try {
-      debugPrint('🤖 Gradio API: محاولة الاتصال بـ $idmVtonSpaceUrl...');
-
-      // رفع صورة الشخص إلى الـ Space
-      final personImageBytes = base64Decode(personDataUri.split(',').last);
-      final uploadUri = Uri.parse('$idmVtonSpaceUrl/upload');
-      final uploadRequest = http.MultipartRequest('POST', uploadUri);
-      uploadRequest.files.add(
-        http.MultipartFile.fromBytes(
-          'files',
-          personImageBytes,
-          filename: 'person.jpg',
-        ),
-      );
-
-      final uploadResponse = await uploadRequest.send();
-      final uploadBody = await uploadResponse.stream.bytesToString();
-      debugPrint('🤖 Gradio Upload: ${uploadResponse.statusCode} - $uploadBody');
-
-      if (uploadResponse.statusCode != 200) {
-        // محاولة طريقة Gradio 4.x الجديدة
-        return await _callGradioApiV4(
-          personDataUri: personDataUri,
-          garmentImageUrl: garmentImageUrl,
-          category: category,
+      if (joinResponse.statusCode != 200) {
+        return PredictionResult(
+          status: PredictionStatus.failed,
+          error: 'فشل الاتصال بالذكاء الاصطناعي (${joinResponse.statusCode})',
         );
       }
 
-      // تحليل مسار الملف المرفوع
-      List<dynamic> uploadedPaths;
+      final joinData = jsonDecode(joinResponse.body);
+      debugPrint('📋 انضم للطابور: ${joinData['event_id']}');
+
+      // ----------------------------------------
+      // الخطوة 2: الاستقصاء عبر SSE
+      // ----------------------------------------
+      final sseUri = Uri.parse('$idmVtonSpaceUrl/queue/data?session_hash=$sessionHash');
+      final sseClient = http.Client();
       try {
-        uploadedPaths = jsonDecode(uploadBody) as List<dynamic>;
-      } catch (_) {
-        // قد يكون نصاً عادياً
-        return await _callGradioApiV4(
-          personDataUri: personDataUri,
-          garmentImageUrl: garmentImageUrl,
-          category: category,
-        );
-      }
+        final sseRequest = http.Request('GET', sseUri);
+        sseRequest.headers['User-Agent'] = 'Alafif-Newform/1.0';
 
-      if (uploadedPaths.isEmpty) {
-        return await _callGradioApiV4(
-          personDataUri: personDataUri,
-          garmentImageUrl: garmentImageUrl,
-          category: category,
-        );
-      }
+        final sseResponse = await sseClient.send(sseRequest);
+        final stream = sseResponse.stream.transform(utf8.decoder);
+        final completer = Completer<PredictionResult>();
+        String buffer = '';
 
-      final uploadedPath = uploadedPaths.first.toString();
-
-      // استدعاء التنبؤ
-      final predictUri = Uri.parse('$idmVtonSpaceUrl/api/predict/');
-      final predictResponse = await http.post(
-        predictUri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'data': [
-            uploadedPath,
-            garmentImageUrl,
-            category,
-          ],
-        }),
-      ).timeout(const Duration(seconds: 60));
-
-      debugPrint('🤖 Gradio Predict: ${predictResponse.statusCode}');
-
-      if (predictResponse.statusCode == 200) {
-        final result = jsonDecode(predictResponse.body);
-        if (result['data'] is List && (result['data'] as List).isNotEmpty) {
-          final output = result['data'].first;
-          String? outputUrl;
-
-          if (output is String) {
-            outputUrl = output;
-          } else if (output is Map && output['url'] != null) {
-            outputUrl = output['url'];
-          } else if (output is Map && output['path'] != null) {
-            // الصورة على الـ Space، نحتاج تحميلها
-            outputUrl = '$idmVtonSpaceUrl/file=${output['path']}';
-          }
-
-          if (outputUrl != null) {
-            // إذا كان المسار محلياً على الـ Space، نحوله لرابط
-            if (!outputUrl.startsWith('http')) {
-              outputUrl = '$idmVtonSpaceUrl/file=$outputUrl';
+        // استقصاء لمدة أقصاها 5 دقائق
+        await Future.any([
+          completer.future,
+          Future.delayed(const Duration(minutes: 5), () {
+            if (!completer.isCompleted) {
+              completer.complete(PredictionResult(
+                status: PredictionStatus.failed,
+                error: 'انتهت مهلة الانتظار (5 دقائق)',
+              ));
             }
-            return PredictionResult(
-              status: PredictionStatus.succeeded,
-              outputUrl: outputUrl,
-            );
-          }
-        }
-      }
+          }),
+        ]);
 
-      return null;
+        // معالجة تدفق SSE
+        await for (final chunk in stream) {
+          if (completer.isCompleted) break;
+          buffer += chunk;
+
+          // معالجة كل سطر SSE
+          for (final line in buffer.split('\n')) {
+            if (line.startsWith('data: ')) {
+              final jsonStr = line.substring(6);
+              try {
+                final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+                final msg = data['msg'] as String?;
+
+                if (msg == 'process_completed') {
+                  final output = data['output'] as Map<String, dynamic>?;
+                  final success = data['success'] as bool? ?? false;
+                  final error = output?['error'] as String?;
+
+                  if (success && output != null) {
+                    // استخراج رابط الصورة الناتجة
+                    final resultData = output['data'] as List<dynamic>?;
+                    if (resultData != null && resultData.isNotEmpty) {
+                      final outputImage = resultData.first;
+                      String? outputUrl = _extractOutputUrl(outputImage);
+
+                      if (outputUrl != null) {
+                        completer.complete(PredictionResult(
+                          status: PredictionStatus.succeeded,
+                          outputUrl: outputUrl,
+                        ));
+                      } else {
+                        completer.complete(PredictionResult(
+                          status: PredictionStatus.failed,
+                          error: 'لم يتم العثور على رابط الصورة الناتجة',
+                        ));
+                      }
+                    }
+                  } else if (error != null && error.isNotEmpty) {
+                    completer.complete(PredictionResult(
+                      status: PredictionStatus.failed,
+                      error: _translateError(error),
+                    ));
+                  } else {
+                    completer.complete(PredictionResult(
+                      status: PredictionStatus.failed,
+                      error: 'فشلت المعالجة. قد تكون الصور غير مناسبة.',
+                    ));
+                  }
+                  break;
+                }
+
+                if (msg == 'process_starts') {
+                  debugPrint('⏳ بدأت المعالجة...');
+                }
+
+                if (msg == 'log') {
+                  final logMsg = data['log'] as String? ?? '';
+                  debugPrint('📋 Space: $logMsg');
+                }
+              } catch (_) {
+                // تجاهل أخطاء تحليل SSE الفردية
+              }
+            }
+          }
+          // إعادة تعيين الـ buffer بعد المعالجة
+          buffer = '';
+        }
+
+        // إذا انتهى الـ stream بدون نتيجة
+        if (!completer.isCompleted) {
+          completer.complete(PredictionResult(
+            status: PredictionStatus.failed,
+            error: 'انقطع الاتصال قبل اكتمال المعالجة',
+          ));
+        }
+
+        return await completer.future;
+      } finally {
+        sseClient.close();
+      }
     } catch (e) {
-      debugPrint('⚠️ Gradio API V3 فشل: $e');
-      return await _callGradioApiV4(
-        personDataUri: personDataUri,
-        garmentImageUrl: garmentImageUrl,
-        category: category,
+      debugPrint('⚠️ Gradio SSE فشل: $e');
+      return PredictionResult(
+        status: PredictionStatus.failed,
+        error: 'فشل الاتصال: $e',
       );
     }
-  }
-
-  /// Gradio 4.x API (تنسيق جديد)
-  static Future<PredictionResult?> _callGradioApiV4({
-    required String personDataUri,
-    required String garmentImageUrl,
-    required String category,
-  }) async {
-    try {
-      debugPrint('🤖 Gradio API V4: محاولة...');
-
-      // Gradio 4.x يستخدم /gradio_api/call/predict
-      final callUri = Uri.parse('$idmVtonSpaceUrl/gradio_api/call/predict');
-      final callResponse = await http.post(
-        callUri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $huggingFaceApiKey',
-        },
-        body: jsonEncode({
-          'data': [
-            personDataUri,
-            garmentImageUrl,
-            category,
-          ],
-        }),
-      ).timeout(const Duration(seconds: 60));
-
-      debugPrint('🤖 Gradio V4 Call: ${callResponse.statusCode}');
-
-      if (callResponse.statusCode == 200) {
-        final result = jsonDecode(callResponse.body);
-        if (result['data'] is List && (result['data'] as List).isNotEmpty) {
-          final output = result['data'].first;
-          String? outputUrl = _extractImageUrl(output);
-          if (outputUrl != null) {
-            return PredictionResult(
-              status: PredictionStatus.succeeded,
-              outputUrl: outputUrl,
-            );
-          }
-        }
-      }
-
-      // Gradio 4.x قد يعيد event_id للاستقصاء
-      if (callResponse.statusCode == 200) {
-        try {
-          final data = jsonDecode(callResponse.body);
-          if (data['event_id'] != null) {
-            // استقصاء النتيجة
-            return await _pollGradioEvent(data['event_id']);
-          }
-        } catch (_) {}
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('⚠️ Gradio API V4 فشل: $e');
-      return null;
-    }
-  }
-
-  /// استقصاء حدث Gradio (لـ Gradio 4.x)
-  static Future<PredictionResult?> _pollGradioEvent(String eventId) async {
-    try {
-      for (int i = 0; i < 30; i++) {
-        await Future.delayed(const Duration(seconds: 2));
-        final response = await http.get(
-          Uri.parse('$idmVtonSpaceUrl/gradio_api/call/predict/$eventId'),
-        );
-        if (response.statusCode == 200) {
-          final body = response.body.trim();
-          // تنسيق SSE: "data: {...}\n\n"
-          for (final line in body.split('\n')) {
-            if (line.startsWith('data: ')) {
-              try {
-                final data = jsonDecode(line.substring(6));
-                if (data['data'] is List && (data['data'] as List).isNotEmpty) {
-                  final output = data['data'].first;
-                  if (output is Map && output['status'] == 'complete') continue;
-                  if (output is Map && output['error'] != null) {
-                    return PredictionResult(
-                      status: PredictionStatus.failed,
-                      error: output['error'].toString(),
-                    );
-                  }
-                  String? url = _extractImageUrl(output);
-                  if (url != null) {
-                    return PredictionResult(
-                      status: PredictionStatus.succeeded,
-                      outputUrl: url,
-                    );
-                  }
-                }
-              } catch (_) {}
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('⚠️ Gradio Poll فشل: $e');
-    }
-    return null;
   }
 
   /// استخراج رابط الصورة من استجابة Gradio
-  static String? _extractImageUrl(dynamic output) {
+  static String? _extractOutputUrl(dynamic output) {
     if (output is String) {
       return output.startsWith('http') ? output : null;
     }
     if (output is Map) {
-      if (output['url'] is String) return output['url'];
-      if (output['path'] is String) return '$idmVtonSpaceUrl/file=${output['path']}';
+      if (output['url'] is String) {
+        final url = output['url'] as String;
+        if (url.startsWith('http')) return url;
+      }
+      if (output['path'] is String) {
+        final path = output['path'] as String;
+        return '$idmVtonSpaceUrl/file=$path';
+      }
+      if (output['name'] is String) {
+        final name = output['name'] as String;
+        return '$idmVtonSpaceUrl/file=$name';
+      }
     }
     return null;
   }
 
-  /// التحقق من حالة الطلب (للتوافق مع الكود القديم - غير مستخدم حالياً)
+  /// توليد معرف جلسة عشوائي
+  static String _generateSessionHash() {
+    final rand = Random();
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    return List.generate(10, (_) => chars[rand.nextInt(chars.length)]).join();
+  }
+
+  /// ترجمة رسائل الخطأ
+  static String _translateError(String error) {
+    if (error.contains('IndexError') || error.contains('out of range')) {
+      return 'خطأ في معالجة الصور. تأكد من أن الصورة تحتوي على شخص واضح ومنتج مناسب.';
+    }
+    if (error.contains('CUDA') || error.contains('GPU') || error.contains('memory')) {
+      return 'الذكاء الاصطناعي مشغول حالياً. حاول مرة أخرى بعد دقيقة.';
+    }
+    if (error.contains('timeout') || error.contains('Timeout')) {
+      return 'انتهت مهلة المعالجة. قد تكون الصورة كبيرة جداً.';
+    }
+    return 'خطأ: $error';
+  }
+
+  /// التحقق من حالة الطلب (للتوافق مع الواجهة القديمة)
   static Future<PredictionResult> checkPrediction(String predictionId) async {
-    // Hugging Face Gradio API متزامن، لا حاجة للاستقصاء
     return PredictionResult(
       id: predictionId,
       status: PredictionStatus.failed,
-      error: 'لا يدعم الاستقصاء مع Hugging Face API',
+      error: 'لا يدعم الاستقصاء في هذا الإصدار',
     );
   }
 
