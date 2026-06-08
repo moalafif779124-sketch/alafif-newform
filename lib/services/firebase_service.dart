@@ -481,4 +481,82 @@ class FirebaseService {
     final snapshot = await firestore.collection('users').count().get();
     return snapshot.count ?? 0;
   }
+
+  // =================== التقييمات والمراجعات ===================
+
+  /// جلب مراجعات منتج معين
+  Future<List<Map<String, dynamic>>> getProductReviews(String productId) async {
+    final snapshot = await firestore
+        .collection('reviews')
+        .where('productId', isEqualTo: productId)
+        .orderBy('createdAt', descending: true)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data()! as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  /// Stream لمراجعات منتج معين
+  Stream<List<Map<String, dynamic>>> getProductReviewsStream(String productId) {
+    return firestore
+        .collection('reviews')
+        .where('productId', isEqualTo: productId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList());
+  }
+
+  /// إضافة مراجعة جديدة
+  Future<String> addReview(Map<String, dynamic> data) async {
+    data['createdAt'] = DateTime.now().millisecondsSinceEpoch;
+    final docRef = await firestore.collection('reviews').add(data);
+
+    // تحديث متوسط التقييم للمنتج
+    await _updateProductRating(data['productId']);
+    return docRef.id;
+  }
+
+  /// تحديث متوسط التقييم للمنتج بناءً على المراجعات
+  Future<void> _updateProductRating(String productId) async {
+    try {
+      final reviews = await firestore
+          .collection('reviews')
+          .where('productId', isEqualTo: productId)
+          .get();
+
+      if (reviews.docs.isEmpty) return;
+
+      double totalRating = 0;
+      for (var doc in reviews.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
+        totalRating += (data['rating'] ?? 5).toDouble();
+      }
+      final averageRating = (totalRating / reviews.docs.length);
+      final reviewCount = reviews.docs.length;
+
+      await firestore.collection('products').doc(productId).update({
+        'rating': double.parse(averageRating.toStringAsFixed(1)),
+        'reviewCount': reviewCount,
+      });
+    } catch (e) {
+      debugPrint('Error updating product rating: $e');
+    }
+  }
+
+  /// التحقق مما إذا كان المستخدم قد قيّم المنتج بالفعل
+  Future<bool> hasUserReviewed(String productId, String userId) async {
+    final snapshot = await firestore
+        .collection('reviews')
+        .where('productId', isEqualTo: productId)
+        .where('userId', isEqualTo: userId)
+        .limit(1)
+        .get();
+    return snapshot.docs.isNotEmpty;
+  }
 }

@@ -353,13 +353,6 @@ class _CartScreenState extends State<CartScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   // التنقل إلى شاشة الدفع
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('شاشة الدفع قيد التطوير'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                  // الانتقال إلى شاشة الدفع
                   Navigator.push(
                     context,
                     MaterialPageRoute(

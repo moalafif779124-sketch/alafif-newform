@@ -7,6 +7,7 @@ import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/wishlist_provider.dart';
+import '../../services/notification_service.dart';
 import '../auth/login_screen.dart';
 import '../shell_screen.dart';
 
@@ -42,6 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
         authProvider.initialize(),
         productProvider.initialize(),
         wishlistProvider.loadWishlist(),
+        NotificationService().initialize(),
       ]);
     } catch (e) {
       debugPrint('SplashScreen initialization error: $e');

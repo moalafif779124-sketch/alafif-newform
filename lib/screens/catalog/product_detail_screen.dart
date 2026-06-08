@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
 import '../../models/cart_item.dart';
+import '../../models/review.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/review_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/app_image.dart';
+import '../cart/cart_screen.dart';
+import '../checkout/checkout_screen.dart';
+import 'add_review_screen.dart';
 
 /// شاشة تفاصيل المنتج
 class ProductDetailScreen extends StatefulWidget {
@@ -71,7 +78,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  void _addToCart() {
+  void _addToCart({bool goToCheckout = false}) {
     if (_selectedSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -101,21 +108,42 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     context.read<CartProvider>().addItem(cartItem);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Text('تمت الإضافة إلى السلة ✓'),
-          ],
+    if (goToCheckout) {
+      // Buy Now: go directly to checkout
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+      );
+    } else {
+      // Normal add to cart: show confirmation
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(child: Text('تمت الإضافة إلى السلة ✓')),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'السلة',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
         ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
-      ),
-    );
+      );
+    }
   }
+
+  void _buyNow() => _addToCart(goToCheckout: true);
 
   @override
   Widget build(BuildContext context) {
@@ -307,6 +335,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
             // معلومات إضافية
             _buildAdditionalInfo(),
+            const SizedBox(height: 16),
+
+            // التقييمات والمراجعات
+            _buildReviewsSection(),
             const SizedBox(height: 16),
             const Divider(color: AppColors.divider, thickness: 1),
             const SizedBox(height: 16),
@@ -663,6 +695,317 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  // ======================== التقييمات والمراجعات ========================
+
+  Widget _buildReviewsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // عنوان القسم
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.star_rounded, color: AppColors.rating, size: 22),
+                SizedBox(width: 6),
+                Text(
+                  'التقييمات',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            TextButton.icon(
+              onPressed: _navigateToAddReview,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('أضف تقييم'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // تحميل التقييمات عند ظهور القسم
+        Consumer<ReviewProvider>(
+          builder: (context, reviewProvider, _) {
+            // بدء التحميل أول مرة
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              reviewProvider.checkUserReviewed(
+                product.id,
+                context.read<AuthProvider>().userId ?? '',
+              );
+              if (reviewProvider.reviews.isEmpty && !reviewProvider.isLoading) {
+                reviewProvider.loadReviews(product.id);
+              }
+            });
+
+            if (reviewProvider.isLoading && reviewProvider.reviews.isEmpty) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            if (reviewProvider.reviews.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.accentLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.rate_review_outlined,
+                      size: 48,
+                      color: AppColors.textSecondary.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'لا توجد تقييمات بعد',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _navigateToAddReview,
+                      child: const Text(
+                        'كن أول من يقيم هذا المنتج',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                // ملخص التقييمات
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      // متوسط التقييم
+                      Column(
+                        children: [
+                          Text(
+                            product.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.rating,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: List.generate(5, (i) {
+                              return Icon(
+                                i < product.rating.floor()
+                                    ? Icons.star
+                                    : (i < product.rating ? Icons.star_half : Icons.star_border),
+                                size: 16,
+                                color: AppColors.rating,
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '(${product.reviewCount} تقييم)',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 24),
+                      // أحدث التقييمات
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: reviewProvider.reviews.take(2).map((review) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _buildReviewItem(review),
+                          )).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // قائمة التقييمات
+                if (reviewProvider.reviews.length > 2) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => _showAllReviews(reviewProvider.reviews),
+                    child: const Text(
+                      'عرض كل التقييمات',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /// عنصر تقييم واحد
+  Widget _buildReviewItem(Review review) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+              child: Text(
+                review.userName.isNotEmpty ? review.userName[0] : 'م',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                review.userName,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            Row(
+              children: List.generate(5, (i) {
+                return Icon(
+                  i < review.rating.floor() ? Icons.star : Icons.star_border,
+                  size: 14,
+                  color: AppColors.rating,
+                );
+              }),
+            ),
+          ],
+        ),
+        if (review.comment.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            review.comment,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// الانتقال إلى شاشة إضافة تقييم
+  void _navigateToAddReview() {
+    final authProvider = context.read<AuthProvider>();
+    if (!authProvider.isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تسجيل الدخول أولاً'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddReviewScreen(
+          productId: product.id,
+          productName: product.name,
+        ),
+      ),
+    );
+  }
+
+  /// عرض كل التقييمات في حوار
+  void _showAllReviews(List<Review> allReviews) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollController) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'كل التقييمات',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    itemCount: allReviews.length,
+                    separatorBuilder: (_, __) => const Divider(height: 20),
+                    itemBuilder: (_, index) => _buildReviewItem(allReviews[index]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ======================== منتجات مشابهة ========================
 
   Widget _buildRelatedProducts() {
@@ -729,7 +1072,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
               // عناصر التحكم في الكمية
@@ -748,7 +1091,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           : null,
                     ),
                     SizedBox(
-                      width: 32,
+                      width: 28,
                       child: Text(
                         '$_quantity',
                         textAlign: TextAlign.center,
@@ -769,38 +1112,54 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
 
-              // السعر الإجمالي
+              // السعر
               Text(
                 '${_totalPrice.toStringAsFixed(0)} ${AppConstants.currency}',
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
                 ),
               ),
               const Spacer(),
 
-              // زر الإضافة إلى السلة
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _addToCart,
+              // Buy Now button
+              SizedBox(
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: _buyNow,
+                  icon: const Icon(Icons.flash_on, size: 18),
+                  label: const Text('شراء'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'أضف إلى السلة',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Add to Cart button
+              SizedBox(
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: () => _addToCart(),
+                  icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+                  label: const Text('أضف'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryLight,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 0,
                   ),
                 ),
               ),

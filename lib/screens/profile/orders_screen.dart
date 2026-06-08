@@ -7,6 +7,7 @@ import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/app_image.dart';
+import 'order_tracking_screen.dart';
 
 /// شاشة طلباتي
 class OrdersScreen extends StatefulWidget {
@@ -600,7 +601,40 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
               ],
             ),
-          ],
+          ),
+        ),
+        // زر تتبع الطلب
+        _buildTrackButton(order),
+      ],
+    );
+  }
+
+  /// زر تتبع الطلب - يفتح شاشة التتبع
+  Widget _buildTrackButton(Order order) {
+    if (order.status == 'cancelled') return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => OrderTrackingScreen(order: order),
+              ),
+            );
+          },
+          icon: const Icon(Icons.timeline_outlined, size: 16),
+          label: const Text('تتبع الطلب'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.primary),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+          ),
         ),
       ),
     );
