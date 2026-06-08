@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/skeleton_widget.dart';
 import 'product_detail_screen.dart';
 
 /// شاشة الكتالوج / كافة المنتجات
@@ -233,7 +233,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
-  /// شبكة تحميل متألقة (Shimmer) تحتوي على 6 عناصر وهمية
+  /// شبكة تحميل متألقة (Skeleton) تحتوي على 6 عناصر وهمية
   Widget _buildShimmerGrid() {
     return SliverPadding(
       padding: const EdgeInsets.all(8),
@@ -245,68 +245,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
           mainAxisSpacing: 8,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _buildShimmerItem(),
+          (context, index) => const ProductCardSkeleton(),
           childCount: 6,
-        ),
-      ),
-    );
-  }
-
-  /// عنصر شبكة وهمي (Shimmer Placeholder)
-  Widget _buildShimmerItem() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // مساحة الصورة
-            Expanded(
-              flex: 3,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-              ),
-            ),
-            // مساحة النص
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: 12,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      width: 100,
-                      height: 10,
-                      color: Colors.white,
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 80,
-                      height: 14,
-                      color: Colors.white,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

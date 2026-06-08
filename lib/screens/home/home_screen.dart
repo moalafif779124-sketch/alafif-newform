@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
 import '../../models/banner.dart';
 import '../../providers/product_provider.dart';
+import '../../widgets/skeleton_widget.dart';
+import '../../widgets/app_image.dart';
 import '../cart/cart_screen.dart';
 import '../catalog/product_detail_screen.dart';
 import '../catalog/catalog_screen.dart';
@@ -63,10 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildCategoriesSection(provider),
 
                   // =========== 3. New Arrivals Section ===========
-                  _buildNewArrivalsSection(provider),
+                  if (provider.isLoading && provider.products.isEmpty)
+                    _buildNewArrivalsSkeleton()
+                  else
+                    _buildNewArrivalsSection(provider),
 
                   // =========== 4. Featured Section ===========
-                  _buildFeaturedSection(provider),
+                  if (provider.isLoading && provider.products.isEmpty)
+                    _buildFeaturedSkeleton()
+                  else
+                    _buildFeaturedSection(provider),
 
                   const SizedBox(height: 24),
                 ],
@@ -82,6 +89,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBannerCarousel(ProductProvider provider) {
     final banners = provider.banners;
+
+    if (provider.isLoading && banners.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: BannerSkeleton(),
+      );
+    }
 
     if (banners.isEmpty) {
       return Container(
@@ -246,6 +260,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategoriesSection(ProductProvider provider) {
     final categories = provider.categories;
+
+    if (provider.isLoading && categories.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: SkeletonWidget(width: 150, height: 22),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 80,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: List.generate(6, (index) => const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: CategorySkeleton(),
+                )),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.only(top: 24),
@@ -451,14 +492,80 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ======================== Loading Skeleton Sections ========================
+
+  /// Skeleton for new arrivals section while loading
+  Widget _buildNewArrivalsSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: SkeletonWidget(width: 140, height: 22),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 300,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 4,
+              itemBuilder: (context, index) => const Padding(
+                padding: EdgeInsets.only(left: 12),
+                child: SizedBox(
+                  width: 180,
+                  child: ProductCardSkeleton(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Skeleton for featured section while loading
+  Widget _buildFeaturedSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: SkeletonWidget(width: 180, height: 22),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 300,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 4,
+              itemBuilder: (context, index) => const Padding(
+                padding: EdgeInsets.only(left: 12),
+                child: SizedBox(
+                  width: 180,
+                  child: ProductCardSkeleton(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ======================== Helper Widgets ========================
 
   Widget _buildShimmerPlaceholder() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: Container(
-        color: Colors.white,
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(16),
       ),
     );
   }
