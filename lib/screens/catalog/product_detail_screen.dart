@@ -509,7 +509,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ArTryOnScreen(
+        builder: (_) => VirtualTryOnScreen(
           productId: product.id,
           productName: product.name,
           productImage: product.images.isNotEmpty ? product.images.first : null,
