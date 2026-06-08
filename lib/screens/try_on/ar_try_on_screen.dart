@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
-import '../../services/ai_try_on_service.dart';
+import '../../services/ai_try_on_service.dart' show AiTryOnService, PredictionResult, PredictionStatus, huggingFaceApiKey;
 import '../../widgets/app_image.dart';
 
 // مراحل التجربة الافتراضية
@@ -323,13 +323,13 @@ class _VirtualTryOnScreenState extends State<VirtualTryOnScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('أدخل مفتاح Replicate API', style: TextStyle(color: Colors.white70, fontSize: 14)),
+        const Text('أدخل مفتاح Hugging Face API', style: TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: true,
           decoration: InputDecoration(
-            hintText: 'r8_...',
+            hintText: 'hf_...',
             hintStyle: const TextStyle(color: Colors.white24),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.08),
@@ -339,13 +339,13 @@ class _VirtualTryOnScreenState extends State<VirtualTryOnScreen> {
           style: const TextStyle(color: Colors.white),
           onSubmitted: (value) {
             if (value.isNotEmpty) {
-              replicateApiKey = value;
+              huggingFaceApiKey = value;
               setState(() => _isApiKeyMissing = false);
             }
           },
         ),
         const SizedBox(height: 8),
-        Text('سجل في replicate.com للحصول على مفتاح مجاني',
+        Text('سجل واحصل على مفتاح مجاني من hf.co/settings/tokens',
             style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
       ]),
     );
@@ -367,7 +367,7 @@ class _VirtualTryOnScreenState extends State<VirtualTryOnScreen> {
 
   Future<void> _startTryOn() async {
     if (_personImage == null) return;
-    if (replicateApiKey.isEmpty) { setState(() => _isApiKeyMissing = true); return; }
+    if (huggingFaceApiKey.isEmpty) { setState(() => _isApiKeyMissing = true); return; }
     setState(() { _isProcessing = true; _errorMessage = null; _currentStep = TryOnStep.processing; });
     final result = await AiTryOnService.createTryOn(
       personImagePath: _personImage!.path,
