@@ -11,7 +11,7 @@ import 'package:http/http.dart' as http;
 // ----------------------------------------------------------------
 String huggingFaceApiKey = '';
 
-/// رابط Space الخاص بـ IDM-VTON (يمكن تغييره إذا نشرت Space خاص بك)
+/// رابط Space الخاص بـ IDM-VTON العام
 String idmVtonSpaceUrl = 'https://yisol-idm-vton.hf.space';
 
 /// حالة طلب الذكاء الاصطناعي
@@ -36,7 +36,7 @@ class PredictionResult {
 }
 
 /// خدمة التجربة الافتراضية بالذكاء الاصطناعي
-/// تستخدم Hugging Face Spaces (IDM-VTON) عبر Gradio 4.x SSE API
+/// تستخدم IDM-VTON العام عبر Gradio 4.x SSE API
 class AiTryOnService {
   /// إنشاء طلب تجربة افتراضية عبر IDM-VTON Space
   /// [personImagePath] مسار صورة الشخص (محلي)
@@ -162,7 +162,6 @@ class AiTryOnService {
         'Content-Type': 'application/json',
         'User-Agent': 'Alafif-Newform/1.0',
       };
-      // إضافة مفتاح HF للسرعة (إذا كان المستخدم Pro)
       if (huggingFaceApiKey.isNotEmpty) {
         headers['Authorization'] = 'Bearer $huggingFaceApiKey';
       }
@@ -217,7 +216,6 @@ class AiTryOnService {
           if (completer.isCompleted) break;
           buffer += chunk;
 
-          // معالجة كل سطر SSE
           for (final line in buffer.split('\n')) {
             if (line.startsWith('data: ')) {
               final jsonStr = line.substring(6);
@@ -231,7 +229,6 @@ class AiTryOnService {
                   final error = output?['error'] as String?;
 
                   if (success && output != null) {
-                    // استخراج رابط الصورة الناتجة
                     final resultData = output['data'] as List<dynamic>?;
                     if (resultData != null && resultData.isNotEmpty) {
                       final outputImage = resultData.first;
@@ -275,16 +272,12 @@ class AiTryOnService {
                   }
                   debugPrint('📋 Space: $logMsg');
                 }
-              } catch (_) {
-                // تجاهل أخطاء تحليل SSE الفردية
-              }
+              } catch (_) {}
             }
           }
-          // إعادة تعيين الـ buffer بعد المعالجة
           buffer = '';
         }
 
-        // إذا انتهى الـ stream بدون نتيجة
         if (!completer.isCompleted) {
           completer.complete(PredictionResult(
             status: PredictionStatus.failed,
@@ -346,15 +339,6 @@ class AiTryOnService {
       return 'انتهت مهلة المعالجة. قد تكون الصورة كبيرة جداً.';
     }
     return 'خطأ: $error';
-  }
-
-  /// التحقق من حالة الطلب (للتوافق مع الواجهة القديمة)
-  static Future<PredictionResult> checkPrediction(String predictionId) async {
-    return PredictionResult(
-      id: predictionId,
-      status: PredictionStatus.failed,
-      error: 'لا يدعم الاستقصاء في هذا الإصدار',
-    );
   }
 
   /// تحويل فئة المنتج إلى فئة النموذج
