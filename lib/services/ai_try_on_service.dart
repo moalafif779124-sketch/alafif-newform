@@ -341,6 +341,15 @@ class AiTryOnService {
     return 'خطأ: $error';
   }
 
+  /// التحقق من حالة الطلب (للتوافق مع الواجهة القديمة)
+  static Future<PredictionResult> checkPrediction(String predictionId) async {
+    return PredictionResult(
+      id: predictionId,
+      status: PredictionStatus.failed,
+      error: 'لا يدعم الاستقصاء في هذا الإصدار',
+    );
+  }
+
   /// تحويل فئة المنتج إلى فئة النموذج
   static String categoryForModel(String categoryId) {
     switch (categoryId) {
