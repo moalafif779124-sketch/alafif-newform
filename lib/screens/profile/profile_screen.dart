@@ -138,6 +138,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         appBar: AppBar(
           title: const Text('حسابي'),
           centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'تحديث البيانات',
+              onPressed: () async {
+                final auth = context.read<AuthProvider>();
+                await auth.refreshUser();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(auth.user?.isAdmin == true
+                        ? '✅ تم التحديث - لديك صلاحية مدير'
+                        : 'تم تحديث البيانات'),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
         body: Consumer<AuthProvider>(
           builder: (context, auth, _) {

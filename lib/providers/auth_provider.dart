@@ -421,6 +421,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // =================== تحديث بيانات المستخدم من Firestore ===================
+
+  /// إعادة جلب بيانات المستخدم من Firestore وتحديث الجلسة
+  /// يُستدعى عندما يريد المستخدم التحقق من صلاحياته المحدثة
+  Future<bool> refreshUser() async {
+    if (_user == null) return false;
+    try {
+      final userData = await _firebaseService.getUser(_user!.id);
+      if (userData != null) {
+        _user = AppUser.fromMap(userData);
+        await _saveUserSession();
+        notifyListeners();
+        debugPrint('♻️ User refreshed from Firestore: admin=${_user!.isAdmin}');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to refresh user: $e');
+    }
+    return false;
+  }
+
   // =================== مسح الأخطاء ===================
 
   void clearError() {
