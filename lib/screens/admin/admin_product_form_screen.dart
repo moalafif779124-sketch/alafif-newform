@@ -390,7 +390,7 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: AppConstants.sizesThobes.map((size) {
+                children: AppConstants.allSizes.map((size) {
                   final selected = _selectedSizes.contains(size);
                   return FilterChip(
                     label: Text(size),

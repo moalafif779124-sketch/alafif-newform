@@ -165,7 +165,7 @@ class ProductProvider with ChangeNotifier {
           'https://picsum.photos/seed/${index}b/400/500',
           'https://picsum.photos/seed/${index}c/400/500',
         ],
-        sizes: ['52', '54', '56', '58', '60'],
+        sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
         colors: ['أسود', 'كحلي', 'رمادي', 'بيج'],
         colorOptions: [
           {'name': 'أسود', 'hex': '#000000'},

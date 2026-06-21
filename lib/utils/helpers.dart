@@ -34,18 +34,22 @@ class Helpers {
   /// الحصول على أيقونة التصنيف
   static IconData getCategoryIcon(String categoryId) {
     switch (categoryId) {
-      case 'thobes':
+      case 'shamzan':
         return Icons.checkroom;
-      case 'suits':
-        return Icons.business_center;
-      case 'shirts':
-        return Icons.straighten;
-      case 'trousers':
-        return Icons.accessibility_new;
-      case 'accessories':
+      case 'fanail':
+        return Icons.style;
+      case 'aqwat':
         return Icons.watch;
-      case 'winter':
-        return Icons.ac_unit;
+      case 'pajamas':
+        return Icons.bed;
+      case 'belts':
+        return Icons.sell;
+      case 'jackets':
+        return Icons.fitbit;
+      case 'underwear':
+        return Icons.face;
+      case 'mawaz':
+        return Icons.accessibility_new;
       default:
         return Icons.shopping_bag;
     }

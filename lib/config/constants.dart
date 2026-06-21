@@ -18,48 +18,59 @@ class AppConstants {
   // =========== فئات المنتجات ===========
   static const List<Map<String, dynamic>> categories = [
     {
-      'id': 'thobes',
-      'name': 'الثياب',
-      'nameEn': 'Thobes',
-      'icon': 'thobe',
+      'id': 'shamzan',
+      'name': 'شمزان',
+      'nameEn': 'Shamzan',
+      'icon': 'shamzan',
     },
     {
-      'id': 'suits',
-      'name': 'البذلات',
-      'nameEn': 'Suits',
-      'icon': 'suit',
+      'id': 'fanail',
+      'name': 'فنايل',
+      'nameEn': 'T-Shirts',
+      'icon': 'fanail',
     },
     {
-      'id': 'shirts',
-      'name': 'القمصان',
-      'nameEn': 'Shirts',
-      'icon': 'shirt',
+      'id': 'aqwat',
+      'name': 'اكوات',
+      'nameEn': 'Aqwat',
+      'icon': 'aqwat',
     },
     {
-      'id': 'trousers',
-      'name': 'السراويل',
-      'nameEn': 'Trousers',
-      'icon': 'trouser',
+      'id': 'pajamas',
+      'name': 'بجائم',
+      'nameEn': 'Pajamas',
+      'icon': 'pajamas',
     },
     {
-      'id': 'accessories',
-      'name': 'الإكسسوارات',
-      'nameEn': 'Accessories',
-      'icon': 'accessory',
+      'id': 'belts',
+      'name': 'حزامات',
+      'nameEn': 'Belts',
+      'icon': 'belts',
     },
     {
-      'id': 'winter',
-      'name': 'المشالح والشتوي',
-      'nameEn': 'Mashlah & Winter',
-      'icon': 'winter',
+      'id': 'jackets',
+      'name': 'جاكتات',
+      'nameEn': 'Jackets',
+      'icon': 'jackets',
+    },
+    {
+      'id': 'underwear',
+      'name': 'ملابس داخليه',
+      'nameEn': 'Underwear',
+      'icon': 'underwear',
+    },
+    {
+      'id': 'mawaz',
+      'name': 'معاوز',
+      'nameEn': 'Mawaz',
+      'icon': 'mawaz',
     },
   ];
 
   // =========== خيارات المقاسات ===========
-  static const List<String> sizesThobes = ['52', '54', '56', '58', '60', '62'];
-  static const List<String> sizesSuits = ['S', 'M', 'L', 'XL', 'XXL', '3XL'];
-  static const List<String> sizesShirts = ['S', 'M', 'L', 'XL', 'XXL', '3XL'];
-  static const List<String> sizesTrousers = ['30', '32', '34', '36', '38', '40'];
+  static const List<String> allSizes = [
+    'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL',
+  ];
 
   // =========== خيارات الألوان ===========
   static const List<Map<String, dynamic>> colorOptions = [
