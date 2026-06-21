@@ -134,6 +134,10 @@ class AuthProvider with ChangeNotifier {
     final restored = await _restoreSavedSession();
     if (restored) {
       debugPrint('♻️ User session restored from SharedPreferences');
+      // 🐛 FIX: Re-fetch from Firestore to get latest admin status
+      // OTP users have no Firebase Auth session, so authStateChanges
+      // never fires for them — this ensures admin role is current on app start
+      await refreshUser();
     }
 
     // 2️⃣ استرجاع جلسة OTP عند بدء التطبيق (إذا كان في منتصف عملية تحقق)
@@ -409,6 +413,9 @@ class AuthProvider with ChangeNotifier {
           phone: _user!.phone,
           email: _user!.email,
           profileImage: profileImage ?? _user!.profileImage,
+          address: _user!.address,
+          createdAt: _user!.createdAt,
+          isAdmin: _user!.isAdmin,  // 🐛 FIX: preserve admin role
         );
       }
 
