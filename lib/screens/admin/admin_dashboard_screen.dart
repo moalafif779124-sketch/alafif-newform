@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -324,7 +323,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       title: 'مزامنة بيانات الفئات',
                       subtitle: 'كتابة الفئات الجديدة في Firestone وترحيل المنتجات القديمة',
                       color: AppColors.success,
-                      onTap: _syncing ? null : _syncCategoriesAndMigrate,
+                      onTap: _syncing
+                          ? null
+                          : () => _syncCategoriesAndMigrate(),
                     ),
                     if (_syncing)
                       const Padding(
@@ -394,14 +395,14 @@ class _AdminMenuItem extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color color;
-  final VoidCallback onTap;
+  final void Function()? onTap;
 
   const _AdminMenuItem({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.color,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
