@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../config/colors.dart';
+import '../../config/constants.dart';
 import 'admin_products_screen.dart';
 import 'admin_categories_screen.dart';
 import 'admin_orders_screen.dart';
@@ -24,6 +27,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _orderCount = 0;
   int _categoryCount = 0;
   bool _loading = true;
+  bool _syncing = false;
 
   @override
   void initState() {
@@ -46,6 +50,118 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // =================== مزامنة قواعد البيانات ===================
+
+  /// مزامنة فئات المنتجات مع قاعدة البيانات في Firestore
+  /// تكتب الفئات الـ 8 الجديدة وتُهاجر المنتجات القديمة
+  Future<void> _syncCategoriesAndMigrate() async {
+    setState(() => _syncing = true);
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final categoriesRef = FirebaseFirestore.instance.collection('categories');
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      // 1️⃣ كتابة الفئات الجديدة
+      for (int i = 0; i < AppConstants.categories.length; i++) {
+        final cat = AppConstants.categories[i];
+        final docRef = categoriesRef.doc(cat['id']);
+        batch.set(docRef, {
+          'id': cat['id'],
+          'name': cat['name'],
+          'nameEn': cat['nameEn'],
+          'icon': cat['icon'],
+          'order': i,
+          'isActive': true,
+          'productCount': 0,
+          'createdAt': now,
+        }, SetOptions(merge: true));
+      }
+
+      // 2️⃣ البحث عن المنتجات ذات الفئات القديمة
+      final oldIdToNew = <String, String>{
+        'thobes': 'shamzan',
+        'suits': 'jackets',
+        'shirts': 'fanail',
+        'trousers': 'pajamas',
+        'accessories': 'belts',
+        'winter': 'jackets',
+        'bisht': 'jackets',
+        'shemagh': 'aqwat',
+      };
+
+      final productsSnapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      int migratedCount = 0;
+      final newCategoryIds = AppConstants.categories
+          .map((c) => c['id'] as String)
+          .toSet();
+
+      for (final productDoc in productsSnapshot.docs) {
+        final productData = productDoc.data();
+        final oldCategoryId = productData['categoryId'] as String?;
+        final oldCategoryName = productData['categoryName'] as String?;
+
+        if (oldCategoryId != null && !newCategoryIds.contains(oldCategoryId)) {
+          // 🐛 هجرة الفئة القديمة إلى الفئة الجديدة
+          final newId = oldIdToNew[oldCategoryId] ?? 'other';
+
+          // البحث عن الاسم العربي للفئة الجديدة
+          String newName = oldCategoryName ?? '';
+          for (final c in AppConstants.categories) {
+            if (c['id'] == newId) {
+              newName = c['name'] as String;
+              break;
+            }
+          }
+
+          batch.update(productDoc.reference, {
+            'categoryId': newId,
+            'categoryName': newName,
+          });
+          migratedCount++;
+        }
+      }
+
+      // 3️⃣ تنفيذ الدفعة
+      await batch.commit();
+
+      if (!mounted) return;
+
+      // إعادة تحميل الإحصائيات
+      await _loadStats();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '✅ تمت المزامنة بنجاح\n'
+            '${AppConstants.categories.length} فئة منشأة\n'
+            '$migratedCount منتج تم تحديث فئته',
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ فشلت المزامنة: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _syncing = false);
     }
   }
 
@@ -189,6 +305,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
                       ),
                     ),
+                    const SizedBox(height: 32),
+
+                    // قسم الأدوات
+                    const Text(
+                      'أدوات الصيانة',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // مزامنة الفئات
+                    _AdminMenuItem(
+                      icon: Icons.sync,
+                      title: 'مزامنة بيانات الفئات',
+                      subtitle: 'كتابة الفئات الجديدة في Firestone وترحيل المنتجات القديمة',
+                      color: AppColors.success,
+                      onTap: _syncing ? null : _syncCategoriesAndMigrate,
+                    ),
+                    if (_syncing)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: LinearProgressIndicator(),
+                      ),
                     const SizedBox(height: 32),
                   ],
                 ),
