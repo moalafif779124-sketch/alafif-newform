@@ -221,7 +221,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               itemBuilder: (context, index) {
                 final imageUrl = product.images.isNotEmpty
                     ? product.images[index]
-                    : 'https://picsum.photos/seed/${product.id}/400/500';
+                    : '';
                 return AppImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,

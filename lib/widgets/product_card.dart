@@ -46,7 +46,7 @@ class ProductCard extends StatelessWidget {
                   AppImage(
                     imageUrl: product.images.isNotEmpty
                         ? product.images.first
-                        : 'https://picsum.photos/seed/${product.id}/200/250',
+                        : '',
                     height: 180,
                     width: double.infinity,
                     fit: BoxFit.cover,
