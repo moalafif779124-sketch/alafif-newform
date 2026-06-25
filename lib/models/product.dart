@@ -8,10 +8,12 @@ class Product {
   final String categoryId;
   final String categoryName;
   final List<String> images;
-  final List<String> sizes;
-  final List<String> colors;
+  final List<String> sizes;          // مقاسات قياسية (M, L, XL, 52, 54...)
+  final String sizeRange;            // نطاق مقاس (1-60)
+  final List<String> colors;         // أكواد الألوان hex
   final List<Map<String, String>> colorOptions; // {name, hex}
-  final Map<String, int> stock; // {'size_color': quantity}
+  final Map<String, int> stock;      // {'size_color': quantity}
+  final int stockQuantity;           // كمية المخزون الكلية
   final double rating;
   final int reviewCount;
   final bool isFeatured;
@@ -35,9 +37,11 @@ class Product {
     required this.categoryName,
     required this.images,
     required this.sizes,
+    this.sizeRange = '',
     required this.colors,
     this.colorOptions = const [],
     this.stock = const {},
+    this.stockQuantity = 0,
     this.rating = 0.0,
     this.reviewCount = 0,
     this.isFeatured = false,
@@ -67,12 +71,14 @@ class Product {
       categoryName: map['categoryName'] ?? '',
       images: List<String>.from(map['images'] ?? []),
       sizes: List<String>.from(map['sizes'] ?? []),
+      sizeRange: map['sizeRange'] ?? '',
       colors: List<String>.from(map['colors'] ?? []),
       colorOptions: (map['colorOptions'] as List<dynamic>?)
               ?.map((e) => Map<String, String>.from(e))
               .toList() ??
           [],
       stock: Map<String, int>.from(map['stock'] ?? {}),
+      stockQuantity: (map['stockQuantity'] ?? 0),
       rating: (map['rating'] ?? 0).toDouble(),
       reviewCount: map['reviewCount'] ?? 0,
       isFeatured: map['isFeatured'] ?? false,
@@ -101,9 +107,11 @@ class Product {
       'categoryName': categoryName,
       'images': images,
       'sizes': sizes,
+      'sizeRange': sizeRange,
       'colors': colors,
       'colorOptions': colorOptions,
       'stock': stock,
+      'stockQuantity': stockQuantity,
       'rating': rating,
       'reviewCount': reviewCount,
       'isFeatured': isFeatured,

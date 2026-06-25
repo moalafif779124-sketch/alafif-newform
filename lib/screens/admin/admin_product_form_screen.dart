@@ -32,6 +32,13 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
   late TextEditingController _careInstructionsController;
   late TextEditingController _tagsController;
 
+  // ===== الحقول الجديدة =====
+  late TextEditingController _stockQuantityController;
+  late TextEditingController _sizeRangeController;
+  List<String> _selectedColors = [];
+  bool _isRangeSize = false;
+  // =========================
+
   String? _categoryId;
   List<String> _selectedSizes = [];
   bool _isFeatured = false;
@@ -61,6 +68,8 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
     _materialController = TextEditingController();
     _careInstructionsController = TextEditingController();
     _tagsController = TextEditingController();
+    _stockQuantityController = TextEditingController();
+    _sizeRangeController = TextEditingController();
 
     _loadCategories();
 
@@ -81,6 +90,8 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
     _materialController.dispose();
     _careInstructionsController.dispose();
     _tagsController.dispose();
+    _stockQuantityController.dispose();
+    _sizeRangeController.dispose();
     super.dispose();
   }
 
@@ -116,6 +127,10 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
     _materialController.text = p['material'] ?? '';
     _careInstructionsController.text = p['careInstructions'] ?? '';
     _tagsController.text = (p['tags'] as List<dynamic>?)?.join(', ') ?? '';
+    _stockQuantityController.text = (p['stockQuantity'] ?? 0).toString();
+    _sizeRangeController.text = p['sizeRange'] ?? '';
+    _selectedColors = List<String>.from(p['colors'] ?? []);
+    _isRangeSize = (p['sizeRange'] ?? '').isNotEmpty;
   }
 
   Future<void> _save() async {
@@ -154,7 +169,12 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
       'categoryId': _categoryId,
       'categoryName': selectedCategory['name'] ?? '',
       'sizes': _selectedSizes,
+      'sizeRange': _isRangeSize ? _sizeRangeController.text.trim() : '',
       'images': imageList,
+      'colors': _selectedColors,
+      'colorOptions': [], // ألوان مفصلة (محجوزة للتوسعة)
+      'stock': {},
+      'stockQuantity': int.tryParse(_stockQuantityController.text.trim()) ?? 0,
       'isFeatured': _isFeatured,
       'isNewArrival': _isNewArrival,
       'hasDiscount': _hasDiscount,
@@ -163,9 +183,6 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
       'material': _materialController.text.trim(),
       'careInstructions': _careInstructionsController.text.trim(),
       'tags': tagList,
-      'colors': [],
-      'colorOptions': [],
-      'stock': {},
       'rating': 0,
       'reviewCount': 0,
     };
@@ -377,38 +394,181 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
                     ),
               const SizedBox(height: 16),
 
-              // المقاسات
-              const Text(
-                'المقاسات',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+              // المخزون
+              _buildSectionTitle('المخزون'),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _stockQuantityController,
+                decoration: _inputDecoration('كمية المخزون', Icons.inventory_2).copyWith(
+                  helperText: 'العدد الإجمالي المتاح من هذا المنتج',
                 ),
+                keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 20),
+
+              // المقاسات
+              _buildSectionTitle('المقاسات'),
+              const SizedBox(height: 12),
+              // اختيار نوع المقاس (نطاق / قياسي)
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text('نطاق (1-60)'),
+                      selected: _isRangeSize,
+                      onSelected: (v) => setState(() => _isRangeSize = true),
+                      selectedColor: AppColors.primary,
+                      labelStyle: TextStyle(
+                        color: _isRangeSize ? Colors.white : AppColors.textPrimary,
+                        fontWeight: _isRangeSize ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text('مقاسات قياسية'),
+                      selected: !_isRangeSize,
+                      onSelected: (v) => setState(() => _isRangeSize = false),
+                      selectedColor: AppColors.primary,
+                      labelStyle: TextStyle(
+                        color: !_isRangeSize ? Colors.white : AppColors.textPrimary,
+                        fontWeight: !_isRangeSize ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              if (_isRangeSize)
+                // إدخال نطاق المقاس
+                TextFormField(
+                  controller: _sizeRangeController,
+                  decoration: _inputDecoration('نطاق المقاس', Icons.straighten).copyWith(
+                    helperText: AppConstants.sizeRangeHint,
+                  ),
+                  keyboardType: TextInputType.text,
+                )
+              else
+                // اختيار مقاسات قياسية (رقمية + أبجدية)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('مقاسات رقمية', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: AppConstants.sizesNumeric.map((size) {
+                        final selected = _selectedSizes.contains(size);
+                        return FilterChip(
+                          label: Text(size, style: const TextStyle(fontSize: 13)),
+                          selected: selected,
+                          onSelected: (v) {
+                            setState(() {
+                              if (v) { _selectedSizes.add(size); }
+                              else { _selectedSizes.remove(size); }
+                            });
+                          },
+                          selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                          checkmarkColor: AppColors.primary,
+                          labelStyle: TextStyle(
+                            color: selected ? AppColors.primary : AppColors.textPrimary,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('مقاسات أبجدية', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: AppConstants.sizesStandard.map((size) {
+                        final selected = _selectedSizes.contains(size);
+                        return FilterChip(
+                          label: Text(size, style: const TextStyle(fontSize: 13)),
+                          selected: selected,
+                          onSelected: (v) {
+                            setState(() {
+                              if (v) { _selectedSizes.add(size); }
+                              else { _selectedSizes.remove(size); }
+                            });
+                          },
+                          selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                          checkmarkColor: AppColors.primary,
+                          labelStyle: TextStyle(
+                            color: selected ? AppColors.primary : AppColors.textPrimary,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 20),
+
+              // الألوان
+              _buildSectionTitle('الألوان'),
+              const SizedBox(height: 12),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: AppConstants.allSizes.map((size) {
-                  final selected = _selectedSizes.contains(size);
-                  return FilterChip(
-                    label: Text(size),
-                    selected: selected,
-                    onSelected: (v) {
+                spacing: 12,
+                runSpacing: 12,
+                children: AppConstants.colorOptions.map((colorOption) {
+                  final hex = colorOption['hex'] as String;
+                  final name = colorOption['name'] as String;
+                  final selected = _selectedColors.contains(hex);
+
+                  Color parsedColor;
+                  try {
+                    parsedColor = Color(int.parse(hex.replaceFirst('#', '0xFF')));
+                  } catch (_) {
+                    parsedColor = const Color(0xFF808080);
+                  }
+
+                  return GestureDetector(
+                    onTap: () {
                       setState(() {
-                        if (v) {
-                          _selectedSizes.add(size);
+                        if (selected) {
+                          _selectedColors.remove(hex);
                         } else {
-                          _selectedSizes.remove(size);
+                          _selectedColors.add(hex);
                         }
                       });
                     },
-                    selectedColor: AppColors.primary.withValues(alpha: 0.15),
-                    checkmarkColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      color: selected ? AppColors.primary : AppColors.textPrimary,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: parsedColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: selected ? AppColors.primary : Colors.grey[300]!,
+                              width: selected ? 3 : 1,
+                            ),
+                            boxShadow: selected
+                                ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8)]
+                                : null,
+                          ),
+                          child: selected
+                              ? const Icon(Icons.check, color: Colors.white, size: 20)
+                              : null,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: selected ? AppColors.primary : AppColors.textSecondary,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }).toList(),
