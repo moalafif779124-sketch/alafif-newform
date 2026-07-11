@@ -6,7 +6,7 @@ import '../../config/constants.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/skeleton_widget.dart';
-import 'product_detail_screen.dart';
+import 'product_detail_screen.dart' deferred as detail;
 
 /// شاشة الكتالوج / كافة المنتجات
 class CatalogScreen extends StatefulWidget {
@@ -93,11 +93,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             final product = provider.filteredProducts[index];
                             return ProductCard(
                               product: product,
-                              onTap: () {
+                              onTap: () async {
+                                await detail.loadLibrary();
+                                if (!context.mounted) return;
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => ProductDetailScreen(
+                                    builder: (_) => detail.ProductDetailScreen(
                                       product: product,
                                     ),
                                   ),

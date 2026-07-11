@@ -12,10 +12,10 @@ import '../../providers/review_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/app_image.dart';
-import '../cart/cart_screen.dart';
-import '../checkout/checkout_screen.dart';
-import '../try_on/ar_try_on_screen.dart';
-import 'add_review_screen.dart';
+import '../cart/cart_screen.dart' deferred as cart;
+import '../checkout/checkout_screen.dart' deferred as checkout;
+import '../try_on/ar_try_on_screen.dart' deferred as tryon;
+import 'add_review_screen.dart' deferred as review;
 
 /// شاشة تفاصيل المنتج
 class ProductDetailScreen extends StatefulWidget {
@@ -78,7 +78,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  void _addToCart({bool goToCheckout = false}) {
+  Future<void> _addToCart({bool goToCheckout = false}) async {
     if (_selectedSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -110,9 +110,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     if (goToCheckout) {
       // Buy Now: go directly to checkout
+      await checkout.loadLibrary();
+      if (!context.mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+        MaterialPageRoute(builder: (_) => const checkout.CheckoutScreen()),
       );
     } else {
       // Normal add to cart: show confirmation
@@ -131,10 +133,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           action: SnackBarAction(
             label: 'السلة',
             textColor: Colors.white,
-            onPressed: () {
+            onPressed: () async {
+              await cart.loadLibrary();
+              if (!context.mounted) return;
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CartScreen()),
+                MaterialPageRoute(builder: (_) => const cart.CartScreen()),
               );
             },
           ),
@@ -143,7 +147,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  void _buyNow() => _addToCart(goToCheckout: true);
+  Future<void> _buyNow() => _addToCart(goToCheckout: true);
 
   @override
   Widget build(BuildContext context) {
@@ -487,7 +491,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _openTryOn,
+              onPressed: () async {
+                await _openTryOn();
+              },
               icon: const Icon(Icons.camera_alt_rounded, size: 20),
               label: const Text('جربه الآن'),
               style: ElevatedButton.styleFrom(
@@ -505,11 +511,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  void _openTryOn() {
+  Future<void> _openTryOn() async {
+    await tryon.loadLibrary();
+    if (!context.mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => VirtualTryOnScreen(
+        builder: (_) => tryon.VirtualTryOnScreen(
           productId: product.id,
           productName: product.name,
           productImage: product.images.isNotEmpty ? product.images.first : null,
@@ -807,7 +815,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
             TextButton.icon(
-              onPressed: _navigateToAddReview,
+              onPressed: () async {
+                await _navigateToAddReview();
+              },
               icon: const Icon(Icons.add, size: 18),
               label: const Text('أضف تقييم'),
               style: TextButton.styleFrom(
@@ -866,7 +876,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: _navigateToAddReview,
+                      onPressed: () async {
+                        await _navigateToAddReview();
+                      },
                       child: const Text(
                         'كن أول من يقيم هذا المنتج',
                         style: TextStyle(
@@ -1020,7 +1032,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   /// الانتقال إلى شاشة إضافة تقييم
-  void _navigateToAddReview() {
+  Future<void> _navigateToAddReview() async {
     final authProvider = context.read<AuthProvider>();
     if (!authProvider.isLoggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1031,10 +1043,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
       return;
     }
+    await review.loadLibrary();
+    if (!context.mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AddReviewScreen(
+        builder: (_) => review.AddReviewScreen(
           productId: product.id,
           productName: product.name,
         ),
@@ -1216,7 +1230,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               SizedBox(
                 height: 46,
                 child: ElevatedButton.icon(
-                  onPressed: _buyNow,
+                  onPressed: () async {
+                    await _buyNow();
+                  },
                   icon: const Icon(Icons.flash_on, size: 18),
                   label: const Text('شراء'),
                   style: ElevatedButton.styleFrom(

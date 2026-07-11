@@ -9,8 +9,8 @@ import '../../providers/order_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
 import '../home/home_screen.dart';
-import '../payment/jeeb_payment_screen.dart';
-import '../payment/kuraimi_payment_screen.dart';
+import '../payment/jeeb_payment_screen.dart' deferred as jeeb;
+import '../payment/kuraimi_payment_screen.dart' deferred as kuraimi;
 
 /// شاشة إتمام الطلب (Checkout)
 class CheckoutScreen extends StatefulWidget {
@@ -152,9 +152,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (orderId != null && mounted) {
         // 🔵 إذا كانت طريقة الدفع هي محفظة جيب — ننتقل لشاشة الدفع (QR + تعليمات)
         if (_selectedPaymentMethod == 'jeeb') {
+          await jeeb.loadLibrary();
+          if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) => JeebPaymentScreen(
+              builder: (_) => jeeb.JeebPaymentScreen(
                 orderId: orderId,
                 amount: cartProvider.total,
                 posNumber: AppConstants.jeebPosNumber,
@@ -166,9 +168,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
         // 🔵 إذا كانت طريقة الدفع هي كريمي حاسب — ننتقل لشاشة الدفع
         if (_selectedPaymentMethod == 'kuraimi') {
+          await kuraimi.loadLibrary();
+          if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) => KuraimiPaymentScreen(
+              builder: (_) => kuraimi.KuraimiPaymentScreen(
                 orderId: orderId,
                 amount: cartProvider.total,
                 posNumber: AppConstants.kuraimiPosNumber,

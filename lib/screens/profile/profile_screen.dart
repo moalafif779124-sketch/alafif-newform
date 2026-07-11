@@ -9,7 +9,7 @@ import '../auth/login_screen.dart';
 import 'orders_screen.dart';
 import 'addresses_screen.dart';
 import '../wishlist/wishlist_screen.dart';
-import '../admin/admin_dashboard_screen.dart';
+import '../admin/admin_dashboard_screen.dart' deferred as admin;
 
 /// شاشة الملف الشخصي وحساب المستخدم
 class ProfileScreen extends StatefulWidget {
@@ -473,11 +473,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Icons.chevron_left,
                     color: AppColors.textSecondary,
                   ),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const AdminDashboard()),
-                  ),
+                  onTap: () async {
+                    await admin.loadLibrary();
+                    if (!context.mounted) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const admin.AdminDashboard()),
+                    );
+                  },
                 ),
               ),
             ),

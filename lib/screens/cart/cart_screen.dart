@@ -7,7 +7,7 @@ import '../../config/constants.dart';
 import '../../providers/cart_provider.dart';
 import '../../models/cart_item.dart';
 import '../shell_screen.dart';
-import '../checkout/checkout_screen.dart';
+import '../checkout/checkout_screen.dart' deferred as checkout;
 
 /// شاشة سلة التسوق
 class CartScreen extends StatefulWidget {
@@ -351,12 +351,14 @@ class _CartScreenState extends State<CartScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   // التنقل إلى شاشة الدفع
+                  await checkout.loadLibrary();
+                  if (!context.mounted) return;
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const CheckoutScreen(),
+                      builder: (_) => const checkout.CheckoutScreen(),
                     ),
                   );
                 },

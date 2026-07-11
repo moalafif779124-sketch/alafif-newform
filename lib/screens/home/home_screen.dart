@@ -98,20 +98,40 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (banners.isEmpty) {
-      return Container(
-        height: 200,
-        width: double.infinity,
-        color: AppColors.primaryLight,
-        child: const Center(
-          child: Text(
-            'العفيف نيوفورم',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+      // بنايات ديناميكية من المنتجات النشطة
+      final allProducts = provider.products;
+      final dynamicProducts = allProducts.take(10).toList();
+
+      if (dynamicProducts.isEmpty) {
+        return Container(
+          height: 200,
+          width: double.infinity,
+          color: AppColors.primaryLight,
+          child: const Center(
+            child: Text(
+              'العفيف نيوفورم',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
+        );
+      }
+
+      return CarouselSlider(
+        options: CarouselOptions(
+          height: 200,
+          autoPlay: true,
+          autoPlayInterval: const Duration(seconds: 4),
+          autoPlayAnimationDuration: const Duration(milliseconds: 800),
+          enlargeCenterPage: true,
+          enlargeFactor: 0.2,
+          viewportFraction: 0.9,
+          enableInfiniteScroll: dynamicProducts.length > 1,
         ),
+        items: dynamicProducts.map((product) => _buildDynamicBanner(product)).toList(),
       );
     }
 
@@ -254,6 +274,92 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  /// بناء بنر ديناميكي من منتج نشط
+  Widget _buildDynamicBanner(Product product) {
+    final imageUrl = product.images.isNotEmpty ? product.images.first : '';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProductDetailScreen(product: product),
+          ),
+        );
+      },
+      child: Stack(
+        children: [
+          // صورة المنتج كخلفية
+          Container(
+            height: 200,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: AppColors.primaryLight,
+            ),
+            child: imageUrl.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: AppImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      backgroundColor: AppColors.primaryLight,
+                    ),
+                  )
+                : null,
+          ),
+
+          // تدرج شفاف لتحسين قراءة النص
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.6),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // نص المنتج
+          Positioned(
+            right: 20,
+            left: 20,
+            bottom: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${product.price.toStringAsFixed(0)} ريال',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
