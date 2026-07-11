@@ -114,7 +114,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (!context.mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const checkout.CheckoutScreen()),
+        MaterialPageRoute(builder: (_) => checkout.CheckoutScreen()),
       );
     } else {
       // Normal add to cart: show confirmation
@@ -138,7 +138,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               if (!context.mounted) return;
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const cart.CartScreen()),
+                MaterialPageRoute(builder: (_) => cart.CartScreen()),
               );
             },
           ),
