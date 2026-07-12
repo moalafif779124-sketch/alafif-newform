@@ -48,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
       ]);
 
       // ربط المستخدم بمزامنة المفضلة والسلة
-      if (authProvider.isLoggedIn && authProvider.userId.isNotEmpty) {
+      if (authProvider.isLoggedIn && (authProvider.userId != null && authProvider.userId!.isNotEmpty)) {
         wishlistProvider.setUserId(authProvider.userId);
         context.read<CartProvider>().setUserId(authProvider.userId);
       }
