@@ -5,7 +5,7 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
-  workflow_dispatch: # تشغيل يدوي
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -33,7 +33,7 @@ jobs:
       - name: 🔧 تثبيت الاعتماديات
         run: flutter pub get
 
-      - name: 🔑 فك Keystore من Secret (ثابت لكل بناء)
+      - name: 🔑 فك Keystore من Secret
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.p12
 
@@ -44,14 +44,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alafif-newform-apk
-          path: |
-            build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/*.apk
           compression-level: 9
 
       - name: 🚀 رفع APK إلى GitHub Release
         run: |
-          # رفع APK باستخدام GitHub API مباشرة (بدون gh CLI)
-          echo "📤 رفع APK إلى jeeb-v1..."
           UPLOAD_URL="https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/333416472/assets?name=app-arm64-v8a-release.apk"
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
@@ -59,11 +56,17 @@ jobs:
             --data-binary @build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
             "$UPLOAD_URL" \
             -w "\nHTTP:%{http_code}\n" | tail -1
-          echo ""
           echo "✅ APK uploaded"
-          echo "📎 https://github.com/$GITHUB_REPOSITORY/releases/download/jeeb-v1/app-arm64-v8a-release.apk"
 
       - name: 📋 عرض المخرجات
         run: |
           echo "✅ تم بناء التطبيق بنجاح!"
           ls -lh build/app/outputs/flutter-apk/
+
+      # نشر قواعد Firestore تلقائياً
+      - name: 🔥 نشر قواعد Firestore
+        run: |
+          npm install -g firebase-tools
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" | base64 -d > /tmp/gcp-key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json
+          firebase deploy --only firestore:rules,firestore:indexes --project alafif-newform
