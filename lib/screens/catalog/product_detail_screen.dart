@@ -581,6 +581,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   // ======================== اختيار اللون ========================
 
+  /// تحويل كود hex إلى اسم لون عربي (للتوافق مع المنتجات القديمة)
+  String _colorNameFromHex(String hex) {
+    final colorMap = {
+      '#000000': 'أسود',
+      '#FFFFFF': 'أبيض',
+      '#0D1B3E': 'كحلي',
+      '#808080': 'رمادي',
+      '#F5F5DC': 'بيج',
+      '#8B4513': 'بني',
+      '#008000': 'أخضر',
+      '#B22222': 'أحمر',
+    };
+    return colorMap[hex.toUpperCase()] ?? hex;
+  }
+
   Widget _buildColorSelector() {
     if (product.colorOptions.isEmpty && product.colors.isEmpty) {
       return const SizedBox.shrink();
@@ -588,7 +603,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     final colorOptions = product.colorOptions.isNotEmpty
         ? product.colorOptions
-        : product.colors.map((c) => {'name': c, 'hex': '#808080'}).toList();
+        : product.colors.map((c) => {'name': _colorNameFromHex(c), 'hex': c}).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

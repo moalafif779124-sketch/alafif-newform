@@ -129,7 +129,11 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
     _tagsController.text = (p['tags'] as List<dynamic>?)?.join(', ') ?? '';
     _stockQuantityController.text = (p['stockQuantity'] ?? 0).toString();
     _sizeRangeController.text = p['sizeRange'] ?? '';
-    _selectedColors = List<String>.from(p['colors'] ?? []);
+    _selectedColors = (p['colorOptions'] as List<dynamic>?)
+            ?.map((e) => (e as Map<String, dynamic>)['hex'] as String? ?? '')
+            .where((h) => h.isNotEmpty)
+            .toList() ??
+        List<String>.from(p['colors'] ?? []);
     _isRangeSize = (p['sizeRange'] ?? '').isNotEmpty;
   }
 
@@ -172,7 +176,13 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
       'sizeRange': _isRangeSize ? _sizeRangeController.text.trim() : '',
       'images': imageList,
       'colors': _selectedColors,
-      'colorOptions': [], // ألوان مفصلة (محجوزة للتوسعة)
+      'colorOptions': _selectedColors.map((hex) {
+        final match = AppConstants.colorOptions.cast<Map<String, dynamic>>().firstWhere(
+          (o) => o['hex'] == hex,
+          orElse: () => {'name': hex, 'hex': hex},
+        );
+        return {'name': match['name'], 'hex': hex};
+      }).toList(),
       'stock': {},
       'stockQuantity': int.tryParse(_stockQuantityController.text.trim()) ?? 0,
       'isFeatured': _isFeatured,
