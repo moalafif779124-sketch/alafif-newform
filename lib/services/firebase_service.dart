@@ -226,6 +226,26 @@ class FirebaseService {
     await firestore.collection('carts').doc(userId).delete();
   }
 
+  // =================== المفضلة (قائمة الرغبات) ===================
+
+  Future<void> saveWishlist(String userId, List<String> productIds) async {
+    await firestore.collection('wishlists').doc(userId).set({
+      'userId': userId,
+      'productIds': productIds,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  Future<List<String>?> getWishlist(String userId) async {
+    final doc = await firestore.collection('wishlists').doc(userId).get();
+    if (!doc.exists) return null;
+    return List<String>.from(doc.data()!['productIds'] ?? []);
+  }
+
+  Future<void> clearWishlist(String userId) async {
+    await firestore.collection('wishlists').doc(userId).delete();
+  }
+
   // =================== الطلبات ===================
 
   Future<String> createOrder(Map<String, dynamic> orderData) async {

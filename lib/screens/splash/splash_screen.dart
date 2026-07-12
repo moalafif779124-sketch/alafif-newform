@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../services/notification_service.dart';
@@ -45,6 +46,12 @@ class _SplashScreenState extends State<SplashScreen> {
         wishlistProvider.loadWishlist(),
         NotificationService().initialize(),
       ]);
+
+      // ربط المستخدم بمزامنة المفضلة والسلة
+      if (authProvider.isLoggedIn && authProvider.userId.isNotEmpty) {
+        wishlistProvider.setUserId(authProvider.userId);
+        context.read<CartProvider>().setUserId(authProvider.userId);
+      }
     } catch (e) {
       debugPrint('SplashScreen initialization error: $e');
     }
