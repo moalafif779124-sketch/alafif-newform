@@ -19,6 +19,8 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
+  bool _showFilters = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +53,38 @@ class _CatalogScreenState extends State<CatalogScreen> {
               context.read<ProductProvider>().setSearchQuery(query);
             },
           ),
+          actions: [
+            Consumer<ProductProvider>(
+              builder: (context, provider, _) {
+                final hasFilters = provider.hasActiveFilters;
+                return Stack(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        _showFilters ? Icons.filter_alt_off : Icons.filter_alt,
+                      ),
+                      tooltip: 'فلاتر',
+                      onPressed: () =>
+                          setState(() => _showFilters = !_showFilters),
+                    ),
+                    if (hasFilters)
+                      Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
         body: Consumer<ProductProvider>(
           builder: (context, provider, _) {
@@ -63,6 +97,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   SliverToBoxAdapter(
                     child: _buildCategoryChips(provider),
                   ),
+
+                  // =========== لوحة الفلاتر المتقدمة ===========
+                  if (_showFilters)
+                    SliverToBoxAdapter(
+                      child: _buildFilterPanel(provider),
+                    ),
+
+                  // =========== شريط الفلاتر النشطة ===========
+                  if (provider.hasActiveFilters)
+                    SliverToBoxAdapter(
+                      child: _buildActiveFilterChips(provider),
+                    ),
 
                   // =========== ترتيب ===========
                   SliverToBoxAdapter(
@@ -287,5 +333,354 @@ class _CatalogScreenState extends State<CatalogScreen> {
         ],
       ),
     );
+  }
+
+  // =================== الفلاتر المتقدمة ===================
+
+  /// لوحة الفلاتر المتقدمة
+  Widget _buildFilterPanel(ProductProvider provider) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // =================== نطاق السعر ===================
+          _buildFilterSectionLabel('نطاق السعر'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPriceField(
+                  hint: 'من',
+                  value: provider.minPrice > 0 ? provider.minPrice.toStringAsFixed(0) : '',
+                  onChanged: (v) {
+                    final min = double.tryParse(v) ?? 0;
+                    provider.setPriceRange(min, provider.maxPrice);
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text('—',
+                    style: TextStyle(color: AppColors.textSecondary)),
+              ),
+              Expanded(
+                child: _buildPriceField(
+                  hint: 'إلى',
+                  value: provider.maxPrice > 0 ? provider.maxPrice.toStringAsFixed(0) : '',
+                  onChanged: (v) {
+                    final max = double.tryParse(v) ?? 0;
+                    provider.setPriceRange(provider.minPrice, max);
+                  },
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(AppConstants.currency,
+                  style: const TextStyle(
+                      fontSize: 13, color: AppColors.textSecondary)),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // =================== المقاسات ===================
+          if (provider.availableSizes.isNotEmpty) ...[
+            _buildFilterSectionLabel('المقاسات'),
+            const SizedBox(height: 8),
+            _buildChipRow(
+              items: provider.availableSizes.toList()..sort(),
+              isSelected: (item) => provider.selectedSizes.contains(item),
+              onToggle: (item) => provider.toggleSize(item),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // =================== الألوان ===================
+          if (provider.availableColors.isNotEmpty) ...[
+            _buildFilterSectionLabel('الألوان'),
+            const SizedBox(height: 8),
+            _buildColorChipRow(provider),
+            const SizedBox(height: 16),
+          ],
+
+          // =================== الخامات ===================
+          if (provider.availableMaterials.isNotEmpty) ...[
+            _buildFilterSectionLabel('الخامة'),
+            const SizedBox(height: 8),
+            _buildChipRow(
+              items: provider.availableMaterials.toList()..sort(),
+              isSelected: (item) => provider.selectedMaterial == item,
+              onToggle: (item) => provider.setMaterial(item),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // =================== عروض فقط ===================
+          Row(
+            children: [
+              const Text('العروض والتخفيضات فقط',
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textPrimary)),
+              const Spacer(),
+              SizedBox(
+                height: 28,
+                child: Switch.adaptive(
+                  value: provider.discountOnly,
+                  onChanged: (v) => provider.setDiscountOnly(v),
+                  activeColor: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // =================== مسح الكل ===================
+          if (provider.hasActiveFilters)
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: () => provider.clearFilters(),
+                icon: const Icon(Icons.clear_all, size: 16),
+                label: const Text('مسح جميع الفلاتر'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// عنوان قسم في لوحة الفلاتر
+  Widget _buildFilterSectionLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        color: AppColors.textPrimary,
+      ),
+    );
+  }
+
+  /// حقل إدخال سعر
+  Widget _buildPriceField({
+    required String hint,
+    required String value,
+    required ValueChanged<String> onChanged,
+  }) {
+    return TextField(
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle:
+            const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+        ),
+      ),
+      style: const TextStyle(fontSize: 14),
+      onChanged: onChanged,
+    );
+  }
+
+  /// صف أفقي من الأزرار (مقاسات، خامات)
+  Widget _buildChipRow({
+    required List<String> items,
+    required bool Function(String) isSelected,
+    required ValueChanged<String> onToggle,
+  }) {
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: items.map((item) {
+          final selected = isSelected(item);
+          return Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: FilterChip(
+              label: Text(item,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: selected ? Colors.white : AppColors.textPrimary,
+                      fontWeight:
+                          selected ? FontWeight.bold : FontWeight.normal)),
+              selected: selected,
+              onSelected: (_) => onToggle(item),
+              selectedColor: AppColors.primary,
+              checkmarkColor: Colors.white,
+              backgroundColor: AppColors.background,
+              side: BorderSide(color: AppColors.border.withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// صف أفقي من دوائر الألوان
+  Widget _buildColorChipRow(ProductProvider provider) {
+    final colors = provider.availableColors.toList()..sort();
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: colors.map((hex) {
+          final selected = provider.selectedColors.contains(hex);
+          final color = _parseHexColor(hex);
+          final name = _colorNameFromHex(hex);
+          return Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: GestureDetector(
+              onTap: () => provider.toggleColor(hex),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? AppColors.primary : Colors.grey.shade300,
+                    width: selected ? 3 : 1.5,
+                  ),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 6,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: selected
+                    ? const Icon(Icons.check,
+                        size: 16, color: Colors.white)
+                    : null,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// شريط الفلاتر النشطة القابلة للإزالة
+  Widget _buildActiveFilterChips(ProductProvider provider) {
+    final chips = <Widget>[];
+
+    if (provider.minPrice > 0 || provider.maxPrice > 0) {
+      final label = 'السعر: ${provider.minPrice > 0 ? provider.minPrice.toStringAsFixed(0) : '0'} - ${provider.maxPrice > 0 ? provider.maxPrice.toStringAsFixed(0) : '∞'} ${AppConstants.currency}';
+      chips.add(_buildDismissibleChip(
+          label: label,
+          onDismiss: () =>
+              provider.setPriceRange(0, 0)));
+    }
+
+    for (final size in provider.selectedSizes) {
+      chips.add(_buildDismissibleChip(
+          label: 'مقاس: $size',
+          onDismiss: () => provider.toggleSize(size)));
+    }
+
+    for (final hex in provider.selectedColors) {
+      chips.add(_buildDismissibleChip(
+          label: _colorNameFromHex(hex),
+          onDismiss: () => provider.toggleColor(hex)));
+    }
+
+    if (provider.selectedMaterial.isNotEmpty) {
+      chips.add(_buildDismissibleChip(
+          label: 'خامة: ${provider.selectedMaterial}',
+          onDismiss: () => provider.setMaterial('')));
+    }
+
+    if (provider.discountOnly) {
+      chips.add(_buildDismissibleChip(
+          label: 'عروض فقط',
+          onDismiss: () => provider.setDiscountOnly(false)));
+    }
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      child: SizedBox(
+        height: 32,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: chips,
+        ),
+      ),
+    );
+  }
+
+  /// شريحة فلتر قابلة للإزالة
+  Widget _buildDismissibleChip({
+    required String label,
+    required VoidCallback onDismiss,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: Chip(
+        label: Text(label,
+            style: const TextStyle(
+                fontSize: 11, color: AppColors.primary)),
+        deleteIcon: const Icon(Icons.close, size: 14),
+        onDeleted: onDismiss,
+        backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+        side: BorderSide.none,
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        labelPadding: const EdgeInsets.only(right: 4),
+      ),
+    );
+  }
+
+  // =================== أدوات الألوان ===================
+
+  /// تحويل hex code إلى Color
+  Color _parseHexColor(String hex) {
+    hex = hex.replaceAll('#', '');
+    if (hex.length == 6) hex = 'FF$hex';
+    return Color(int.parse(hex, radix: 16));
+  }
+
+  /// الحصول على اسم اللون من الـ hex code
+  String _colorNameFromHex(String hex) {
+    final normalized = hex.toUpperCase();
+    for (final option in AppConstants.colorOptions) {
+      if ((option['hex'] as String).toUpperCase() == normalized) {
+        return option['name'] as String;
+      }
+    }
+    return hex;
   }
 }

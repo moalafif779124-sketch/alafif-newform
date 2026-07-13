@@ -22,6 +22,14 @@ class ProductProvider with ChangeNotifier {
   String _selectedCategoryId = '';
   String _sortBy = 'newest';
 
+  // =========== حالة الفلاتر المتقدمة ===========
+  double _minPrice = 0;
+  double _maxPrice = 0;
+  Set<String> _selectedSizes = {};
+  Set<String> _selectedColors = {};
+  String _selectedMaterial = '';
+  bool _discountOnly = false;
+
   // =================== Getters ===================
 
   List<Product> get products => _products;
@@ -35,6 +43,31 @@ class ProductProvider with ChangeNotifier {
   String get searchQuery => _searchQuery;
   String get selectedCategoryId => _selectedCategoryId;
   String get sortBy => _sortBy;
+  double get minPrice => _minPrice;
+  double get maxPrice => _maxPrice;
+  Set<String> get selectedSizes => _selectedSizes;
+  Set<String> get selectedColors => _selectedColors;
+  String get selectedMaterial => _selectedMaterial;
+  bool get discountOnly => _discountOnly;
+  bool get hasActiveFilters =>
+      _minPrice > 0 ||
+      _maxPrice > 0 ||
+      _selectedSizes.isNotEmpty ||
+      _selectedColors.isNotEmpty ||
+      _selectedMaterial.isNotEmpty ||
+      _discountOnly;
+
+  /// جميع المقاسات المتوفرة في المنتجات
+  Set<String> get availableSizes =>
+      _products.expand((p) => p.sizes).toSet();
+
+  /// جميع الألوان المتوفرة في المنتجات (hex codes فريدة)
+  Set<String> get availableColors =>
+      _products.expand((p) => p.colors).toSet();
+
+  /// جميع الخامات المتوفرة في المنتجات
+  Set<String> get availableMaterials =>
+      _products.map((p) => p.material).where((m) => m.isNotEmpty).toSet();
 
   // =================== التهيئة والتحميل ===================
 
@@ -236,6 +269,42 @@ class ProductProvider with ChangeNotifier {
           .toList();
     }
 
+    // فلترة حسب نطاق السعر
+    if (_minPrice > 0) {
+      result = result.where((p) => p.price >= _minPrice).toList();
+    }
+    if (_maxPrice > 0) {
+      result = result.where((p) => p.price <= _maxPrice).toList();
+    }
+
+    // فلترة حسب المقاسات
+    if (_selectedSizes.isNotEmpty) {
+      result = result
+          .where((p) => p.sizes.any((s) => _selectedSizes.contains(s)))
+          .toList();
+    }
+
+    // فلترة حسب الألوان
+    if (_selectedColors.isNotEmpty) {
+      result = result
+          .where((p) =>
+              p.colors.any((c) => _selectedColors.contains(c)))
+          .toList();
+    }
+
+    // فلترة حسب الخامة
+    if (_selectedMaterial.isNotEmpty) {
+      result = result
+          .where((p) =>
+              p.material.toLowerCase() == _selectedMaterial.toLowerCase())
+          .toList();
+    }
+
+    // فلترة العروض فقط
+    if (_discountOnly) {
+      result = result.where((p) => p.hasDiscount).toList();
+    }
+
     // ترتيب
     switch (_sortBy) {
       case 'price_asc':
@@ -274,10 +343,57 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // =================== فلاتر متقدمة ===================
+
+  /// تعيين نطاق السعر (0 يعني غير محدود)
+  void setPriceRange(double min, double max) {
+    _minPrice = min;
+    _maxPrice = max;
+    notifyListeners();
+  }
+
+  /// تبديل اختيار مقاس
+  void toggleSize(String size) {
+    if (_selectedSizes.contains(size)) {
+      _selectedSizes.remove(size);
+    } else {
+      _selectedSizes.add(size);
+    }
+    notifyListeners();
+  }
+
+  /// تبديل اختيار لون (hex code)
+  void toggleColor(String hexColor) {
+    if (_selectedColors.contains(hexColor)) {
+      _selectedColors.remove(hexColor);
+    } else {
+      _selectedColors.add(hexColor);
+    }
+    notifyListeners();
+  }
+
+  /// تعيين فلتر الخامة (فارغ = الكل)
+  void setMaterial(String material) {
+    _selectedMaterial = _selectedMaterial == material ? '' : material;
+    notifyListeners();
+  }
+
+  /// تبديل فلتر العروض فقط
+  void setDiscountOnly(bool value) {
+    _discountOnly = value;
+    notifyListeners();
+  }
+
   void clearFilters() {
     _searchQuery = '';
     _selectedCategoryId = '';
     _sortBy = 'newest';
+    _minPrice = 0;
+    _maxPrice = 0;
+    _selectedSizes = {};
+    _selectedColors = {};
+    _selectedMaterial = '';
+    _discountOnly = false;
     notifyListeners();
   }
 
