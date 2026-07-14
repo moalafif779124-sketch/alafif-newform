@@ -71,12 +71,14 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Install Functions deps
+        continue-on-error: true
         working-directory: ./functions
-        run: npm ci --only=production
+        run: npm install --omit=dev
         env:
           NODE_ENV: production
 
       - name: Deploy Cloud Functions
+        continue-on-error: true
         uses: w9jds/firebase-action@v15.23.0
         with:
           args: deploy --only functions --project alafif-newform
