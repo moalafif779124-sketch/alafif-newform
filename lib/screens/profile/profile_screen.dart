@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
 import 'orders_screen.dart';
 import 'addresses_screen.dart';
@@ -485,6 +486,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
+
+          const SizedBox(height: 8),
+
+          // 🌙 الثيم الداكن
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  return SwitchListTile(
+                    secondary: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        themeProvider.isDarkMode
+                            ? Icons.dark_mode
+                            : Icons.light_mode,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                    ),
+                    title: const Text(
+                      'الوضع الليلي',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      themeProvider.isDarkMode
+                          ? 'الوضع الداكن نشط'
+                          : 'الوضع الفاتح نشط',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    value: themeProvider.isDarkMode,
+                    onChanged: (_) => themeProvider.toggle(),
+                    activeColor: AppColors.primary,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  );
+                },
+              ),
+            ),
+          ),
 
           const SizedBox(height: 8),
 

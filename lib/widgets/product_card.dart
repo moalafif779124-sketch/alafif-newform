@@ -43,14 +43,17 @@ class ProductCard extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: Stack(
                 children: [
-                  AppImage(
-                    imageUrl: product.images.isNotEmpty
-                        ? product.images.first
-                        : '',
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    backgroundColor: AppColors.accentLight,
+                  Hero(
+                    tag: 'product_${product.id}',
+                    child: AppImage(
+                      imageUrl: product.images.isNotEmpty
+                          ? product.images.first
+                          : '',
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      backgroundColor: AppColors.accentLight,
+                    ),
                   ),
                   // شارة الخصم
                   if (product.hasDiscount)

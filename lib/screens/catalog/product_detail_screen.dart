@@ -226,13 +226,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 final imageUrl = product.images.isNotEmpty
                     ? product.images[index]
                     : '';
-                return AppImage(
+                final imageWidget = AppImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
                   backgroundColor: AppColors.accentLight,
                 );
+                // الصورة الأولى تستخدم Hero للانتقال السلس
+                if (index == 0) {
+                  return Hero(
+                    tag: 'product_${product.id}',
+                    child: imageWidget,
+                  );
+                }
+                return imageWidget;
               },
             ),
           ],

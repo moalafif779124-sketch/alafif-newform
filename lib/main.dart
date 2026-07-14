@@ -8,6 +8,7 @@ import 'providers/product_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'providers/review_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/notification_service.dart';
 import 'screens/splash/splash_screen.dart';
 
@@ -29,34 +30,43 @@ class ALAFIFApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..load()),
       ],
-      child: MaterialApp(
-        title: 'العفيف نيوفورم',
-        debugShowCheckedModeBanner: false,
-        
-        // =========== RTL ===========
-        theme: AppTheme.lightTheme,
-        locale: const Locale('ar', 'SA'),
-        supportedLocales: const [
-          Locale('ar', 'SA'),
-          Locale('en', 'US'),
-        ],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        localeResolutionCallback: (locale, supportedLocales) {
-          for (final supported in supportedLocales) {
-            if (supported.languageCode == locale?.languageCode) {
-              return supported;
-            }
-          }
-          return supportedLocales.first;
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp(
+            title: 'العفيف نيوفورم',
+            debugShowCheckedModeBanner: false,
+
+            // =========== الثيم (فاتح/داكن) ===========
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+
+            // =========== RTL ===========
+            locale: const Locale('ar', 'SA'),
+            supportedLocales: const [
+              Locale('ar', 'SA'),
+              Locale('en', 'US'),
+            ],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            localeResolutionCallback: (locale, supportedLocales) {
+              for (final supported in supportedLocales) {
+                if (supported.languageCode == locale?.languageCode) {
+                  return supported;
+                }
+              }
+              return supportedLocales.first;
+            },
+
+            // =========== البداية ===========
+            home: const SplashScreen(),
+          );
         },
-        
-        // =========== البداية ===========
-        home: const SplashScreen(),
       ),
     );
   }
