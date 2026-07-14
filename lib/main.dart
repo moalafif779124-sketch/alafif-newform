@@ -38,6 +38,9 @@ class ALAFIFApp extends StatelessWidget {
             title: 'العفيف نيوفورم',
             debugShowCheckedModeBanner: false,
 
+            // =========== مفتاح التنقل من الإشعارات ===========
+            navigatorKey: NotificationService.navigatorKey,
+
             // =========== الثيم (فاتح/داكن) ===========
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,

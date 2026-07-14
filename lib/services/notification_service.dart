@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'firebase_service.dart';
+import '../models/order.dart';
+import '../screens/profile/order_tracking_screen.dart';
 
 /// خدمة الإشعارات - تدعم FCM (Firebase Cloud Messaging)
 /// مع إشعارات محلية عبر flutter_local_notifications
@@ -16,6 +18,10 @@ class NotificationService {
   String? _fcmToken;
   String? _userId;
 
+  /// مفتاح التنقل العام — يُستخدم للانتقال إلى الشاشات من الإشعارات
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
@@ -27,7 +33,6 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    // إعداد قناة الإشعارات لنظام Android
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
@@ -65,10 +70,6 @@ class NotificationService {
         alert: true,
         badge: true,
         sound: true,
-        announcement: false,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
       );
       final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;
@@ -83,16 +84,13 @@ class NotificationService {
   /// تسجيل FCM token وحفظه في Firestore
   Future<void> _registerFcmToken() async {
     try {
-      // الحصول على FCM token
       _fcmToken = await _messaging.getToken();
       debugPrint('🔔 FCM Token: $_fcmToken');
 
-      // حفظ token في Firestore
       if (_fcmToken != null && _userId != null) {
         await FirebaseService().saveFcmToken(_userId!, _fcmToken!);
       }
 
-      // الاستماع للتغييرات في token (عند انتهاء صلاحيته أو تحديثه)
       _messaging.onTokenRefresh.listen((newToken) {
         _fcmToken = newToken;
         debugPrint('🔔 FCM Token refreshed: $newToken');
@@ -107,7 +105,7 @@ class NotificationService {
 
   /// إعداد معالجات الرسائل الواردة
   void setupMessageHandlers() {
-    // 1. عند فتح التطبيق من إشعار (التطبيق مقتول)
+    // 1. فتح التطبيق من إشعار (التطبيق مقتول)
     _messaging.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         debugPrint('🔔 App opened from terminated state: ${message.messageId}');
@@ -115,13 +113,13 @@ class NotificationService {
       }
     });
 
-    // 2. عند النقر على إشعار والتطبيق في الخلفية
+    // 2. النقر على إشعار والتطبيق في الخلفية
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('🔔 App opened from background: ${message.messageId}');
       _handleNotificationTap(message.data);
     });
 
-    // 3. عند استلام إشعار والتطبيق في المقدمة
+    // 3. استلام إشعار والتطبيق في المقدمة
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('🔔 Message received in foreground: ${message.messageId}');
       _showLocalNotification(message);
@@ -133,19 +131,15 @@ class NotificationService {
     final notification = message.notification;
     if (notification == null) return;
 
-    // إعداد قناة الإشعارات لنظام Android
-    const androidChannelId = 'order_updates';
     const androidChannel = AndroidNotificationDetails(
-      androidChannelId,
+      'order_updates',
       'تحديثات الطلبات',
       channelDescription: 'إشعارات تحديث حالة الطلبات',
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
     );
-    const platformChannel = NotificationDetails(
-      android: androidChannel,
-    );
+    const platformChannel = NotificationDetails(android: androidChannel);
 
     await _localNotifications.show(
       notification.hashCode,
@@ -156,7 +150,7 @@ class NotificationService {
     );
   }
 
-  /// معالجة النقر على الإشعار
+  /// معالجة النقر على الإشعار المحلي
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null && response.payload!.isNotEmpty) {
       try {
@@ -172,16 +166,29 @@ class NotificationService {
   void _handleNotificationTap(Map<String, dynamic> data) {
     final type = data['type'] as String?;
     final orderId = data['orderId'] as String?;
-
-    if (type == 'order_update' && orderId != null) {
-      // يمكن إضافة التنقل إلى شاشة تتبع الطلب هنا
-      // عبر GlobalKey<NavigatorState> أو event bus
-      debugPrint('🔔 Navigate to order: $orderId');
-      // TODO: التنقل إلى شاشة الطلب باستخدام route observer
-    }
+    if (orderId == null || orderId.isEmpty) return;
+    _navigateToOrder(orderId);
   }
 
-  /// إرسال إشعار للطلب (محاكاة - يتم الإرسال الفعلي عبر Cloud Function)
+  /// التنقل إلى شاشة تتبع الطلب
+  void _navigateToOrder(String orderId) async {
+    // جلب بيانات الطلب
+    final orderData = await FirebaseService().getOrderById(orderId);
+    if (orderData == null) {
+      debugPrint('⚠️ Order not found: $orderId');
+      return;
+    }
+    final order = Order.fromMap(orderData);
+
+    // التنقل إلى شاشة التتبع
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => OrderTrackingScreen(order: order),
+      ),
+    );
+  }
+
+  /// إرسال إشعار للطلب (محاكاة - الإرسال الفعلي عبر Cloud Function)
   Future<void> sendOrderNotification({
     required String orderNumber,
     required String status,
@@ -193,7 +200,6 @@ class NotificationService {
       'delivered': 'تم توصيل طلبك ✅',
       'cancelled': 'تم إلغاء الطلب',
     };
-
     final bodies = {
       'confirmed': 'تم تأكيد الطلب رقم $orderNumber وسيتم تجهيزه قريباً',
       'processing': 'طلبك رقم $orderNumber قيد التجهيز الآن',
@@ -205,7 +211,6 @@ class NotificationService {
     final title = titles[status] ?? 'تحديث الطلب';
     final body = bodies[status] ?? 'تم تحديث حالة الطلب رقم $orderNumber';
 
-    // عرض إشعار محلي للاختبار
     const androidChannel = AndroidNotificationDetails(
       'order_updates',
       'تحديثات الطلبات',

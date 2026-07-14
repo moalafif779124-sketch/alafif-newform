@@ -248,6 +248,20 @@ class FirebaseService {
 
   // =================== الطلبات ===================
 
+  /// جلب طلب معين بواسطة ID
+  Future<Map<String, dynamic>?> getOrderById(String orderId) async {
+    try {
+      final doc = await firestore.collection('orders').doc(orderId).get();
+      if (!doc.exists) return null;
+      final data = doc.data()!;
+      data['id'] = doc.id;
+      return data;
+    } catch (e) {
+      debugPrint('⚠️ Failed to get order: $e');
+      return null;
+    }
+  }
+
   Future<String> createOrder(Map<String, dynamic> orderData) async {
     final docRef = await firestore.collection('orders').add(orderData);
     return docRef.id;
