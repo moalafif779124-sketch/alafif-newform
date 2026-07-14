@@ -1,43 +1,187 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'firebase_service.dart';
 
 /// خدمة الإشعارات - تدعم FCM (Firebase Cloud Messaging)
-/// وإشعارات الطلبات المحلية
+/// مع إشعارات محلية عبر flutter_local_notifications
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
   bool _initialized = false;
+  String? _fcmToken;
+  String? _userId;
+
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   bool get isInitialized => _initialized;
+  String? get fcmToken => _fcmToken;
 
   /// تهيئة خدمة الإشعارات
   Future<void> initialize() async {
     if (_initialized) return;
+
+    // إعداد قناة الإشعارات لنظام Android
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: _onNotificationTap,
+    );
+
     _initialized = true;
     debugPrint('🔔 NotificationService initialized');
   }
 
-  /// طلب صلاحية الإشعارات
+  /// ربط FCM بمستخدم معين (يُستدعى بعد تسجيل الدخول)
+  Future<void> setUserId(String? userId) async {
+    _userId = userId;
+    if (userId != null && userId.isNotEmpty) {
+      await _registerFcmToken();
+    }
+  }
+
+  /// طلب صلاحية الإشعارات من المستخدم
   Future<bool> requestPermission() async {
-    // Android لا يحتاج صلاحية منفصلة للإشعارات
-    debugPrint('🔔 Notification permission requested');
-    return true;
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        announcement: false,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+      );
+      final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+      debugPrint('🔔 Notification permission: $granted');
+      return granted;
+    } catch (e) {
+      debugPrint('⚠️ Failed to request notification permission: $e');
+      return false;
+    }
   }
 
-  /// إرسال إشعار محلي (للاختبار/التنبيهات الفورية)
-  Future<void> showLocalNotification({
-    required String title,
-    required String body,
-    String? payload,
-  }) async {
-    debugPrint('🔔 Local notification: $title - $body');
-    // في الإصدار الحالي، نسجل الإشعار في السجل فقط.
-    // يمكن تفعيل flutter_local_notifications لاحقاً
+  /// تسجيل FCM token وحفظه في Firestore
+  Future<void> _registerFcmToken() async {
+    try {
+      // الحصول على FCM token
+      _fcmToken = await _messaging.getToken();
+      debugPrint('🔔 FCM Token: $_fcmToken');
+
+      // حفظ token في Firestore
+      if (_fcmToken != null && _userId != null) {
+        await FirebaseService().saveFcmToken(_userId!, _fcmToken!);
+      }
+
+      // الاستماع للتغييرات في token (عند انتهاء صلاحيته أو تحديثه)
+      _messaging.onTokenRefresh.listen((newToken) {
+        _fcmToken = newToken;
+        debugPrint('🔔 FCM Token refreshed: $newToken');
+        if (_userId != null) {
+          FirebaseService().saveFcmToken(_userId!, newToken);
+        }
+      });
+    } catch (e) {
+      debugPrint('⚠️ Failed to register FCM token: $e');
+    }
   }
 
-  /// إرسال إشعار للطلب (محاكاة - سيتم تفعيل FCM لاحقاً)
+  /// إعداد معالجات الرسائل الواردة
+  void setupMessageHandlers() {
+    // 1. عند فتح التطبيق من إشعار (التطبيق مقتول)
+    _messaging.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        debugPrint('🔔 App opened from terminated state: ${message.messageId}');
+        _handleNotificationTap(message.data);
+      }
+    });
+
+    // 2. عند النقر على إشعار والتطبيق في الخلفية
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('🔔 App opened from background: ${message.messageId}');
+      _handleNotificationTap(message.data);
+    });
+
+    // 3. عند استلام إشعار والتطبيق في المقدمة
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('🔔 Message received in foreground: ${message.messageId}');
+      _showLocalNotification(message);
+    });
+  }
+
+  /// عرض إشعار محلي (يُستخدم عندما يكون التطبيق في المقدمة)
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    final notification = message.notification;
+    if (notification == null) return;
+
+    // إعداد قناة الإشعارات لنظام Android
+    const androidChannelId = 'order_updates';
+    const androidChannel = AndroidNotificationDetails(
+      androidChannelId,
+      'تحديثات الطلبات',
+      channelDescription: 'إشعارات تحديث حالة الطلبات',
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    );
+    const platformChannel = NotificationDetails(
+      android: androidChannel,
+    );
+
+    await _localNotifications.show(
+      notification.hashCode,
+      notification.title ?? '',
+      notification.body ?? '',
+      platformChannel,
+      payload: jsonEncode(message.data),
+    );
+  }
+
+  /// معالجة النقر على الإشعار
+  void _onNotificationTap(NotificationResponse response) {
+    if (response.payload != null && response.payload!.isNotEmpty) {
+      try {
+        final data = jsonDecode(response.payload!) as Map<String, dynamic>;
+        _handleNotificationTap(data);
+      } catch (e) {
+        debugPrint('⚠️ Failed to parse notification payload: $e');
+      }
+    }
+  }
+
+  /// توجيه المستخدم بعد النقر على الإشعار
+  void _handleNotificationTap(Map<String, dynamic> data) {
+    final type = data['type'] as String?;
+    final orderId = data['orderId'] as String?;
+
+    if (type == 'order_update' && orderId != null) {
+      // يمكن إضافة التنقل إلى شاشة تتبع الطلب هنا
+      // عبر GlobalKey<NavigatorState> أو event bus
+      debugPrint('🔔 Navigate to order: $orderId');
+      // TODO: التنقل إلى شاشة الطلب باستخدام route observer
+    }
+  }
+
+  /// إرسال إشعار للطلب (محاكاة - يتم الإرسال الفعلي عبر Cloud Function)
   Future<void> sendOrderNotification({
     required String orderNumber,
     required String status,
@@ -61,18 +205,31 @@ class NotificationService {
     final title = titles[status] ?? 'تحديث الطلب';
     final body = bodies[status] ?? 'تم تحديث حالة الطلب رقم $orderNumber';
 
-    await showLocalNotification(title: title, body: body);
+    // عرض إشعار محلي للاختبار
+    const androidChannel = AndroidNotificationDetails(
+      'order_updates',
+      'تحديثات الطلبات',
+      channelDescription: 'إشعارات تحديث حالة الطلبات',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const platformChannel = NotificationDetails(android: androidChannel);
+    await _localNotifications.show(
+      orderNumber.hashCode,
+      title,
+      body,
+      platformChannel,
+    );
   }
 
-  /// معالجة رسالة واردة من FCM
+  /// معالجة رسالة واردة من FCM (للتطبيقات القديمة)
   void handleMessage(Map<String, dynamic> message) {
     debugPrint('🔔 Received message: ${jsonEncode(message)}');
-
     final notification = message['notification'] as Map<String, dynamic>?;
     if (notification != null) {
       final title = notification['title'] ?? '';
       final body = notification['body'] ?? '';
-      showLocalNotification(title: title, body: body);
+      debugPrint('🔔 Local notification: $title - $body');
     }
   }
 }

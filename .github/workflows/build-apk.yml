@@ -69,3 +69,16 @@ jobs:
           args: deploy --only firestore:rules,firestore:indexes --project alafif-newform
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Install Functions deps
+        working-directory: ./functions
+        run: npm ci --only=production
+        env:
+          NODE_ENV: production
+
+      - name: Deploy Cloud Functions
+        uses: w9jds/firebase-action@v15.23.0
+        with:
+          args: deploy --only functions:sendOrderNotification --project alafif-newform
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

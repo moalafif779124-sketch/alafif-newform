@@ -450,10 +450,14 @@ class FirebaseService {
 
   /// تحديث حالة الطلب
   Future<void> updateOrderStatus(String orderId, String status) async {
-    await firestore.collection('orders').doc(orderId).update({
+    final update = <String, dynamic>{
       'status': status,
       'updatedAt': DateTime.now().millisecondsSinceEpoch,
-    });
+    };
+    if (status == 'delivered') {
+      update['deliveredAt'] = DateTime.now().millisecondsSinceEpoch;
+    }
+    await firestore.collection('orders').doc(orderId).update(update);
   }
 
   // =================== المستخدم (Admin) ===================
@@ -578,5 +582,58 @@ class FirebaseService {
         .limit(1)
         .get();
     return snapshot.docs.isNotEmpty;
+  }
+
+  // =================== FCM Tokens (الإشعارات) ===================
+
+  /// حفظ FCM token للمستخدم
+  Future<void> saveFcmToken(String userId, String token) async {
+    try {
+      final userDoc = firestore.collection('users').doc(userId);
+      final existing = await userDoc.get();
+      if (existing.exists) {
+        // إضافة token إلى مصفوفة fcmTokens (لنفقد لا شيء)
+        final currentTokens = List<String>.from(existing.data()?['fcmTokens'] ?? []);
+        if (!currentTokens.contains(token)) {
+          currentTokens.add(token);
+          // الحفاظ على آخر 5 tokens فقط
+          while (currentTokens.length > 5) {
+            currentTokens.removeAt(0);
+          }
+          await userDoc.update({'fcmTokens': currentTokens});
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to save FCM token: $e');
+    }
+  }
+
+  /// جلب FCM tokens لمستخدم
+  Future<List<String>> getFcmTokens(String userId) async {
+    try {
+      final doc = await firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return List<String>.from(doc.data()?['fcmTokens'] ?? []);
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to get FCM tokens: $e');
+    }
+    return [];
+  }
+
+  /// حذف FCM token (عند تسجيل الخروج)
+  Future<void> removeFcmToken(String userId, String token) async {
+    try {
+      final doc = await firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        final currentTokens = List<String>.from(doc.data()?['fcmTokens'] ?? []);
+        currentTokens.remove(token);
+        await firestore.collection('users').doc(userId).update({
+          'fcmTokens': currentTokens,
+        });
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to remove FCM token: $e');
+    }
   }
 }

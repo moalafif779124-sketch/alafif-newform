@@ -47,11 +47,18 @@ class _SplashScreenState extends State<SplashScreen> {
         NotificationService().initialize(),
       ]);
 
-      // ربط المستخدم بمزامنة المفضلة والسلة
+      // طلب صلاحية الإشعارات بعد التهيئة
+      NotificationService().requestPermission();
+
+      // ربط FCM بالمستخدم (تسجيل token)
       if (authProvider.isLoggedIn && (authProvider.userId != null && authProvider.userId!.isNotEmpty)) {
+        await NotificationService().setUserId(authProvider.userId);
         wishlistProvider.setUserId(authProvider.userId);
         context.read<CartProvider>().setUserId(authProvider.userId);
       }
+
+      // إعداد معالجات الرسائل الواردة من FCM
+      NotificationService().setupMessageHandlers();
     } catch (e) {
       debugPrint('SplashScreen initialization error: $e');
     }
