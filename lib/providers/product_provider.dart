@@ -130,19 +130,19 @@ class ProductProvider with ChangeNotifier {
 
   // =================== تحميل المنتجات المُقسّم (Pagination) ===================
 
-  /// تحميل الدفعة الأولى من المنتجات (أو إعادة التحميل)
+  /// تحميل الدفعة الأولى — يُظهر العيّنات فوراً ثم يستبدلها بالبيانات الحقيقية
   Future<void> loadInitialProducts() async {
-    _isLoading = true;
     _hasMore = true;
     _lastDocument = null;
-    _products = [];
-    _featuredProducts = [];
-    _newArrivals = [];
+
+    // ===== الخطوة 1: اعرض العيّنات فوراً (صفر انتظار) =====
+    _loadSampleData();
+    _isLoading = false;
+    _error = null;
     notifyListeners();
 
+    // ===== الخطوة 2: في الخلفية، احمل المنتجات الحقيقية =====
     try {
-      // فقط أضف ترتيبًا إذا اختار المستخدم فرزًا غير افتراضي
-      // الافتراضي 'newest' لا يُمرر لتجنب الحاجة إلى index مركب في Firestore
       final result = await _firebaseService.getProducts(
         limit: _pageSize,
         sortBy: _sortBy == 'newest' ? null : _sortBy,
@@ -154,16 +154,12 @@ class ProductProvider with ChangeNotifier {
 
       _products = productsData.map((data) => Product.fromMap(data)).toList();
       _recomputeCollections();
-      _error = null;
+      notifyListeners();
     } catch (e) {
       debugPrint('Error loading initial products: $e');
-      // فشل — استخدم العيّنات كاحتياط
-      _loadSampleData();
+      // العيّنات لا تزال معروضة، لا داعي للتبديل
       _hasMore = false;
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   /// تحميل الدفعة التالية (التمرير اللانهائي)
@@ -221,15 +217,15 @@ class ProductProvider with ChangeNotifier {
             ))
         .toList();
 
-    _products = _generateSampleProducts();
+    _products = _generateSampleProducts(_pageSize); // تطابق حجم الصفحة
     _featuredProducts = _products.where((p) => p.isFeatured).toList();
     _newArrivals = _products.where((p) => p.isNewArrival).toList();
     _banners = _generateSampleBanners();
   }
 
-  List<Product> _generateSampleProducts() {
+  List<Product> _generateSampleProducts(int count) {
     final random = Random();
-    return List.generate(40, (index) {
+    return List.generate(count, (index) {
       final isFeatured = index < 6;
       final isNew = index >= 6 && index < 12;
       final hasDiscount = index % 3 == 0;
