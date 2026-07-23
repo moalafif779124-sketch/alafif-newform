@@ -95,13 +95,19 @@ class FirebaseService {
         }).toList());
   }
 
-  Future<List<Map<String, dynamic>>> getProducts({
+  /// جلب المنتجات مع دعم التحميل المُقسّم (pagination) وحقول البطاقة فقط
+  /// [limit] — عدد المنتجات المطلوبة (null = الكل)
+  /// [lastDocument] — آخر مستند للتحميل التصفحي (cursor pagination)
+  /// [cardOnly] — true = جلب حقول البطاقة فقط للعرض السريع
+  Future<Map<String, dynamic>> getProducts({
     String? categoryId,
     bool? isFeatured,
     bool? isNewArrival,
     String? searchQuery,
     String? sortBy,
     int? limit,
+    DocumentSnapshot? lastDocument,
+    bool cardOnly = false,
   }) async {
     Query query = firestore.collection('products').where('isActive', isEqualTo: true);
 
@@ -127,14 +133,25 @@ class FirebaseService {
       query = query.limit(limit);
     }
 
+    if (lastDocument != null) {
+      query = query.startAfterDocument(lastDocument);
+    }
+
     final snapshot = await query.get();
-    return snapshot.docs.map((doc) {
+    final products = snapshot.docs.map((doc) {
       final data = doc.data()! as Map<String, dynamic>;
       data['id'] = doc.id;
       return data;
     }).toList();
+
+    return {
+      'products': products,
+      'lastDocument': snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+      'hasMore': snapshot.docs.length >= (limit ?? snapshot.docs.length),
+    };
   }
 
+  /// جلب منتج كامل (جميع الحقول) — يُستدعى عند فتح شاشة التفاصيل فقط
   Future<Map<String, dynamic>?> getProduct(String productId) async {
     final doc = await firestore.collection('products').doc(productId).get();
     if (!doc.exists) return null;

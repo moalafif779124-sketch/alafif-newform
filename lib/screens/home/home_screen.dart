@@ -26,9 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // تحميل البيانات عند بدء التشغيل
+    // تحميل المنتجات عند بدء التشغيل — أول 20 منتج فقط
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().loadAll();
+      context.read<ProductProvider>().loadInitialProducts();
     });
   }
 

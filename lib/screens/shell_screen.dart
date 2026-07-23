@@ -8,6 +8,7 @@ import 'cart/cart_screen.dart';
 import 'profile/profile_screen.dart';
 
 /// الشاشة الرئيسية للتطبيق مع شريط التنقل السفلي
+/// تستخدم PageView بدلاً من IndexedStack لبناء الشاشات عند الحاجة فقط
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -17,22 +18,35 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  late final PageController _pageController;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    CatalogScreen(),
-    CartScreen(),
-    ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
+        body: PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
+          onPageChanged: (index) => setState(() => _currentIndex = index),
+          children: const [
+            HomeScreen(),
+            CatalogScreen(),
+            CartScreen(),
+            ProfileScreen(),
+          ],
         ),
         bottomNavigationBar: Consumer<CartProvider>(
           builder: (context, cart, _) {
@@ -49,7 +63,10 @@ class _MainShellState extends State<MainShell> {
               ),
               child: BottomNavigationBar(
                 currentIndex: _currentIndex,
-                onTap: (index) => setState(() => _currentIndex = index),
+                onTap: (index) {
+                  _pageController.jumpToPage(index);
+                  setState(() => _currentIndex = index);
+                },
                 selectedItemColor: AppColors.primary,
                 unselectedItemColor: AppColors.textSecondary,
                 type: BottomNavigationBarType.fixed,

@@ -20,14 +20,35 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   bool _showFilters = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     if (widget.initialCategoryId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.read<ProductProvider>().setCategoryFilter(widget.initialCategoryId!);
       });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// التحميل التلقائي عند الاقتراب من نهاية القائمة
+  void _onScroll() {
+    final provider = context.read<ProductProvider>();
+    if (!provider.hasMore || provider.isLoadingMore) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (maxScroll - currentScroll <= 300) {
+      provider.loadMoreProducts();
     }
   }
 
@@ -91,6 +112,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             return RefreshIndicator(
               onRefresh: () => provider.loadAll(),
               child: CustomScrollView(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   // =========== فلاتر الفئات ===========
@@ -156,6 +178,24 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           childCount: provider.filteredProducts.length,
                         ),
                       ),
+                      if (provider.isLoadingMore)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.primary.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ),
                 ],
               ),

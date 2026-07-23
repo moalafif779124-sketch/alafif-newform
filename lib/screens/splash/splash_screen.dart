@@ -4,8 +4,6 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../providers/product_provider.dart';
-import '../../providers/wishlist_provider.dart';
 import '../../services/notification_service.dart';
 import '../auth/login_screen.dart';
 import '../shell_screen.dart';
@@ -67,13 +65,9 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _initializeProviders() async {
     try {
       final authProvider = context.read<AuthProvider>();
-      final productProvider = context.read<ProductProvider>();
-      final wishlistProvider = context.read<WishlistProvider>();
 
       await Future.wait([
         authProvider.initialize(),
-        productProvider.initialize(),
-        wishlistProvider.loadWishlist(),
         NotificationService().initialize(),
       ]);
 
@@ -84,7 +78,6 @@ class _SplashScreenState extends State<SplashScreen>
       if (authProvider.isLoggedIn &&
           (authProvider.userId != null && authProvider.userId!.isNotEmpty)) {
         await NotificationService().setUserId(authProvider.userId);
-        wishlistProvider.setUserId(authProvider.userId);
         context.read<CartProvider>().setUserId(authProvider.userId);
       }
 

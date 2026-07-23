@@ -1,20 +1,28 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart' hide Category;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
 import '../models/category.dart';
 import '../models/banner.dart';
 import '../services/firebase_service.dart';
 import '../config/constants.dart';
 
-/// مزود حالة المنتجات والفئات
+/// مزود حالة المنتجات والفئات — مع تحميل مُقسّم (pagination)
 class ProductProvider with ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
 
+  // =========== البيانات الكاملة (تُحمّل عند الحاجة فقط) ===========
   List<Product> _products = [];
   List<Category> _categories = [];
   List<BannerModel> _banners = [];
   List<Product> _featuredProducts = [];
   List<Product> _newArrivals = [];
+
+  // =========== حالة التحميل المُقسّم (pagination) ===========
+  static const int _pageSize = 20;
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
 
   bool _isLoading = false;
   String? _error;
@@ -30,6 +38,10 @@ class ProductProvider with ChangeNotifier {
   String _selectedMaterial = '';
   bool _discountOnly = false;
 
+  // =========== أعلام التحميل الجزئي ===========
+  bool _categoriesLoaded = false;
+  bool _bannersLoaded = false;
+
   // =================== Getters ===================
 
   List<Product> get products => _products;
@@ -39,6 +51,8 @@ class ProductProvider with ChangeNotifier {
   List<Product> get featuredProducts => _featuredProducts;
   List<Product> get newArrivals => _newArrivals;
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMore => _hasMore;
   String? get error => _error;
   String get searchQuery => _searchQuery;
   String get selectedCategoryId => _selectedCategoryId;
@@ -69,42 +83,18 @@ class ProductProvider with ChangeNotifier {
   Set<String> get availableMaterials =>
       _products.map((p) => p.material).where((m) => m.isNotEmpty).toSet();
 
-  // =================== التهيئة والتحميل ===================
+  // =================== التهيئة السريعة (بدون تحميل المنتجات) ===================
 
+  /// تهيئة بسيطة — فقط Firebase + الفئات والبانرات (خفيفة)
+  /// لا تُحمّل المنتجات هنا — يتم تحميلها عند عرض الكتالوج
   Future<void> initialize() async {
     if (!_firebaseService.isInitialized) {
       await _firebaseService.initialize();
     }
-    await loadAll();
-  }
-
-  Future<void> loadAll() async {
-    _isLoading = true;
-    notifyListeners();
-
-    // تحميل كل مجموعة بشكل مستقل — فشل الفئات أو البانرات لا يمنع عرض المنتجات
-    final results = await Future.wait([
-      _loadProducts().then((_) => 'ok').catchError((e) {
-        debugPrint('Error loading products from Firebase: $e');
-        return 'fail: $e';
-      }),
-      _loadCategories().then((_) => 'ok').catchError((e) {
-        debugPrint('Error loading categories from Firebase: $e');
-        return 'fail: $e';
-      }),
-      _loadBanners().then((_) => 'ok').catchError((e) {
-        debugPrint('Error loading banners from Firebase: $e');
-        return 'fail: $e';
-      }),
-    ]);
-
-    if (results[0] != 'ok') {
-      // إذا فشلت المنتجات، استخدم البيانات الافتراضية كاملة
-      debugPrint('Products failed, using sample data');
-      _loadSampleData();
-    } else {
-      // المنتجات نجحت — استخدمها مع بيانات افتراضية للفئات والبانرات إذا فشلت
-      if (results[1] != 'ok') {
+    // تحميل الفئات والبانرات فقط (خفيف — 2 طلبات)
+    await Future.wait([
+      _loadCategoriesOnce().catchError((e) {
+        debugPrint('Error loading categories: $e');
         _categories = AppConstants.categories
             .map((data) => Category(
                   id: data['id'],
@@ -113,49 +103,108 @@ class ProductProvider with ChangeNotifier {
                   icon: data['icon'],
                 ))
             .toList();
-      }
-      if (results[2] != 'ok') {
+      }),
+      _loadBannersOnce().catchError((e) {
+        debugPrint('Error loading banners: $e');
         _banners = _generateSampleBanners();
-      }
+      }),
+    ]);
+  }
+
+  /// تحميل الفئات مرة واحدة فقط
+  Future<void> _loadCategoriesOnce() async {
+    if (_categoriesLoaded) return;
+    final categoriesData = await _firebaseService.getCategories();
+    _categories =
+        categoriesData.map((data) => Category.fromMap(data)).toList();
+    _categoriesLoaded = true;
+  }
+
+  /// تحميل البانرات مرة واحدة فقط
+  Future<void> _loadBannersOnce() async {
+    if (_bannersLoaded) return;
+    final bannersData = await _firebaseService.getActiveBanners();
+    _banners = bannersData.map((data) => BannerModel.fromMap(data)).toList();
+    _bannersLoaded = true;
+  }
+
+  // =================== تحميل المنتجات المُقسّم (Pagination) ===================
+
+  /// تحميل الدفعة الأولى من المنتجات (أو إعادة التحميل)
+  Future<void> loadInitialProducts() async {
+    _isLoading = true;
+    _hasMore = true;
+    _lastDocument = null;
+    _products = [];
+    _featuredProducts = [];
+    _newArrivals = [];
+    notifyListeners();
+
+    try {
+      final result = await _firebaseService.getProducts(
+        limit: _pageSize,
+        sortBy: _sortBy,
+      );
+
+      final productsData = result['products'] as List<Map<String, dynamic>>;
+      _lastDocument = result['lastDocument'] as DocumentSnapshot?;
+      _hasMore = result['hasMore'] as bool;
+
+      _products = productsData.map((data) => Product.fromMap(data)).toList();
+      _recomputeCollections();
       _error = null;
+    } catch (e) {
+      debugPrint('Error loading initial products: $e');
+      // فشل — استخدم العيّنات كاحتياط
+      _loadSampleData();
+      _hasMore = false;
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
-  Future<void> _loadProducts() async {
-    try {
-      final productsData = await _firebaseService.getProducts();
-      _products = productsData.map((data) => Product.fromMap(data)).toList();
+  /// تحميل الدفعة التالية (التمرير اللانهائي)
+  Future<void> loadMoreProducts() async {
+    if (_isLoadingMore || !_hasMore) return;
+    _isLoadingMore = true;
+    notifyListeners();
 
-      _featuredProducts = _products.where((p) => p.isFeatured).toList();
-      _newArrivals = _products.where((p) => p.isNewArrival).toList();
+    try {
+      final result = await _firebaseService.getProducts(
+        limit: _pageSize,
+        lastDocument: _lastDocument,
+        sortBy: _sortBy,
+      );
+
+      final productsData = result['products'] as List<Map<String, dynamic>>;
+      _lastDocument = result['lastDocument'] as DocumentSnapshot?;
+      _hasMore = result['hasMore'] as bool;
+
+      final newProducts =
+          productsData.map((data) => Product.fromMap(data)).toList();
+      _products.addAll(newProducts);
+      _recomputeCollections();
     } catch (e) {
-      debugPrint('Error loading products from Firebase: $e');
-      rethrow;
+      debugPrint('Error loading more products: $e');
     }
+
+    _isLoadingMore = false;
+    notifyListeners();
   }
 
-  Future<void> _loadCategories() async {
-    try {
-      final categoriesData = await _firebaseService.getCategories();
-      _categories =
-          categoriesData.map((data) => Category.fromMap(data)).toList();
-    } catch (e) {
-      debugPrint('Error loading categories from Firebase: $e');
-      rethrow;
-    }
+  /// إعادة حساب القوائم المشتقة
+  void _recomputeCollections() {
+    _featuredProducts = _products.where((p) => p.isFeatured).toList();
+    _newArrivals = _products.where((p) => p.isNewArrival).toList();
   }
 
-  Future<void> _loadBanners() async {
-    try {
-      final bannersData = await _firebaseService.getActiveBanners();
-      _banners = bannersData.map((data) => BannerModel.fromMap(data)).toList();
-    } catch (e) {
-      debugPrint('Error loading banners from Firebase: $e');
-      rethrow;
-    }
+  /// إعادة تحميل كل شيء (للتحديث بالسحب)
+  Future<void> loadAll() async {
+    // مسح حالة التحميل المُقسّم
+    _lastDocument = null;
+    _hasMore = true;
+    return loadInitialProducts();
   }
 
   // =================== بيانات تجريبية (عند فشل الاتصال) ===================
@@ -287,16 +336,14 @@ class ProductProvider with ChangeNotifier {
     // فلترة حسب الألوان
     if (_selectedColors.isNotEmpty) {
       result = result
-          .where((p) =>
-              p.colors.any((c) => _selectedColors.contains(c)))
+          .where((p) => p.colors.any((c) => _selectedColors.contains(c)))
           .toList();
     }
 
     // فلترة حسب الخامة
     if (_selectedMaterial.isNotEmpty) {
       result = result
-          .where((p) =>
-              p.material.toLowerCase() == _selectedMaterial.toLowerCase())
+          .where((p) => p.material.toLowerCase() == _selectedMaterial.toLowerCase())
           .toList();
     }
 
