@@ -141,9 +141,11 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // فقط أضف ترتيبًا إذا اختار المستخدم فرزًا غير افتراضي
+      // الافتراضي 'newest' لا يُمرر لتجنب الحاجة إلى index مركب في Firestore
       final result = await _firebaseService.getProducts(
         limit: _pageSize,
-        sortBy: _sortBy,
+        sortBy: _sortBy == 'newest' ? null : _sortBy,
       );
 
       final productsData = result['products'] as List<Map<String, dynamic>>;
@@ -174,7 +176,7 @@ class ProductProvider with ChangeNotifier {
       final result = await _firebaseService.getProducts(
         limit: _pageSize,
         lastDocument: _lastDocument,
-        sortBy: _sortBy,
+        sortBy: _sortBy == 'newest' ? null : _sortBy,
       );
 
       final productsData = result['products'] as List<Map<String, dynamic>>;
