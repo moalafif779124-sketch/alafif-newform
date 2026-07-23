@@ -178,24 +178,24 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           childCount: provider.filteredProducts.length,
                         ),
                       ),
-                      if (provider.isLoadingMore)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppColors.primary.withValues(alpha: 0.6),
-                                  ),
-                                ),
+                    ),
+                  if (provider.isLoadingMore)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary.withValues(alpha: 0.6),
                               ),
                             ),
                           ),
                         ),
+                      ),
                     ),
                 ],
               ),
