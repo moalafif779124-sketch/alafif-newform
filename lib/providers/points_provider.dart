@@ -26,7 +26,7 @@ class PointsProvider with ChangeNotifier {
   static const int pointsToYerRate = 375;
   static const int pointsPerUnit = 100;
 
-  double get discountValue => (_points ~/ pointsPerUnit) * pointsToYerRate;
+  double get discountValue => ((_points ~/ pointsPerUnit) * pointsToYerRate).toDouble();
 
   // =================== أيام الأسبوع للتسلسل ===================
   List<bool> get weekCheckins {

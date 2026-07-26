@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
+import '../../models/cart_item.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import 'app_image.dart';
@@ -218,8 +219,11 @@ class ProductCard extends StatelessWidget {
                             onTap: inCart
                                 ? null
                                 : () {
-                                    cart.addItem(product,
-                                        size: product.sizes.isNotEmpty ? product.sizes.first : '');
+                                    cart.addItem(CartItem(
+                                      product: product,
+                                      size: product.sizes.isNotEmpty ? product.sizes.first : '',
+                                      quantity: 1,
+                                    ));
                                   },
                             child: Container(
                               width: 30,

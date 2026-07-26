@@ -16,6 +16,7 @@ import '../../widgets/product_card.dart';
 import '../cart/cart_screen.dart';
 import '../catalog/product_detail_screen.dart';
 import '../catalog/catalog_screen.dart';
+import '../profile/points_screen.dart';
 
 /// الشاشة الرئيسية — متجر متكامل مع العروض والفلاش سيل
 class HomeScreen extends StatefulWidget {
@@ -223,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen>
     {'icon': Icons.local_fire_department, 'label': 'عروض', 'id': 'flash'},
     {'icon': Icons.trending_up, 'label': 'ترند', 'id': 'trends'},
     {'icon': Icons.checkroom, 'label': 'شمزان', 'id': 'shamzan'},
-    {'icon': Icons.suitcase, 'label': 'جاكتات', 'id': 'jackets'},
+    {'icon': Icons.work, 'label': 'جاكتات', 'id': 'jackets'},
     {'icon': Icons.watch, 'label': 'إكسسوارات', 'id': 'accessories'},
     {'icon': Icons.flash_on, 'label': 'أقوات', 'id': 'aqwat'},
     {'icon': Icons.percent, 'label': 'تخفيضات', 'id': 'discount'},
