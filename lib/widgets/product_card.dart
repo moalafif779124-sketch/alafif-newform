@@ -220,8 +220,10 @@ class ProductCard extends StatelessWidget {
                                 ? null
                                 : () {
                                     cart.addItem(CartItem(
+                                      id: DateTime.now().millisecondsSinceEpoch.toString(),
                                       product: product,
                                       size: product.sizes.isNotEmpty ? product.sizes.first : '',
+                                      color: '',
                                       quantity: 1,
                                     ));
                                   },
