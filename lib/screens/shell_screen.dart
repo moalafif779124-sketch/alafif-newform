@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/points_provider.dart';
+import '../providers/navigation_provider.dart';
 import '../config/colors.dart';
 import 'home/home_screen.dart';
 import 'catalog/catalog_screen.dart';
@@ -9,7 +10,7 @@ import 'cart/cart_screen.dart';
 import 'profile/profile_screen.dart';
 import 'live/live_screen.dart';
 
-/// الشاشة الرئيسية — 5 تبويبات مع الاحتفاظ بحالة كل شاشة
+/// الشاشة الرئيسية — تبويبات ديناميكية من Firestore
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -21,10 +22,23 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   late final PageController _pageController;
 
+  // خريطة id التبويب ← شاشته
+  static const Map<String, Widget> _screenMap = {
+    'home': HomeScreen(),
+    'category': CatalogScreen(),
+    'live': LiveScreen(),
+    'cart': CartScreen(),
+    'profile': ProfileScreen(),
+  };
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: 0);
+    // تحميل إعدادات التنقل من Firestore
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NavigationProvider>().load();
+    });
   }
 
   @override
@@ -33,25 +47,45 @@ class _MainShellState extends State<MainShell> {
     super.dispose();
   }
 
+  /// أيقونات كل تبويب
+  static const Map<String, IconData> _iconMap = {
+    'home': Icons.home,
+    'category': Icons.grid_view,
+    'live': Icons.live_tv,
+    'cart': Icons.shopping_cart,
+    'profile': Icons.person,
+  };
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: PageView(
-          controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          onPageChanged: (index) => setState(() => _currentIndex = index),
-          children: const [
-            HomeScreen(),
-            CatalogScreen(),
-            LiveScreen(),
-            CartScreen(),
-            ProfileScreen(),
-          ],
+        body: Consumer<NavigationProvider>(
+          builder: (context, nav, _) {
+            final activeTabs = nav.tabs;
+            // تصحيح المؤشر إذا كان خارج النطاق
+            if (_currentIndex >= activeTabs.length) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                setState(() => _currentIndex = 0);
+                _pageController.jumpToPage(0);
+              });
+            }
+            return PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (index) => setState(() => _currentIndex = index),
+              children: activeTabs.map((tab) {
+                return _screenMap[tab.id] ?? const SizedBox.shrink();
+              }).toList(),
+            );
+          },
         ),
-        bottomNavigationBar: Consumer2<CartProvider, PointsProvider>(
-          builder: (context, cart, points, _) {
+        bottomNavigationBar: Consumer3<NavigationProvider, CartProvider, PointsProvider>(
+          builder: (context, nav, cart, points, _) {
+            final activeTabs = nav.tabs;
+            if (activeTabs.isEmpty) return const SizedBox.shrink();
+
             return Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -64,7 +98,7 @@ class _MainShellState extends State<MainShell> {
                 ],
               ),
               child: BottomNavigationBar(
-                currentIndex: _currentIndex,
+                currentIndex: _currentIndex < activeTabs.length ? _currentIndex : 0,
                 onTap: (index) {
                   _pageController.jumpToPage(index);
                   setState(() => _currentIndex = index);
@@ -83,86 +117,74 @@ class _MainShellState extends State<MainShell> {
                   fontFamily: 'NotoKufiArabic',
                   fontSize: 10,
                 ),
-                items: [
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.home_outlined),
-                    activeIcon: Icon(Icons.home),
-                    label: 'الرئيسية',
-                  ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.grid_view_outlined),
-                    activeIcon: Icon(Icons.grid_view),
-                    label: 'الفئات',
-                  ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.live_tv_outlined),
-                    activeIcon: Icon(Icons.live_tv),
-                    label: 'المجتمع',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Badge(
-                      isLabelVisible: cart.itemCount > 0,
-                      label: Text(
-                        '${cart.itemCount}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                items: activeTabs.map((tab) {
+                  final icon = _iconMap[tab.id] ?? Icons.tab;
+                  final label = tab.labelAr.isNotEmpty ? tab.labelAr : _defaultLabel(tab.id);
+
+                  // شارة مخصصة للسلة
+                  if (tab.id == 'cart') {
+                    return BottomNavigationBarItem(
+                      icon: Badge(
+                        isLabelVisible: cart.itemCount > 0,
+                        label: Text('${cart.itemCount}',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        child: Icon(icon),
                       ),
-                      child: const Icon(Icons.shopping_cart_outlined),
-                    ),
-                    activeIcon: Badge(
-                      isLabelVisible: cart.itemCount > 0,
-                      label: Text(
-                        '${cart.itemCount}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      activeIcon: Badge(
+                        isLabelVisible: cart.itemCount > 0,
+                        label: Text('${cart.itemCount}',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        child: Icon(icon),
                       ),
-                      child: const Icon(Icons.shopping_cart),
-                    ),
-                    label: 'السلة',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: points.points > 0
-                        ? Badge(
-                            isLabelVisible: true,
-                            label: Text(
-                              '${points.points}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            child: const Icon(Icons.person_outline),
-                          )
-                        : const Icon(Icons.person_outline),
-                    activeIcon: points.points > 0
-                        ? Badge(
-                            isLabelVisible: true,
-                            label: Text(
-                              '${points.points}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            child: const Icon(Icons.person),
-                          )
-                        : const Icon(Icons.person),
-                    label: 'حسابي',
-                  ),
-                ],
+                      label: label,
+                    );
+                  }
+
+                  // شارة النقاط للحساب
+                  if (tab.id == 'profile') {
+                    return BottomNavigationBarItem(
+                      icon: points.points > 0
+                          ? Badge(
+                              isLabelVisible: true,
+                              label: Text('${points.points}',
+                                  style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                              child: Icon(icon),
+                            )
+                          : Icon(icon),
+                      activeIcon: points.points > 0
+                          ? Badge(
+                              isLabelVisible: true,
+                              label: Text('${points.points}',
+                                  style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                              child: Icon(icon),
+                            )
+                          : Icon(icon),
+                      label: label,
+                    );
+                  }
+
+                  return BottomNavigationBarItem(
+                    icon: Icon(icon),
+                    activeIcon: Icon(icon),
+                    label: label,
+                  );
+                }).toList(),
               ),
             );
           },
         ),
       ),
     );
+  }
+
+  String _defaultLabel(String id) {
+    const labels = {
+      'home': 'الرئيسية',
+      'category': 'الفئات',
+      'live': 'المجتمع',
+      'cart': 'السلة',
+      'profile': 'حسابي',
+    };
+    return labels[id] ?? id;
   }
 }

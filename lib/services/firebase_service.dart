@@ -223,6 +223,58 @@ class FirebaseService {
     await firestore.collection('banners').doc(bannerId).update(data);
   }
 
+  Future<void> deleteBanner(String bannerId) async {
+    await firestore.collection('banners').doc(bannerId).delete();
+  }
+
+  /// جلب البانرات مرتبة حسب حقل order
+  Future<List<Map<String, dynamic>>> getBannersByOrder() async {
+    final snapshot = await firestore
+        .collection('banners')
+        .orderBy('order', descending: false)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data()! as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  // =================== إعدادات التنقل (Tab Management) ===================
+
+  Future<Map<String, dynamic>?> getNavigationConfig() async {
+    try {
+      final doc = await firestore.collection('app_config').doc('navigation').get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        data['id'] = doc.id;
+        return data;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to get navigation config: $e');
+    }
+    return null;
+  }
+
+  Future<void> saveNavigationConfig(Map<String, dynamic> data) async {
+    try {
+      await firestore.collection('app_config').doc('navigation').set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('⚠️ Failed to save navigation config: $e');
+    }
+  }
+
+  /// تحديث تبويب معين في إعدادات التنقل
+  Future<void> updateTabConfig(String tabId, Map<String, dynamic> data) async {
+    try {
+      await firestore.collection('app_config').doc('navigation').update({
+        'tabs.$tabId': data,
+      });
+    } catch (e) {
+      debugPrint('⚠️ Failed to update tab config: $e');
+    }
+  }
+
   // =================== السلة ===================
 
   Future<void> saveCart(String userId, List<Map<String, dynamic>> items) async {

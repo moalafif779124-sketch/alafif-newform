@@ -10,6 +10,7 @@ import 'admin_categories_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_banners_screen.dart';
 import 'admin_users_screen.dart';
+import 'tab_management_screen.dart';
 
 /// لوحة تحكم المدير — الصفحة الرئيسية للإدارة
 class AdminDashboard extends StatefulWidget {
@@ -316,6 +317,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                     ),
                     const SizedBox(height: 12),
+
+                    // إدارة التبويبات
+                    _AdminMenuItem(
+                      icon: Icons.tab,
+                      title: 'إدارة التبويبات',
+                      subtitle: 'تشغيل/إيقاف التبويبات الظاهرة في الشريط السفلي',
+                      color: AppColors.info,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const TabManagementScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
 
                     // مزامنة الفئات
                     _AdminMenuItem(
