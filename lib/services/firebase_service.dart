@@ -667,4 +667,85 @@ class FirebaseService {
       debugPrint('⚠️ Failed to remove FCM token: $e');
     }
   }
+
+  // =================== نقاط المستخدمين (Gamification) ===================
+
+  /// جلب بيانات نقاط المستخدم
+  Future<Map<String, dynamic>?> getUserPoints(String userId) async {
+    try {
+      final doc = await firestore.collection('users').doc(userId).get();
+      if (doc.exists && doc.data()!.containsKey('points')) {
+        return {
+          'points': doc.data()!['points'] ?? 0,
+          'lifetimePoints': doc.data()!['lifetimePoints'] ?? 0,
+          'streakDays': doc.data()!['streakDays'] ?? 0,
+          'lastCheckin': doc.data()!['lastCheckin'] ?? 0,
+        };
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to get user points: $e');
+    }
+    return null;
+  }
+
+  /// حفظ بيانات النقاط الأولية
+  Future<void> saveUserPoints(String userId, Map<String, dynamic> data) async {
+    try {
+      await firestore.collection('users').doc(userId).set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('⚠️ Failed to save user points: $e');
+    }
+  }
+
+  /// تحديث نقاط المستخدم
+  Future<void> updateUserPoints(String userId, Map<String, dynamic> data) async {
+    try {
+      await firestore.collection('users').doc(userId).update(data);
+    } catch (e) {
+      debugPrint('⚠️ Failed to update user points: $e');
+    }
+  }
+
+  // =================== إشعارات المواضيع (Topic Subscriptions) ===================
+
+  /// تسجيل اشتراك في موضوع إشعارات
+  Future<void> subscribeToTopic(String userId, String topic) async {
+    try {
+      final doc = firestore.collection('users').doc(userId);
+      final existing = await doc.get();
+      final topics = List<String>.from(existing.data()?['notificationTopics'] ?? []);
+      if (!topics.contains(topic)) {
+        topics.add(topic);
+        await doc.update({'notificationTopics': topics});
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to subscribe to topic: $e');
+    }
+  }
+
+  /// إلغاء الاشتراك من موضوع إشعارات
+  Future<void> unsubscribeFromTopic(String userId, String topic) async {
+    try {
+      final doc = firestore.collection('users').doc(userId);
+      final existing = await doc.get();
+      final topics = List<String>.from(existing.data()?['notificationTopics'] ?? []);
+      topics.remove(topic);
+      await doc.update({'notificationTopics': topics});
+    } catch (e) {
+      debugPrint('⚠️ Failed to unsubscribe from topic: $e');
+    }
+  }
+
+  /// جلب مواضيع الإشعارات المشترك بها
+  Future<List<String>> getNotificationTopics(String userId) async {
+    try {
+      final doc = await firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return List<String>.from(doc.data()?['notificationTopics'] ?? []);
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to get notification topics: $e');
+    }
+    return [];
+  }
 }

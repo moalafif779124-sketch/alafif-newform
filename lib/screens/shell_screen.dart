@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/points_provider.dart';
 import '../config/colors.dart';
 import 'home/home_screen.dart';
 import 'catalog/catalog_screen.dart';
 import 'cart/cart_screen.dart';
 import 'profile/profile_screen.dart';
+import 'live/live_screen.dart';
 
-/// الشاشة الرئيسية للتطبيق مع شريط التنقل السفلي
-/// تستخدم PageView بدلاً من IndexedStack لبناء الشاشات عند الحاجة فقط
+/// الشاشة الرئيسية — 5 تبويبات مع الاحتفاظ بحالة كل شاشة
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -44,12 +45,13 @@ class _MainShellState extends State<MainShell> {
           children: const [
             HomeScreen(),
             CatalogScreen(),
+            LiveScreen(),
             CartScreen(),
             ProfileScreen(),
           ],
         ),
-        bottomNavigationBar: Consumer<CartProvider>(
-          builder: (context, cart, _) {
+        bottomNavigationBar: Consumer2<CartProvider, PointsProvider>(
+          builder: (context, cart, points, _) {
             return Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -74,12 +76,12 @@ class _MainShellState extends State<MainShell> {
                 backgroundColor: Colors.white,
                 selectedLabelStyle: const TextStyle(
                   fontFamily: 'NotoKufiArabic',
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
                 unselectedLabelStyle: const TextStyle(
                   fontFamily: 'NotoKufiArabic',
-                  fontSize: 11,
+                  fontSize: 10,
                 ),
                 items: [
                   const BottomNavigationBarItem(
@@ -91,6 +93,11 @@ class _MainShellState extends State<MainShell> {
                     icon: Icon(Icons.grid_view_outlined),
                     activeIcon: Icon(Icons.grid_view),
                     label: 'الفئات',
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.live_tv_outlined),
+                    activeIcon: Icon(Icons.live_tv),
+                    label: 'المجتمع',
                   ),
                   BottomNavigationBarItem(
                     icon: Badge(
@@ -119,9 +126,35 @@ class _MainShellState extends State<MainShell> {
                     ),
                     label: 'السلة',
                   ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.person_outline),
-                    activeIcon: Icon(Icons.person),
+                  BottomNavigationBarItem(
+                    icon: points.points > 0
+                        ? Badge(
+                            isLabelVisible: true,
+                            label: Text(
+                              '${points.points}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            child: const Icon(Icons.person_outline),
+                          )
+                        : const Icon(Icons.person_outline),
+                    activeIcon: points.points > 0
+                        ? Badge(
+                            isLabelVisible: true,
+                            label: Text(
+                              '${points.points}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            child: const Icon(Icons.person),
+                          )
+                        : const Icon(Icons.person),
                     label: 'حسابي',
                   ),
                 ],
