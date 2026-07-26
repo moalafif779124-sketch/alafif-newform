@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart' hide Category;
+import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
 import '../models/category.dart';
@@ -195,6 +197,30 @@ class ProductProvider with ChangeNotifier {
   void _recomputeCollections() {
     _featuredProducts = _products.where((p) => p.isFeatured).toList();
     _newArrivals = _products.where((p) => p.isNewArrival).toList();
+  }
+
+  /// التحميل المسبق للصور المصغرة — يُستدعى من الشاشات عند توفر Context
+  static Future<void> precacheProductThumbnails(
+    BuildContext context,
+    List<Product> products, {
+    int max = 10,
+  }) async {
+    final toCache = products.take(max).toList();
+    for (final product in toCache) {
+      if (product.images.isNotEmpty) {
+        final url = product.images.first;
+        if (url.isNotEmpty && !url.startsWith('data:image/')) {
+          // الصور Base64 لا تحتاج تحميل مسبق — مخزنة في الذاكرة (b64Cache)
+          try {
+            await precacheImage(
+              CachedNetworkImageProvider(url),
+              context,
+              onError: (_, __) {},
+            );
+          } catch (_) {}
+        }
+      }
+    }
   }
 
   /// إعادة تحميل كل شيء (للتحديث بالسحب)

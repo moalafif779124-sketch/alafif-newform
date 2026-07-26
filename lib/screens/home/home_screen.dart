@@ -38,12 +38,29 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    // متغير للتأكد من أننا نحمّل الصور المسبقة مرة واحدة فقط
+    bool _precached = false;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().loadInitialProducts();
       // تهيئة النقاط عند عرض الرئيسية
       final auth = context.read<AuthProvider>();
       if (auth.isLoggedIn && auth.userId != null) {
         context.read<PointsProvider>().initialize(auth.userId!);
+      }
+    });
+
+    // استمع لتغييرات المنتجات لتحميل الصور المسبقة
+    context.read<ProductProvider>().addListener(() {
+      if (_precached) return;
+      final provider = context.read<ProductProvider>();
+      if (!provider.isLoading && provider.products.isNotEmpty) {
+        _precached = true;
+        ProductProvider.precacheProductThumbnails(
+          context,
+          provider.products,
+          max: 10,
+        );
       }
     });
     _startFlashCountdown();
