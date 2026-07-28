@@ -55,6 +55,7 @@ class ProductCard extends StatelessWidget {
                       width: double.infinity,
                       fit: BoxFit.cover,
                       backgroundColor: AppColors.accentLight,
+                      cacheWidth: 300,
                     ),
                   ),
                   // شارات

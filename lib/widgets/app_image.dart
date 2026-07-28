@@ -33,24 +33,47 @@ class AppImage extends StatelessWidget {
     this.cacheHeight,
   });
 
-  bool get _isBase64 => imageUrl.startsWith('data:image/');
+  /// كشف قاعدة 64 — مع مرونة للمسافات البيضاء
+  bool get _isBase64 {
+    final trimmed = imageUrl.trim();
+    return trimmed.startsWith('data:image/');
+  }
+
+  /// رابط صحيح قابل للتحميل
+  bool get _isValidUrl {
+    final trimmed = imageUrl.trim();
+    return trimmed.isNotEmpty &&
+        (trimmed.startsWith('http://') ||
+            trimmed.startsWith('https://') ||
+            trimmed.startsWith('data:image/'));
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_isBase64) {
-      return _buildBase64(context);
+    final url = imageUrl.trim();
+
+    // رابط فارغ — ارجع فوراً أيقونة الخطأ بدون سبينر
+    if (url.isEmpty) {
+      return _errorWidget();
     }
-    return _buildNetwork();
+
+    if (url.startsWith('data:image/')) {
+      return _buildBase64(context, url);
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return _buildNetwork(url);
+    }
+
+    // رابط غير معروف — أيقونة خطأ
+    return _errorWidget();
   }
 
   // ===================== Base64 =====================
 
-  Widget _buildBase64(BuildContext context) {
+  Widget _buildBase64(BuildContext context, String url) {
     try {
-      final bytes = _decodeB64(imageUrl);
-      // استخدام cacheWidth/cacheHeight لتصغير الصورة في الذاكرة
-      final targetW = cacheWidth ?? width?.toInt();
-      final targetH = cacheHeight ?? height?.toInt();
+      final bytes = _decodeB64(url);
 
       return ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
@@ -60,8 +83,8 @@ class AppImage extends StatelessWidget {
           color: backgroundColor,
           child: Image.memory(
             bytes,
-            width: targetW?.toDouble(),
-            height: targetH?.toDouble(),
+            width: width,
+            height: height,
             fit: fit,
             filterQuality: FilterQuality.medium,
             errorBuilder: (_, __, ___) => _errorWidget(),
@@ -69,42 +92,51 @@ class AppImage extends StatelessWidget {
         ),
       );
     } catch (e) {
+      debugPrint('🧩 AppImage base64 error: $e');
       return _errorWidget();
     }
   }
 
-  /// فك تشفير Base64 مع تخزين في الذاكرة المؤقتة
-  Uint8List _decodeB64(String imageUrl) {
+  /// فك تشفير Base64 — يتعامل مع وجود أو غياب البادئة
+  Uint8List _decodeB64(String raw) {
     // البحث في الذاكرة المؤقتة
-    if (_b64Cache.containsKey(imageUrl)) {
-      return _b64Cache[imageUrl]!;
+    if (_b64Cache.containsKey(raw)) {
+      return _b64Cache[raw]!;
     }
 
-    final encoded = imageUrl.split(',')[1];
-    final bytes = base64Decode(encoded);
+    // تنظيف السلسلة: إزالة البادئة data:image/...;base64,
+    String clean;
+    if (raw.contains(',')) {
+      clean = raw.split(',').last.trim();
+    } else {
+      clean = raw.trim();
+    }
 
-    // التخزين مع الحد الأقصى للحجم
+    // إزالة أي مسافات بيضاء أو أسطر جديدة
+    clean = clean.replaceAll(RegExp(r'\s'), '');
+
+    final bytes = base64Decode(clean);
+
+    // التخزين في الذاكرة المؤقتة
     if (_b64Cache.length >= _b64CacheMaxEntries) {
-      // إزالة أول عنصر (الأقدم)
       final firstKey = _b64Cache.keys.first;
       _b64Cache.remove(firstKey);
     }
-    _b64Cache[imageUrl] = bytes;
+    _b64Cache[raw] = bytes;
 
     return bytes;
   }
 
   // ===================== Network =====================
 
-  Widget _buildNetwork() {
-    // حجم الصورة المصغرة — ثلث عرض الشاشة كحد أقصى
-    const int defaultThumbWidth = 250;
+  Widget _buildNetwork(String url) {
+    const int defaultThumbWidth = 300;
     final effectiveCacheWidth = cacheWidth ?? defaultThumbWidth;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: CachedNetworkImage(
-        imageUrl: imageUrl,
+        imageUrl: url,
         width: width,
         height: height,
         fit: fit,
@@ -115,8 +147,8 @@ class AppImage extends StatelessWidget {
           color: backgroundColor ?? Colors.grey[100],
           child: const Center(
             child: SizedBox(
-              width: 24,
-              height: 24,
+              width: 20,
+              height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
@@ -124,7 +156,10 @@ class AppImage extends StatelessWidget {
             ),
           ),
         ),
-        errorWidget: (context, url, error) => _errorWidget(),
+        errorWidget: (context, url, error) {
+          debugPrint('🧩 AppImage network error: $error');
+          return _errorWidget();
+        },
       ),
     );
   }
@@ -133,8 +168,17 @@ class AppImage extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: Colors.grey[200],
-      child: const Icon(Icons.broken_image, color: Colors.grey),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          size: (width ?? 48) * 0.35,
+          color: Colors.grey[400],
+        ),
+      ),
     );
   }
 }
