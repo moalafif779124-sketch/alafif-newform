@@ -108,7 +108,7 @@ class ProductProvider with ChangeNotifier {
       }),
       _loadBannersOnce().catchError((e) {
         debugPrint('Error loading banners: $e');
-        _banners = _generateSampleBanners();
+        // لا تستخدم بينرات تجريبية — اترك المصفوفة فارغة
       }),
     ]);
   }

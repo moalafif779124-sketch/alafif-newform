@@ -193,6 +193,7 @@ class FirebaseService {
     final snapshot = await firestore
         .collection('banners')
         .where('isActive', isEqualTo: true)
+        .orderBy('order', descending: false)
         .get();
     return snapshot.docs.map((doc) {
       final data = doc.data()! as Map<String, dynamic>;

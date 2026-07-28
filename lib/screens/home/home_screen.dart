@@ -432,43 +432,21 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildBannerCarousel(ProductProvider provider) {
     final banners = provider.banners;
+
+    // حالة التحميل — شيمر
     if (provider.isLoading && banners.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16),
         child: BannerSkeleton(),
       );
     }
+
+    // لا توجد بانرات حقيقية — اترك المساحة فارغة (لا بينرات افتراضية)
     if (banners.isEmpty) {
-      final allProducts = provider.products;
-      final dynamicProducts = allProducts.take(10).toList();
-      if (dynamicProducts.isEmpty) {
-        return Container(
-          height: 180,
-          width: double.infinity,
-          color: AppColors.primaryLight,
-          child: const Center(
-            child: Text('العفيف نيوفورم',
-                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-          ),
-        );
-      }
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: CarouselSlider(
-          options: CarouselOptions(
-            height: 180,
-            autoPlay: true,
-            autoPlayInterval: const Duration(seconds: 4),
-            enlargeCenterPage: true,
-            enlargeFactor: 0.2,
-            viewportFraction: 0.9,
-          ),
-          items: dynamicProducts
-              .map((p) => _buildDynamicBanner(p))
-              .toList(),
-        ),
-      );
+      return const SizedBox.shrink();
     }
+
+    // بانرات حقيقية من Firestore — اعرضها
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: CarouselSlider(

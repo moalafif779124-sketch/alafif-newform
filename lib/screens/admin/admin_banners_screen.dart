@@ -246,6 +246,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                     'buttonText': buttonTextC.text.trim(),
                     'order': int.tryParse(orderC.text.trim()) ?? _banners.length,
                     'isActive': isActive,
+                    'createdAt': DateTime.now().millisecondsSinceEpoch,
                   };
                   if (productId != null && productId!.isNotEmpty) data['productId'] = productId;
                   if (categoryId != null && categoryId!.isNotEmpty) data['categoryId'] = categoryId;
@@ -321,6 +322,33 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
     }
   }
 
+  /// إضافة بانرات افتراضية إلى Firestore كبداية سريعة
+  Future<void> _seedDefaultBanners() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final defaults = [
+      {'title': 'المجموعة الشتوية 2026', 'subtitle': 'تصاميم عصرية بأقمشة فاخرة', 'imageUrl': '', 'buttonText': 'تسوق الآن', 'order': 0, 'isActive': true, 'createdAt': now},
+      {'title': 'خصومات تصل إلى 50%', 'subtitle': 'على تشكيلة الثياب والبذلات', 'imageUrl': '', 'buttonText': 'استفد من العرض', 'order': 1, 'isActive': true, 'createdAt': now},
+      {'title': 'أزياء العيد', 'subtitle': 'أفخم التصاميم للمناسبات السعيدة', 'imageUrl': '', 'buttonText': 'اكتشف المجموعة', 'order': 2, 'isActive': true, 'createdAt': now},
+    ];
+    try {
+      for (final banner in defaults) {
+        await _firebase.addBanner(banner);
+      }
+      await _loadBanners();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ تمت إضافة 3 بانرات افتراضية'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل الإضافة: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -352,6 +380,13 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                           onPressed: () => _showBannerDialog(),
                           icon: const Icon(Icons.add),
                           label: const Text('إضافة بانر جديد'),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => _seedDefaultBanners(),
+                          icon: const Icon(Icons.auto_fix_high),
+                          label: const Text('إضافة بانرات افتراضية'),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                         ),
                       ],
                     ),
