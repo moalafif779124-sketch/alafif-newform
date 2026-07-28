@@ -1,9 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/firebase_service.dart';
 import '../../config/colors.dart';
 import '../../widgets/app_image.dart';
 
-/// شاشة إدارة البانرات — مع إعادة ترتيب وحذف ومعاينة الصور
+/// شاشة إدارة البانرات — مع رفع الصور من الجهاز (Image Picker)
 class AdminBannersScreen extends StatefulWidget {
   const AdminBannersScreen({super.key});
 
@@ -13,6 +16,7 @@ class AdminBannersScreen extends StatefulWidget {
 
 class _AdminBannersScreenState extends State<AdminBannersScreen> {
   final FirebaseService _firebase = FirebaseService();
+  final ImagePicker _picker = ImagePicker();
 
   List<Map<String, dynamic>> _banners = [];
   bool _loading = true;
@@ -26,7 +30,6 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
   Future<void> _loadBanners() async {
     setState(() => _loading = true);
     try {
-      // استخدام getBannersByOrder للترتيب التصاعدي
       final banners = await _firebase.getBannersByOrder();
       if (mounted) {
         setState(() {
@@ -39,6 +42,29 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
     }
   }
 
+  /// التقاط صورة من المعرض وضغطها إلى Base64 (JPEG مضغوط)
+  Future<String?> _pickAndCompressImage() async {
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 75,
+      );
+      if (picked == null) return null;
+
+      final bytes = await picked.readAsBytes();
+      // تحويل إلى Base64 مع البادئة
+      final b64 = base64Encode(bytes);
+      final ext = picked.name.split('.').last.toLowerCase();
+      final mime = ext == 'png' ? 'image/png' : 'image/jpeg';
+      return 'data:$mime;base64,$b64';
+    } catch (e) {
+      debugPrint('⚠️ Image pick error: $e');
+      return null;
+    }
+  }
+
   Future<void> _showBannerDialog({Map<String, dynamic>? existing}) async {
     final isEdit = existing != null;
     final titleC = TextEditingController(text: existing?['title'] ?? '');
@@ -48,107 +74,202 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
     final orderC = TextEditingController(text: (existing?['order'] ?? _banners.length).toString());
     String? productId = existing?['productId'];
     String? categoryId = existing?['categoryId'];
+    bool isActive = existing?['isActive'] ?? true;
+    String? pendingImageB64;
     final formKey = GlobalKey<FormState>();
 
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Text(isEdit ? 'تعديل البانر' : 'إضافة بانر جديد'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // معاينة الصورة
-                  if (imageUrlC.text.isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: AppImage(imageUrl: imageUrlC.text, height: 120, width: double.infinity, fit: BoxFit.cover),
+        child: StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text(isEdit ? 'تعديل البانر' : 'إضافة بانر جديد'),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ===== معاينة الصورة مع زر الرفع =====
+                    GestureDetector(
+                      onTap: () async {
+                        final b64 = await _pickAndCompressImage();
+                        if (b64 != null) {
+                          setDialogState(() {
+                            pendingImageB64 = b64;
+                            imageUrlC.text = b64;
+                          });
+                        }
+                      },
+                      child: Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.border, width: 1),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: (pendingImageB64 ?? imageUrlC.text).isNotEmpty
+                              ? Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    AppImage(
+                                      imageUrl: pendingImageB64 ?? imageUrlC.text,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: 120,
+                                    ),
+                                    Container(
+                                      alignment: Alignment.bottomCenter,
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.5)],
+                                        ),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                                          SizedBox(width: 4),
+                                          Text('تغيير الصورة', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate_outlined, size: 36, color: AppColors.textSecondary),
+                                    const SizedBox(height: 4),
+                                    const Text('اختيار صورة من الجهاز', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                  ],
+                                ),
+                        ),
+                      ),
                     ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: titleC,
-                    decoration: const InputDecoration(labelText: 'العنوان *', border: OutlineInputBorder(), prefixIcon: Icon(Icons.title)),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'الحقل مطلوب' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: subtitleC,
-                    decoration: const InputDecoration(labelText: 'النص الفرعي', border: OutlineInputBorder(), prefixIcon: Icon(Icons.subtitles)),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: imageUrlC,
-                    decoration: const InputDecoration(labelText: 'رابط الصورة *', hintText: 'https://... أو base64...', border: OutlineInputBorder(), prefixIcon: Icon(Icons.image)),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'الحقل مطلوب' : null,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: buttonTextC,
-                    decoration: const InputDecoration(labelText: 'نص الزر', border: OutlineInputBorder(), prefixIcon: Icon(Icons.smart_button)),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: orderC,
-                    decoration: const InputDecoration(labelText: 'الترتيب', border: OutlineInputBorder(), prefixIcon: Icon(Icons.sort)),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'معرف المنتج (للبانر المرتبط بمنتج)', hintText: 'prod_01', border: OutlineInputBorder(), prefixIcon: Icon(Icons.link)),
-                    initialValue: productId ?? '',
-                    onChanged: (v) => productId = v.isEmpty ? null : v,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'معرف الفئة (للبانر المرتبط بفئة)', hintText: 'mawaz', border: OutlineInputBorder(), prefixIcon: Icon(Icons.category)),
-                    initialValue: categoryId ?? '',
-                    onChanged: (v) => categoryId = v.isEmpty ? null : v,
-                  ),
-                ],
+                    const SizedBox(height: 12),
+
+                    // ===== حقل العنوان =====
+                    TextFormField(
+                      controller: titleC,
+                      decoration: const InputDecoration(labelText: 'العنوان *', border: OutlineInputBorder(), prefixIcon: Icon(Icons.title)),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'الحقل مطلوب' : null,
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: subtitleC,
+                      decoration: const InputDecoration(labelText: 'النص الفرعي', border: OutlineInputBorder(), prefixIcon: Icon(Icons.subtitles)),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: buttonTextC,
+                      decoration: const InputDecoration(labelText: 'نص الزر', border: OutlineInputBorder(), prefixIcon: Icon(Icons.smart_button)),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: orderC,
+                            decoration: const InputDecoration(labelText: 'الترتيب', border: OutlineInputBorder(), prefixIcon: Icon(Icons.sort)),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        // زر التفعيل
+                        Column(
+                          children: [
+                            const Text('نشط', style: TextStyle(fontSize: 11)),
+                            Switch.adaptive(
+                              value: isActive,
+                              onChanged: (v) => setDialogState(() => isActive = v),
+                              activeColor: AppColors.primary,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: 'معرف المنتج (للبانر المرتبط بمنتج)', hintText: 'prod_01', border: OutlineInputBorder(), prefixIcon: Icon(Icons.link)),
+                      initialValue: productId ?? '',
+                      onChanged: (v) => productId = v.isEmpty ? null : v,
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: 'معرف الفئة (للبانر المرتبط بفئة)', hintText: 'mawaz', border: OutlineInputBorder(), prefixIcon: Icon(Icons.category)),
+                      initialValue: categoryId ?? '',
+                      onChanged: (v) => categoryId = v.isEmpty ? null : v,
+                    ),
+                    // حقل الرابط اليدوي (اختياري)
+                    if (pendingImageB64 == null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: TextFormField(
+                          controller: imageUrlC,
+                          decoration: const InputDecoration(
+                            labelText: 'أو رابط الصورة (اختياري)',
+                            hintText: 'https://...',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.link),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('إلغاء')),
-            ElevatedButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) return;
-                final data = <String, dynamic>{
-                  'title': titleC.text.trim(),
-                  'subtitle': subtitleC.text.trim(),
-                  'imageUrl': imageUrlC.text.trim(),
-                  'buttonText': buttonTextC.text.trim(),
-                  'order': int.tryParse(orderC.text.trim()) ?? _banners.length,
-                  'isActive': existing?['isActive'] ?? true,
-                };
-                if (productId != null && productId!.isNotEmpty) data['productId'] = productId;
-                if (categoryId != null && categoryId!.isNotEmpty) data['categoryId'] = categoryId;
-
-                try {
-                  if (isEdit) {
-                    await _firebase.updateBanner(existing['id'], data);
-                  } else {
-                    await _firebase.addBanner(data);
-                  }
-                  if (ctx.mounted) Navigator.of(ctx).pop(true);
-                } catch (e) {
-                  if (ctx.mounted) {
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (!formKey.currentState!.validate()) return;
+                  // استخدام الصورة المرفوعة أو الرابط اليدوي أو الصورة القديمة
+                  final finalImage = pendingImageB64 ?? imageUrlC.text.trim();
+                  if (finalImage.isEmpty) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('فشل الحفظ: $e'), backgroundColor: AppColors.error),
+                      const SnackBar(content: Text('الرجاء اختيار صورة'), backgroundColor: AppColors.error),
                     );
+                    return;
                   }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-              child: Text(isEdit ? 'تحديث' : 'إضافة'),
-            ),
-          ],
+                  final data = <String, dynamic>{
+                    'title': titleC.text.trim(),
+                    'subtitle': subtitleC.text.trim(),
+                    'imageUrl': finalImage,
+                    'buttonText': buttonTextC.text.trim(),
+                    'order': int.tryParse(orderC.text.trim()) ?? _banners.length,
+                    'isActive': isActive,
+                  };
+                  if (productId != null && productId!.isNotEmpty) data['productId'] = productId;
+                  if (categoryId != null && categoryId!.isNotEmpty) data['categoryId'] = categoryId;
+
+                  try {
+                    if (isEdit) {
+                      await _firebase.updateBanner(existing['id'], data);
+                    } else {
+                      await _firebase.addBanner(data);
+                    }
+                    if (ctx.mounted) Navigator.of(ctx).pop(true);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('فشل الحفظ: $e'), backgroundColor: AppColors.error),
+                      );
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                child: Text(isEdit ? 'تحديث' : 'إضافة'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -283,7 +404,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                 padding: const EdgeInsets.only(right: 8),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: AppImage(imageUrl: imageUrl, width: 48, height: 48, fit: BoxFit.cover),
+                  child: AppImage(imageUrl: imageUrl, width: 48, height: 48, fit: BoxFit.cover, cacheWidth: 96),
                 ),
               ),
             // تفاصيل البانر
