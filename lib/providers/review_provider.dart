@@ -38,13 +38,15 @@ class ReviewProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// إضافة مراجعة جديدة
+  /// إضافة مراجعة جديدة — مع ملاءمة المقاس وصورة اختيارية
   Future<bool> addReview({
     required String productId,
     required String userId,
     required String userName,
     required double rating,
     required String comment,
+    String fitFeedback = '',
+    String photoBase64 = '',
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -56,6 +58,9 @@ class ReviewProvider with ChangeNotifier {
         'userName': userName,
         'rating': rating,
         'comment': comment,
+        'fitFeedback': fitFeedback,
+        'photoBase64': photoBase64,
+        'createdAt': DateTime.now().millisecondsSinceEpoch,
       });
       _hasReviewed = true;
       _isLoading = false;

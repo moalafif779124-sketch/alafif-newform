@@ -6,6 +6,8 @@ class Review {
   final String userName;
   final double rating;
   final String comment;
+  final String fitFeedback; // "مناسب تماماً" / "صغير" / "كبير"
+  final String photoBase64; // صورة اختيارية (مضغوطة)
   final DateTime createdAt;
 
   Review({
@@ -15,6 +17,8 @@ class Review {
     required this.userName,
     required this.rating,
     required this.comment,
+    this.fitFeedback = '',
+    this.photoBase64 = '',
     required this.createdAt,
   });
 
@@ -26,6 +30,8 @@ class Review {
       userName: map['userName'] ?? '',
       rating: (map['rating'] ?? 5).toDouble(),
       comment: map['comment'] ?? '',
+      fitFeedback: map['fitFeedback'] ?? '',
+      photoBase64: map['photoBase64'] ?? '',
       createdAt: map['createdAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
           : DateTime.now(),
@@ -40,6 +46,8 @@ class Review {
       'userName': userName,
       'rating': rating,
       'comment': comment,
+      'fitFeedback': fitFeedback,
+      'photoBase64': photoBase64,
       'createdAt': createdAt.millisecondsSinceEpoch,
     };
   }

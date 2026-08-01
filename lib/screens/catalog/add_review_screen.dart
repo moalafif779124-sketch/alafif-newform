@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/review_provider.dart';
+import '../../widgets/app_image.dart';
 import '../auth/login_screen.dart';
 
 /// شاشة إضافة تقييم للمنتج
@@ -26,11 +29,36 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
   double _rating = 5;
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmitting = false;
+  final ImagePicker _picker = ImagePicker();
+
+  // ===== ملاءمة المقاس =====
+  static const List<String> _fitOptions = ['مناسب تماماً', 'صغير', 'كبير'];
+  String _fitFeedback = '';
+
+  // ===== الصورة المرفقة =====
+  String _photoBase64 = '';
 
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
+  }
+
+  /// اختيار صورة من المعرض وضغطها (800x800، جودة 75%)
+  Future<void> _pickPhoto() async {
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 75,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      setState(() => _photoBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}');
+    } catch (e) {
+      debugPrint('⚠️ Photo pick error: $e');
+    }
   }
 
   Future<void> _submitReview() async {
@@ -62,6 +90,8 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
       userName: authProvider.user?.fullName ?? 'مستخدم',
       rating: _rating,
       comment: _commentController.text.trim(),
+      fitFeedback: _fitFeedback,
+      photoBase64: _photoBase64,
     );
 
     setState(() => _isSubmitting = false);
@@ -177,6 +207,94 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                   alignLabelWithHint: true,
                 ),
                 textDirection: TextDirection.rtl,
+              ),
+
+              const SizedBox(height: 32),
+
+              // ===== ملاءمة المقاس (True to Size) =====
+              const Text(
+                'ما مدى ملاءمة المقاس؟',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                children: _fitOptions.map((option) {
+                  final selected = _fitFeedback == option;
+                  return ChoiceChip(
+                    label: Text(option, style: const TextStyle(fontSize: 12)),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _fitFeedback = option),
+                    selectedColor: AppColors.primary,
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : AppColors.textPrimary,
+                      fontSize: 12,
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ===== صورة اختيارية =====
+              GestureDetector(
+                onTap: _pickPhoto,
+                child: Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: _photoBase64.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              AppImage(
+                                imageUrl: _photoBase64,
+                                fit: BoxFit.cover,
+                                cacheWidth: 300,
+                              ),
+                              Positioned(
+                                top: 6,
+                                right: 6,
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _photoBase64 = ''),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close,
+                                        color: Colors.white, size: 14),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo_outlined,
+                                size: 30, color: AppColors.textSecondary),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'إرفاق صورة (اختياري)',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                ),
               ),
 
               const SizedBox(height: 32),

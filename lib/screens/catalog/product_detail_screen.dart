@@ -974,6 +974,48 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ),
 
+                // ===== معرض صور العملاء =====
+                if (reviewProvider.reviews.any((r) => r.photoBase64.isNotEmpty)) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 84,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      addAutomaticKeepAlives: false,
+                      addRepaintBoundaries: true,
+                      itemCount: reviewProvider.reviews
+                          .where((r) => r.photoBase64.isNotEmpty)
+                          .length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final photos = reviewProvider.reviews
+                            .where((r) => r.photoBase64.isNotEmpty)
+                            .toList();
+                        return GestureDetector(
+                          onTap: () => _showPhotoFullscreen(
+                              photos[index].photoBase64),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: AppImage(
+                              imageUrl: photos[index].photoBase64,
+                              width: 84,
+                              height: 84,
+                              fit: BoxFit.cover,
+                              cacheWidth: 168,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+
+                // ===== توزيع ملاءمة المقاس =====
+                if (reviewProvider.reviews.any((r) => r.fitFeedback.isNotEmpty)) ...[
+                  const SizedBox(height: 12),
+                  _buildFitBreakdown(reviewProvider.reviews),
+                ],
+
                 // قائمة التقييمات
                 if (reviewProvider.reviews.length > 2) ...[
                   const SizedBox(height: 8),
@@ -1050,7 +1092,147 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+        // ===== شارة ملاءمة المقاس =====
+        if (review.fitFeedback.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.straighten, size: 12, color: AppColors.primary),
+                const SizedBox(width: 4),
+                Text(
+                  'المقاس: ${review.fitFeedback}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        // ===== صورة مرفقة =====
+        if (review.photoBase64.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => _showPhotoFullscreen(review.photoBase64),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: AppImage(
+                imageUrl: review.photoBase64,
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+                cacheWidth: 240,
+              ),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  /// شريط توزيع ملاءمة المقاس
+  Widget _buildFitBreakdown(List<Review> reviews) {
+    final withFit = reviews.where((r) => r.fitFeedback.isNotEmpty).toList();
+    if (withFit.isEmpty) return const SizedBox.shrink();
+    final total = withFit.length;
+
+    double ratio(String label) =>
+        withFit.where((r) => r.fitFeedback == label).length / total;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.accentLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ملاءمة المقاس',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _fitBar('مناسب تماماً', ratio('مناسب تماماً'), AppColors.success),
+          const SizedBox(height: 6),
+          _fitBar('صغير', ratio('صغير'), AppColors.warning),
+          const SizedBox(height: 6),
+          _fitBar('كبير', ratio('كبير'), AppColors.error),
+        ],
+      ),
+    );
+  }
+
+  Widget _fitBar(String label, double ratio, Color color) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 76,
+          child: Text(
+            label,
+            style: const TextStyle(
+                fontSize: 11, color: AppColors.textSecondary),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 6,
+              backgroundColor: AppColors.border.withValues(alpha: 0.4),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 34,
+          child: Text(
+            '${(ratio * 100).round()}%',
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+                fontSize: 11, color: AppColors.textSecondary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// عرض الصورة المرفقة بالمراجعة بملء الشاشة
+  void _showPhotoFullscreen(String photoBase64) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Dialog(
+          backgroundColor: Colors.black,
+          child: GestureDetector(
+            onTap: () => Navigator.of(dialogContext).pop(),
+            child: SizedBox(
+              width: double.infinity,
+              child: AppImage(
+                imageUrl: photoBase64,
+                fit: BoxFit.contain,
+                cacheWidth: 800,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
