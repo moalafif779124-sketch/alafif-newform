@@ -759,6 +759,15 @@ class FirebaseService {
     }
   }
 
+  /// تسجيل معاملة في سجل نقاط المستخدم (users/{userId}/points_history)
+  Future<void> addPointsHistory(String userId, Map<String, dynamic> data) async {
+    try {
+      await firestore.collection('users').doc(userId).collection('points_history').add(data);
+    } catch (e) {
+      debugPrint('⚠️ Failed to add points history: $e');
+    }
+  }
+
   // =================== إشعارات المواضيع (Topic Subscriptions) ===================
 
   /// تسجيل اشتراك في موضوع إشعارات

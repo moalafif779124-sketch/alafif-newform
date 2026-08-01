@@ -150,6 +150,42 @@ class PointsProvider with ChangeNotifier {
     return true;
   }
 
+  /// خصم النقاط عند الاسترداد في السلة — مع تسجيل سجل معاملة
+  Future<bool> deductPoints(int amount, {String? orderId, String? note}) async {
+    if (_points < amount) return false;
+    _points -= amount;
+    notifyListeners();
+    await _syncToFirestore();
+    // تسجيل المعاملة في سجل النقاط
+    await _recordHistory(-amount, orderId: orderId, note: note ?? 'استرداد نقاط في الطلب');
+    return true;
+  }
+
+  /// إضافة نقاط مع تسجيل سجل معاملة
+  Future<void> addPointsWithHistory(int amount, {String? note}) async {
+    _points += amount;
+    _lifetimePoints += amount;
+    notifyListeners();
+    await _syncToFirestore();
+    await _recordHistory(amount, note: note ?? 'مكافأة');
+  }
+
+  /// تسجيل معاملة في سجل النقاط (users/{userId}/points_history)
+  Future<void> _recordHistory(int delta, {String? orderId, String? note}) async {
+    if (_userId == null) return;
+    try {
+      await _firebaseService.addPointsHistory(_userId!, {
+        'delta': delta,
+        'balance': _points,
+        'orderId': orderId,
+        'note': note ?? '',
+        'createdAt': DateTime.now().millisecondsSinceEpoch,
+      });
+    } catch (e) {
+      debugPrint('⚠️ Failed to record points history: $e');
+    }
+  }
+
   // =================== المزامنة ===================
 
   Future<void> _syncToFirestore() async {

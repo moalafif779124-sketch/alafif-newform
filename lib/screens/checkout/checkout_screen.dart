@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/points_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
 import '../home/home_screen.dart';
@@ -35,6 +36,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _selectedPaymentMethod = 'cod';
   bool _isDefaultAddress = false;
   bool _isSubmitting = false;
+
+  // =========== نقاط الاسترداد ===========
+  bool _redeemPoints = false;
+  double _pointsDiscount = 0;
+
+  /// حساب الخصم بالنقاط: 100 نقطة = 375 ريال، بحد أقصى 20% من المجموع الفرعي
+  double _calculatePointsDiscount(int points, double subtotal) {
+    if (points <= 0) return 0;
+    // قيمة النقاط بالريال
+    final pointsValue = (points ~/ PointsProvider.pointsPerUnit) *
+        PointsProvider.pointsToYerRate;
+    // حد 20% من المجموع الفرعي
+    final maxDiscount = subtotal * 0.20;
+    return pointsValue < maxDiscount ? pointsValue.toDouble() : maxDiscount;
+  }
+
+  /// عدد النقاط المطلوب خصمها مقابل الخصم المحسوب
+  int _pointsForDiscount(double discount) {
+    return ((discount / PointsProvider.pointsToYerRate) *
+            PointsProvider.pointsPerUnit)
+        .ceil();
+  }
 
   @override
   void dispose() {
@@ -98,12 +121,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final authProvider = context.read<AuthProvider>();
       final cartProvider = context.read<CartProvider>();
       final orderProvider = context.read<OrderProvider>();
+      final pointsProvider = context.read<PointsProvider>();
 
       if (cartProvider.items.isEmpty) {
         _showSnackBar('سلة التسوق فارغة');
         setState(() => _isSubmitting = false);
         return;
       }
+
+      // حساب الإجمالي مع الخصم بالنقاط
+      final pointsDiscount = _redeemPoints
+          ? _calculatePointsDiscount(
+              pointsProvider.points, cartProvider.subtotal)
+          : 0.0;
+      final pointsToDeduct = _redeemPoints
+          ? _pointsForDiscount(pointsDiscount)
+          : 0;
 
       final shippingAddress = {
         'fullName': _nameController.text.trim(),
@@ -150,6 +183,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       setState(() => _isSubmitting = false);
 
       if (orderId != null && mounted) {
+        // ===== خصم النقاط المستردة وتسجيل المعاملة =====
+        if (pointsToDeduct > 0) {
+          await pointsProvider.deductPoints(
+            pointsToDeduct,
+            orderId: orderId,
+            note: 'استرداد نقاط في الطلب $orderId',
+          );
+        }
+
         // 🔵 إذا كانت طريقة الدفع هي محفظة جيب — ننتقل لشاشة الدفع (QR + تعليمات)
         if (_selectedPaymentMethod == 'jeeb') {
           await jeeb.loadLibrary();
@@ -439,69 +481,101 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                     // =========== ٣. ملخص الطلب ===========
                     _buildSectionHeader('ملخص الطلب', Icons.receipt_long),
-                    Consumer<CartProvider>(
-                      builder: (context, cart, _) {
+                    Consumer2<CartProvider, PointsProvider>(
+                      builder: (context, cart, points, _) {
                         final subtotal = cart.subtotal;
                         final shipping = cart.shipping;
                         final tax = cart.tax;
-                        final total = cart.total;
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                _buildSummaryRow(
-                                  'المجموع الفرعي',
-                                  '${AppConstants.currency} ${_formatPrice(subtotal)}',
-                                ),
-                                const Divider(height: 24),
-                                _buildSummaryRow(
-                                  'الخصم',
-                                  '${AppConstants.currency} 0',
-                                ),
-                                const SizedBox(height: 12),
-                                _buildSummaryRow(
-                                  'التوصيل',
-                                  shipping == 0
-                                      ? 'مجاني'
-                                      : '${AppConstants.currency} ${_formatPrice(shipping)}',
-                                ),
-                                const SizedBox(height: 12),
-                                _buildSummaryRow(
-                                  'الضريبة (${(AppConstants.taxRate * 100).toInt()}%)',
-                                  '${AppConstants.currency} ${_formatPrice(tax)}',
-                                ),
-                                const Divider(height: 24),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                        // حساب الخصم بالنقاط (عند التفعيل)
+                        final pointsDiscount = _redeemPoints
+                            ? _calculatePointsDiscount(points.points, subtotal)
+                            : 0.0;
+                        final total =
+                            subtotal + shipping + tax - pointsDiscount;
+
+                        return Column(
+                          children: [
+                            Card(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
                                   children: [
-                                    const Text(
-                                      'الإجمالي',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textPrimary,
-                                      ),
+                                    _buildSummaryRow(
+                                      'المجموع الفرعي',
+                                      '${AppConstants.currency} ${_formatPrice(subtotal)}',
                                     ),
-                                    Text(
-                                      '${AppConstants.currency} ${_formatPrice(total)}',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                      ),
+                                    const Divider(height: 24),
+                                    // ===== بطاقة استرداد النقاط =====
+                                    if (points.points >=
+                                        PointsProvider.pointsPerUnit)
+                                      _buildPointsRedemptionCard(
+                                        points, subtotal),
+                                    const SizedBox(height: 8),
+                                    _buildSummaryRow(
+                                      'الخصم بالنقاط',
+                                      pointsDiscount > 0
+                                          ? '-${AppConstants.currency} ${_formatPrice(pointsDiscount)}'
+                                          : '${AppConstants.currency} 0',
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildSummaryRow(
+                                      'التوصيل',
+                                      shipping == 0
+                                          ? 'مجاني'
+                                          : '${AppConstants.currency} ${_formatPrice(shipping)}',
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildSummaryRow(
+                                      'الضريبة (${(AppConstants.taxRate * 100).toInt()}%)',
+                                      '${AppConstants.currency} ${_formatPrice(tax)}',
+                                    ),
+                                    const Divider(height: 24),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'الإجمالي',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${AppConstants.currency} ${_formatPrice(total)}',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                            // ملاحظة: الإجمالي النهائي يُرسل بعد الخصم
+                            if (_redeemPoints)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20),
+                                child: Text(
+                                  'سيتم خصم ${_pointsForDiscount(pointsDiscount)} نقطة من رصيدك عند تأكيد الطلب',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary
+                                        .withValues(alpha: 0.8),
+                                  ),
+                                ),
+                              ),
+                          ],
                         );
                       },
                     ),
@@ -592,6 +666,115 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   // ======================== Widget Helpers ========================
+
+  /// بطاقة استرداد النقاط — تبديل + رصيد + قيمة الخصم
+  Widget _buildPointsRedemptionCard(
+      PointsProvider points, double subtotal) {
+    final discount = _calculatePointsDiscount(points.points, subtotal);
+    final neededPoints = _pointsForDiscount(discount);
+    final pointsValue = (points.points ~/ PointsProvider.pointsPerUnit) *
+        PointsProvider.pointsToYerRate;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: _redeemPoints
+              ? AppColors.primary
+              : AppColors.border.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                _redeemPoints
+                    ? Icons.check_circle
+                    : Icons.monetization_on_outlined,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'استخدام النقاط للخصم',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Switch.adaptive(
+                value: _redeemPoints,
+                onChanged: (v) => setState(() {
+                  _redeemPoints = v;
+                  _pointsDiscount =
+                      v ? _calculatePointsDiscount(points.points, subtotal) : 0;
+                }),
+                activeColor: AppColors.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'رصيدك: ${points.points} نقطة',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                'الخصم: ${AppConstants.currency} ${_formatPrice(discount)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.success,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'قيمة رصيدك: ${AppConstants.currency} ${_formatPrice(pointsValue)}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                'تحتاج: $neededPoints نقطة',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'الحد الأقصى: 20% من قيمة الطلب (100 نقطة = 375 ريال)',
+              style: TextStyle(
+                fontSize: 10,
+                color: AppColors.textSecondary.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSectionHeader(String title, IconData icon) {
     return Padding(
