@@ -185,7 +185,7 @@ class NotificationService {
   void _navigateToProduct(String productId) {
     navigatorKey.currentState?.push(
       MaterialPageRoute(
-        builder: (_) => const ProductDetailRoute(productId: productId),
+        builder: (_) => ProductDetailRoute(productId: productId),
       ),
     );
   }

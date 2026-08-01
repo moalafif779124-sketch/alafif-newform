@@ -672,8 +672,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       PointsProvider points, double subtotal) {
     final discount = _calculatePointsDiscount(points.points, subtotal);
     final neededPoints = _pointsForDiscount(discount);
-    final pointsValue = (points.points ~/ PointsProvider.pointsPerUnit) *
-        PointsProvider.pointsToYerRate;
+    final pointsValue = ((points.points ~/ PointsProvider.pointsPerUnit) *
+            PointsProvider.pointsToYerRate)
+        .toDouble();
 
     return Container(
       padding: const EdgeInsets.all(12),
