@@ -11,6 +11,7 @@ import 'admin_orders_screen.dart';
 import 'admin_banners_screen.dart';
 import 'admin_users_screen.dart';
 import 'tab_management_screen.dart';
+import 'admin_flash_sale_screen.dart';
 
 /// لوحة تحكم المدير — الصفحة الرئيسية للإدارة
 class AdminDashboard extends StatefulWidget {
@@ -340,6 +341,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const AdminBannersScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _AdminMenuItem(
+                      icon: Icons.bolt,
+                      title: 'التخفيضات الخاطفة',
+                      subtitle: 'جدولة تخفيضات محدودة مع إشعارات فورية',
+                      color: AppColors.error,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminFlashSaleScreen()),
                       ),
                     ),
                     const SizedBox(height: 8),

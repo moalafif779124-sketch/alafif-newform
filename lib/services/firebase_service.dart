@@ -2,9 +2,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
+import '../config/constants.dart';
 
 /// خدمة Firebase المركزية
 class FirebaseService {
@@ -809,5 +812,142 @@ class FirebaseService {
       debugPrint('⚠️ Failed to get notification topics: $e');
     }
     return [];
+  }
+
+  // =================== التخفيضات الخاطفة (Flash Sales) ===================
+
+  /// إنشاء تخفيض خاطف جديد — مع إرسال إشعار FCM للموضوع
+  Future<String> createFlashSale(Map<String, dynamic> data) async {
+    final docRef = await firestore.collection('flash_sales').add(data);
+
+    // إرسال إشعار FCM تلقائي (fire-and-forget — لا يحجب الحفظ)
+    try {
+      final productName = data['productName'] as String? ?? 'منتجنا';
+      final discount = data['discountPercentage'] ?? 0;
+      final productId = data['productId'] as String? ?? '';
+      unawaited(_sendFlashSaleNotification(
+        discount.toString(),
+        productName,
+        productId: productId,
+      ));
+    } catch (e) {
+      debugPrint('⚠️ Flash sale notification dispatch failed: $e');
+    }
+
+    return docRef.id;
+  }
+
+  /// جلب التخفيضات الخاطفة النشطة
+  Future<List<Map<String, dynamic>>> getActiveFlashSales() async {
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final snapshot = await firestore
+          .collection('flash_sales')
+          .where('endTime', isGreaterThan: now)
+          .orderBy('startTime', descending: true)
+          .limit(20)
+          .get();
+      return snapshot.docs.map((doc) {
+        final d = doc.data() as Map<String, dynamic>;
+        d['id'] = doc.id;
+        return d;
+      }).toList();
+    } catch (e) {
+      debugPrint('⚠️ Failed to get active flash sales: $e');
+      return [];
+    }
+  }
+
+  /// جلب كل التخفيضات الخاطفة (للوحة التحكم)
+  Future<List<Map<String, dynamic>>> getAllFlashSales() async {
+    try {
+      final snapshot = await firestore
+          .collection('flash_sales')
+          .orderBy('startTime', descending: true)
+          .limit(50)
+          .get();
+      return snapshot.docs.map((doc) {
+        final d = doc.data() as Map<String, dynamic>;
+        d['id'] = doc.id;
+        return d;
+      }).toList();
+    } catch (e) {
+      debugPrint('⚠️ Failed to get all flash sales: $e');
+      return [];
+    }
+  }
+
+  /// حذف تخفيض خاطف
+  Future<void> deleteFlashSale(String id) async {
+    try {
+      await firestore.collection('flash_sales').doc(id).delete();
+    } catch (e) {
+      debugPrint('⚠️ Failed to delete flash sale: $e');
+    }
+  }
+
+  /// إرسال إشعار FCM لموضوع /topics/flash_sales عبر HTTP v1
+  Future<void> _sendFlashSaleNotification(
+      String discount, String productName,
+      {String productId = ''}) async {
+    try {
+      final http = await _sendFcmHttpNotification(
+        title: '⚡ تخفيض خاطف جديد!',
+        body: 'خصم $discount% على $productName لمدة محدودة! تسوق الآن.',
+        topic: 'flash_sales',
+        data: {
+          'type': 'flash_sale',
+          'productId': productId,
+          'title': '⚡ تخفيض خاطف جديد!',
+          'body': 'خصم $discount% على $productName لمدة محدودة! تسوق الآن.',
+        },
+      );
+      if (!http) {
+        debugPrint('⚠️ FCM topic send returned false');
+      }
+    } catch (e) {
+      debugPrint('⚠️ FCM send error: $e');
+    }
+  }
+
+  /// إرسال إشعار FCM عبر HTTP API (topic أو token)
+  Future<bool> _sendFcmHttpNotification({
+    required String title,
+    required String body,
+    String? topic,
+    String? token,
+    Map<String, String>? data,
+  }) async {
+    try {
+      final serverKey = AppConstants.fcmServerKey;
+      if (serverKey.isEmpty) return false;
+      final uri = Uri.parse('https://fcm.googleapis.com/fcm/send');
+      final message = <String, dynamic>{
+        if (topic != null) 'to': '/topics/$topic',
+        if (token != null) 'to': token,
+        'notification': {'title': title, 'body': body},
+        'data': data ?? {
+          'type': 'flash_sale',
+          'title': title,
+          'body': body,
+        },
+      };
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'key=$serverKey',
+        },
+        body: jsonEncode(message),
+      );
+      if (response.statusCode != 200) {
+        debugPrint('⚠️ FCM HTTP ${response.statusCode}: ${response.body}');
+        return false;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('⚠️ FCM send exception: $e');
+      return false;
+    }
   }
 }

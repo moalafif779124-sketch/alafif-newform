@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'firebase_service.dart';
 import '../models/order.dart';
+import '../widgets/product_detail_route.dart';
 import '../screens/profile/order_tracking_screen.dart';
 
 /// خدمة الإشعارات - تدعم FCM (Firebase Cloud Messaging)
@@ -165,9 +166,28 @@ class NotificationService {
   /// توجيه المستخدم بعد النقر على الإشعار
   void _handleNotificationTap(Map<String, dynamic> data) {
     final type = data['type'] as String?;
+
+    // إشعار تخفيض خاطف — افتح صفحة المنتج مباشرة
+    if (type == 'flash_sale') {
+      final productId = data['productId'] as String?;
+      if (productId != null && productId.isNotEmpty) {
+        _navigateToProduct(productId);
+      }
+      return;
+    }
+
     final orderId = data['orderId'] as String?;
     if (orderId == null || orderId.isEmpty) return;
     _navigateToOrder(orderId);
+  }
+
+  /// التنقل إلى صفحة تفاصيل المنتج
+  void _navigateToProduct(String productId) {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => const ProductDetailRoute(productId: productId),
+      ),
+    );
   }
 
   /// التنقل إلى شاشة تتبع الطلب

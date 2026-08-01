@@ -153,4 +153,10 @@ class AppConstants {
   static const String firebaseAddresses = 'addresses';
   static const String firebaseBanners = 'banners';
   static const String firebaseReviews = 'reviews';
+  static const String firebaseFlashSales = 'flash_sales';
+
+  // =========== إشعارات FCM ===========
+  /// مفتاح خادم FCM (Legacy Server Key) — يُضاف في إعدادات Firebase Console
+  /// اتركه فارغاً لتعطيل الإشعارات التلقائية للتخفيضات
+  static const String fcmServerKey = '';
 }
