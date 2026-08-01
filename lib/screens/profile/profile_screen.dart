@@ -28,6 +28,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   final _nameController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // ===== تسخين مسبق للوحة التحكم المؤجلة =====
+    // إذا كان المستخدم مديراً، حمّل مكتبة Admin في الخلفية فوراً
+    // حتى تكون جاهزة في الذاكرة قبل الضغط على الزر
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.user?.isAdmin == true) {
+        admin.loadLibrary(); // fire-and-forget — بدون await
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
@@ -480,6 +494,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: AppColors.textSecondary,
                   ),
                   onTap: () async {
+                    // المكتبة مسخّنة مسبقاً — التنقل فوري
+                    // loadLibrary() تعيد فوراً إذا كانت محمّلة بالفعل
                     await admin.loadLibrary();
                     if (!context.mounted) return;
                     Navigator.push(

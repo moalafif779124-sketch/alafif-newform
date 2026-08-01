@@ -37,20 +37,68 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Future<void> _loadStats() async {
     try {
-      final products = await _firebase.getAllProducts();
-      final orders = await _firebase.getAllOrders();
-      final categories = await _firebase.getAllCategories();
+      // ===== استعلامات متوازية — كل استدعاءات Firestore تنفذ في نفس الوقت =====
+      final results = await Future.wait([
+        _firebase.getAllProducts(),
+        _firebase.getAllOrders(),
+        _firebase.getAllCategories(),
+      ]);
       if (mounted) {
         setState(() {
-          _productCount = products.length;
-          _orderCount = orders.length;
-          _categoryCount = categories.length;
+          _productCount = (results[0] as List).length;
+          _orderCount = (results[1] as List).length;
+          _categoryCount = (results[2] as List).length;
           _loading = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// هيكل شيمر خفيف أثناء تحميل الإحصائيات
+  Widget _buildSkeleton() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // عنوان القسم
+        Container(
+          width: 120, height: 20,
+          decoration: BoxDecoration(
+            color: AppColors.border.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // صف البطاقات الإحصائية
+        Row(
+          children: List.generate(3, (_) => const Expanded(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: AspectRatio(
+                aspectRatio: 1.2,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0xFFE8E8E8),
+                    borderRadius: BorderRadius.all(Radius.circular(16)),
+                  ),
+                ),
+              ),
+            ),
+          )),
+        ),
+        const SizedBox(height: 32),
+        // قائمة عناصر الإدارة
+        ...List.generate(5, (_) => Container(
+          height: 64,
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8E8E8),
+            borderRadius: BorderRadius.circular(14),
+          ),
+        )),
+      ],
+    );
   }
 
   // =================== مزامنة قواعد البيانات ===================
@@ -198,7 +246,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         ),
         body: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? _buildSkeleton()
             : RefreshIndicator(
                 onRefresh: _loadStats,
                 child: ListView(
