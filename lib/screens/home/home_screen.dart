@@ -42,8 +42,13 @@ class _HomeScreenState extends State<HomeScreen>
     bool _precached = false;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().loadInitialProducts();
-      // تهيئة النقاط عند عرض الرئيسية
+      // ===== تحميل متدرّج بعد عرض أول إطار =====
+      // 1) استرجاع الكاش المحلي فوراً + مزامنة الفئات/البانرات في الخلفية
+      final pp = context.read<ProductProvider>();
+      pp.initialize();
+      // 2) تحميل المنتجات — عيّنات فورية ثم تحديث من Firestore في الخلفية
+      pp.loadInitialProducts();
+      // 3) تهيئة النقاط عند عرض الرئيسية
       final auth = context.read<AuthProvider>();
       if (auth.isLoggedIn && auth.userId != null) {
         context.read<PointsProvider>().initialize(auth.userId!);
@@ -251,6 +256,8 @@ class _HomeScreenState extends State<HomeScreen>
     return SizedBox(
       height: 80,
       child: ListView.separated(
+        addAutomaticKeepAlives: false,
+        addRepaintBoundaries: true,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: _quickCategories.length,
@@ -369,6 +376,8 @@ class _HomeScreenState extends State<HomeScreen>
         SizedBox(
           height: 280,
           child: ListView.separated(
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: true,
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: flashProducts.length,
@@ -603,6 +612,8 @@ class _HomeScreenState extends State<HomeScreen>
         SizedBox(
           height: 280,
           child: ListView.separated(
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: true,
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: items.length,
@@ -644,6 +655,8 @@ class _HomeScreenState extends State<HomeScreen>
         SizedBox(
           height: 280,
           child: ListView.separated(
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: true,
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: items.length,

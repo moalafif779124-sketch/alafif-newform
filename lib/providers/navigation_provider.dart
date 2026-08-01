@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../services/firebase_service.dart';
+import '../services/cache_service.dart';
 
 /// تكوين التبويب الواحد
 class TabConfig {
@@ -53,12 +54,27 @@ class NavigationProvider with ChangeNotifier {
   List<TabConfig> get allTabs => List.unmodifiable(_tabs);
   bool get isLoading => _isLoading;
 
-  /// تحميل التكوين من Firestore أو استخدام الافتراضي
+  /// تحميل التكوين — من الكاش المحلي فوراً ثم Firestore في الخلفية
   Future<void> load() async {
     if (_initialized) return;
     _isLoading = true;
     notifyListeners();
 
+    // ===== الخطوة 1: اقرأ من الكاش المحلي (صفر انتظار) =====
+    final cached = await CacheService.instance.getNavigation();
+    if (cached != null && cached['tabs'] is Map) {
+      final tabsMap = cached['tabs'] as Map<String, dynamic>;
+      _tabs = tabsMap.entries.map((e) {
+        final data = e.value as Map<String, dynamic>;
+        data['id'] = e.key;
+        return TabConfig.fromMap(data);
+      }).toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    // ===== الخطوة 2: حدّث من Firestore في الخلفية =====
     try {
       final config = await _firebase.getNavigationConfig();
       if (config != null && config['tabs'] is Map) {
@@ -69,6 +85,8 @@ class NavigationProvider with ChangeNotifier {
           return TabConfig.fromMap(data);
         }).toList()
           ..sort((a, b) => a.order.compareTo(b.order));
+        // حفظ في الكاش المحلي
+        await CacheService.instance.saveNavigation(config);
       } else {
         _tabs = List.from(defaultTabs);
         // حفظ الافتراضي في Firestore
@@ -76,7 +94,7 @@ class NavigationProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('⚠️ Failed to load nav config: $e');
-      _tabs = List.from(defaultTabs);
+      if (_tabs.isEmpty) _tabs = List.from(defaultTabs);
     }
 
     _initialized = true;

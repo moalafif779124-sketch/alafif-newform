@@ -7,6 +7,7 @@ import '../models/product.dart';
 import '../models/category.dart';
 import '../models/banner.dart';
 import '../services/firebase_service.dart';
+import '../services/cache_service.dart';
 import '../config/constants.dart';
 
 /// مزود حالة المنتجات والفئات — مع تحميل مُقسّم (pagination)
@@ -87,13 +88,17 @@ class ProductProvider with ChangeNotifier {
 
   // =================== التهيئة السريعة (بدون تحميل المنتجات) ===================
 
-  /// تهيئة بسيطة — فقط Firebase + الفئات والبانرات (خفيفة)
-  /// لا تُحمّل المنتجات هنا — يتم تحميلها عند عرض الكتالوج
+  /// تهيئة سريعة — تعرض البيانات المخزنة محلياً فوراً ثم تحمّل من Firestore في الخلفية
+  /// لا تُحمّل المنتجات هنا — يتم تحميلها عند عرض الشاشة الرئيسية
   Future<void> initialize() async {
     if (!_firebaseService.isInitialized) {
       await _firebaseService.initialize();
     }
-    // تحميل الفئات والبانرات فقط (خفيف — 2 طلبات)
+
+    // ===== الخطوة 1: اقرأ من الكاش المحلي (صفر انتظار) =====
+    await _restoreFromCache();
+
+    // ===== الخطوة 2: حدّث من Firestore في الخلفية =====
     await Future.wait([
       _loadCategoriesOnce().catchError((e) {
         debugPrint('Error loading categories: $e');
@@ -113,6 +118,30 @@ class ProductProvider with ChangeNotifier {
     ]);
   }
 
+  /// استرجاع البيانات المخزنة محلياً (بانرات + منتجات)
+  Future<void> _restoreFromCache() async {
+    try {
+      final cachedBanners = await CacheService.instance.getBanners();
+      if (cachedBanners != null && cachedBanners.isNotEmpty) {
+        _banners =
+            cachedBanners.map((data) => BannerModel.fromMap(data)).toList();
+        // لا نضبط _bannersLoaded = true هنا — نريد تحديث البانرات من Firestore لاحقاً
+        notifyListeners();
+      }
+
+      final cachedProducts = await CacheService.instance.getProducts();
+      if (cachedProducts != null && cachedProducts.isNotEmpty) {
+        _products =
+            cachedProducts.map((data) => Product.fromMap(data)).toList();
+        _recomputeCollections();
+        _hasMore = true;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Cache restore failed: $e');
+    }
+  }
+
   /// تحميل الفئات مرة واحدة فقط
   Future<void> _loadCategoriesOnce() async {
     if (_categoriesLoaded) return;
@@ -122,12 +151,15 @@ class ProductProvider with ChangeNotifier {
     _categoriesLoaded = true;
   }
 
-  /// تحميل البانرات مرة واحدة فقط
+  /// تحميل البانرات مرة واحدة فقط — مع حفظ في الكاش
   Future<void> _loadBannersOnce() async {
     if (_bannersLoaded) return;
     final bannersData = await _firebaseService.getActiveBanners();
     _banners = bannersData.map((data) => BannerModel.fromMap(data)).toList();
     _bannersLoaded = true;
+    // حفظ في الكاش المحلي
+    await CacheService.instance.saveBanners(bannersData);
+    notifyListeners();
   }
 
   // =================== تحميل المنتجات المُقسّم (Pagination) ===================
@@ -157,6 +189,12 @@ class ProductProvider with ChangeNotifier {
       _products = productsData.map((data) => Product.fromMap(data)).toList();
       _recomputeCollections();
       notifyListeners();
+
+      // ===== الخطوة 3: حفظ أول 15 منتج في الكاش المحلي =====
+      final toCache = productsData.take(15).toList();
+      if (toCache.isNotEmpty) {
+        await CacheService.instance.saveProducts(toCache);
+      }
     } catch (e) {
       debugPrint('Error loading initial products: $e');
       // العيّنات لا تزال معروضة، لا داعي للتبديل

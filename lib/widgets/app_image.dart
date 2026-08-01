@@ -1,12 +1,31 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-/// ذاكرة مؤقتة للصور Base64
+/// ذاكرة مؤقتة للصور Base64 — تمنع فك التشفير المتكرر لنفس الصورة
 final _b64Cache = HashMap<String, Uint8List>();
 const int _b64CacheMaxEntries = 50;
+
+/// فك تشفير Base64 في isolate منفصل (خارج الخيط الرئيسي)
+Future<Uint8List> _decodeBase64InIsolate(String raw) {
+  return compute(_decodeBase64Worker, raw);
+}
+
+/// دالة العامل — تُنفَّذ داخل الـ isolate
+Uint8List _decodeBase64Worker(String raw) {
+  // تنظيف السلسلة: إزالة البادئة data:image/...;base64, والمسافات
+  String clean;
+  if (raw.contains(',')) {
+    clean = raw.split(',').last.trim();
+  } else {
+    clean = raw.trim();
+  }
+  clean = clean.replaceAll(RegExp(r'\s'), '');
+  return base64Decode(clean);
+}
 
 /// أداة لعرض الصور مع معالجة محسّنة للذاكرة:
 /// - Base64: ذاكرة مؤقتة LRU + تحميل غير متزامن (عبر compute)
@@ -74,26 +93,6 @@ class AppImage extends StatelessWidget {
         placeholder: _buildPlaceholder(),
       ),
     );
-  }
-
-  /// فك تشفير Base64 — يتعامل مع وجود أو غياب البادئة، مع تخزين مؤقت
-  static Uint8List _decodeB64(String raw) {
-    if (_b64Cache.containsKey(raw)) return _b64Cache[raw]!;
-
-    String clean;
-    if (raw.contains(',')) {
-      clean = raw.split(',').last.trim();
-    } else {
-      clean = raw.trim();
-    }
-    clean = clean.replaceAll(RegExp(r'\s'), '');
-    final bytes = base64Decode(clean);
-
-    if (_b64Cache.length >= _b64CacheMaxEntries) {
-      _b64Cache.remove(_b64Cache.keys.first);
-    }
-    _b64Cache[raw] = bytes;
-    return bytes;
   }
 
   // ===================== Network =====================
@@ -198,8 +197,22 @@ class _Base64ImageState extends State<_Base64Image> {
 
   Future<void> _decode() async {
     try {
-      // فك التشفير في الخلفية (غير متزامن) — لا يحجب الـ UI
-      final bytes = await Future(() => AppImage._decodeB64(widget.rawUrl));
+      // 1) ابحث في الذاكرة المؤقتة أولاً — صفر معالجة
+      final cached = _b64Cache[widget.rawUrl];
+      if (cached != null) {
+        if (mounted) setState(() => _bytes = cached);
+        return;
+      }
+
+      // 2) فك التشفير في isolate منفصل — لا يحجب خيط الـ UI
+      final bytes = await _decodeBase64InIsolate(widget.rawUrl);
+
+      // 3) خزّن في الذاكرة المؤقتة
+      if (_b64Cache.length >= _b64CacheMaxEntries) {
+        _b64Cache.remove(_b64Cache.keys.first);
+      }
+      _b64Cache[widget.rawUrl] = bytes;
+
       if (mounted) setState(() => _bytes = bytes);
     } catch (_) {
       if (mounted) setState(() => _errored = true);

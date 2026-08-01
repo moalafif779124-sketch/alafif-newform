@@ -12,10 +12,13 @@ import 'providers/theme_provider.dart';
 import 'providers/points_provider.dart';
 import 'providers/navigation_provider.dart';
 import 'services/notification_service.dart';
+import 'services/cache_service.dart';
 import 'screens/splash/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // تهيئة الكاش المحلي قبل الإقلاع — يضمن عرض فوري
+  CacheService.instance.init();
   runApp(const ALAFIFApp());
 }
 

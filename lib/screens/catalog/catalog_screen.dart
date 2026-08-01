@@ -181,6 +181,9 @@ class _CatalogScreenState extends State<CatalogScreen>
                             );
                           },
                           childCount: provider.filteredProducts.length,
+                          // أداء: لا تُبقي الأطفال أحياء خارج الشاشة، اعزل مناطق الرسم
+                          addAutomaticKeepAlives: false,
+                          addRepaintBoundaries: true,
                         ),
                       ),
                     ),
