@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
+import '../../widgets/app_image.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
@@ -47,7 +48,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final TextEditingController _transferRefController = TextEditingController();
   String _receiptBase64 = '';
   final ImagePicker _imagePicker = ImagePicker();
-  final GlobalKey _transferFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _transferFormKey = GlobalKey<FormState>();
 
   /// حساب الخصم بالنقاط: 100 نقطة = 375 ريال، بحد أقصى 20% من المجموع الفرعي
   double _calculatePointsDiscount(int points, double subtotal) {
