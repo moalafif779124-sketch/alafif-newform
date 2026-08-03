@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
@@ -10,8 +14,6 @@ import '../../providers/points_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
 import '../home/home_screen.dart';
-import '../payment/jeeb_payment_screen.dart' deferred as jeeb;
-import '../payment/kuraimi_payment_screen.dart' deferred as kuraimi;
 
 /// شاشة إتمام الطلب (Checkout)
 class CheckoutScreen extends StatefulWidget {
@@ -41,6 +43,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _redeemPoints = false;
   double _pointsDiscount = 0;
 
+  // =========== إثبات التحويل (كريمي/جيب) ===========
+  final TextEditingController _transferRefController = TextEditingController();
+  String _receiptBase64 = '';
+  final ImagePicker _imagePicker = ImagePicker();
+  final GlobalKey _transferFormKey = GlobalKey<FormState>();
+
   /// حساب الخصم بالنقاط: 100 نقطة = 375 ريال، بحد أقصى 20% من المجموع الفرعي
   double _calculatePointsDiscount(int points, double subtotal) {
     if (points <= 0) return 0;
@@ -67,7 +75,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _districtController.dispose();
     _cityController.dispose();
     _notesController.dispose();
+    _transferRefController.dispose();
     super.dispose();
+  }
+
+  /// نسخ نص إلى الحافظة
+  Future<void> _copyToClipboard(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم النسخ ✓'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  /// اختيار صورة إثبات التحويل (مضغوطة 800×800، جودة 75%)
+  Future<void> _pickReceiptImage() async {
+    try {
+      final XFile? picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 75,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _receiptBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      });
+    } catch (e) {
+      debugPrint('⚠️ Receipt pick error: $e');
+    }
   }
 
   // ======================== التحقق من الحقول ========================
@@ -114,6 +156,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _submitOrder() async {
     if (!_validateFields()) return;
+
+    // ===== تحقق من رقم الحوالة عند التحويل (كريمي/جيب) =====
+    if (_selectedPaymentMethod == 'kuraimi' ||
+        _selectedPaymentMethod == 'jeeb') {
+      if (!_transferFormKey.currentState!.validate()) {
+        _showSnackBar('يرجى إدخال رقم الحوالة / السند لإكمال الطلب');
+        return;
+      }
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -183,6 +234,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       setState(() => _isSubmitting = false);
 
       if (orderId != null && mounted) {
+        // ===== حفظ إثبات التحويل (كريمي/جيب) =====
+        final isTransfer = _selectedPaymentMethod == 'kuraimi' ||
+            _selectedPaymentMethod == 'jeeb';
+        if (isTransfer) {
+          final ref = _transferRefController.text.trim();
+          final updates = <String, dynamic>{
+            'transactionRef': ref,
+            'transferMethod': _selectedPaymentMethod,
+            if (_receiptBase64.isNotEmpty)
+              'receiptImageBase64': _receiptBase64,
+          };
+          try {
+            await FirebaseService().firestore
+                .collection('orders')
+                .doc(orderId)
+                .update(updates);
+          } catch (e) {
+            debugPrint('⚠️ Failed to save transfer proof: $e');
+          }
+        }
+
         // ===== خصم النقاط المستردة وتسجيل المعاملة =====
         if (pointsToDeduct > 0) {
           await pointsProvider.deductPoints(
@@ -192,43 +264,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           );
         }
 
-        // 🔵 إذا كانت طريقة الدفع هي محفظة جيب — ننتقل لشاشة الدفع (QR + تعليمات)
-        if (_selectedPaymentMethod == 'jeeb') {
-          await jeeb.loadLibrary();
-          if (!mounted) return;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => jeeb.JeebPaymentScreen(
-                orderId: orderId,
-                amount: cartProvider.total,
-                posNumber: AppConstants.jeebPosNumber,
-              ),
-            ),
-          );
-          return; // JeebPaymentScreen تتعامل مع rest
-        }
+        // ===== التحقق اليدوي من التحويل — لا حاجة لشاشات الدفع الخارجية =====
+        // (كريمي/جيب يتم التحقق منها يدوياً عبر الواتساب بعد الطلب)
 
-        // 🔵 إذا كانت طريقة الدفع هي كريمي حاسب — ننتقل لشاشة الدفع
-        if (_selectedPaymentMethod == 'kuraimi') {
-          await kuraimi.loadLibrary();
-          if (!mounted) return;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => kuraimi.KuraimiPaymentScreen(
-                orderId: orderId,
-                amount: cartProvider.total,
-                posNumber: AppConstants.kuraimiPosNumber,
-              ),
-            ),
-          );
-          return;
-        }
+        // حساب الإجمالي قبل تفريغ السلة
+        final finalTotal = cartProvider.total - pointsDiscount;
 
         // تفريغ السلة
         cartProvider.clearCart();
 
-        // إظهار حوار النجاح
-        _showSuccessDialog(orderId);
+        // إظهار حوار النجاح مع زر الواتساب (للتحويلات)
+        _showSuccessDialog(
+          orderId,
+          total: finalTotal,
+          showWhatsApp: isTransfer,
+        );
       } else {
         if (mounted) {
           _showSnackBar(
@@ -245,7 +295,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  void _showSuccessDialog(String orderId) {
+  void _showSuccessDialog(String orderId,
+      {double total = 0, bool showWhatsApp = false}) {
+    final paymentName = _paymentMethodName(_selectedPaymentMethod);
+    final ref = _transferRefController.text.trim();
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -280,11 +334,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   color: AppColors.textSecondary,
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                'الإجمالي: ${AppConstants.currency} ${_formatPrice(total)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 8),
-              const Text(
-                'سيتم التواصل معك لتأكيد الطلب وتفاصيل التوصيل',
+              Text(
+                showWhatsApp
+                    ? 'يرجى إرسال إشعار التحويل عبر الواتساب لتأكيد طلبك'
+                    : 'سيتم التواصل معك لتأكيد الطلب وتفاصيل التوصيل',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
@@ -292,6 +357,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ],
           ),
           actions: [
+            // ===== زر الواتساب (للتحويلات البنكية) =====
+            if (showWhatsApp) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openWhatsApp(
+                    orderId: orderId,
+                    total: total,
+                    paymentName: paymentName,
+                    ref: ref,
+                  ),
+                  icon: const Icon(Icons.chat, size: 18),
+                  label: const Text(
+                    'ارسال إشعار التحويل عبر الواتساب',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -326,6 +422,52 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
       ),
     );
+  }
+
+  /// اسم طريقة الدفع بالعربية
+  String _paymentMethodName(String? id) {
+    switch (id) {
+      case 'kuraimi':
+        return 'كريمي إكسبرس';
+      case 'jeeb':
+        return 'محفظة جيب';
+      case 'cod':
+        return 'الدفع عند الاستلام';
+      default:
+        return id ?? '';
+    }
+  }
+
+  /// فتح الواتساب برسالة جاهزة تحتوي تفاصيل الطلب
+  Future<void> _openWhatsApp({
+    required String orderId,
+    required double total,
+    required String paymentName,
+    required String ref,
+  }) async {
+    final message = Uri.encodeComponent(
+      'مرحباً، قمت بإجراء طلب جديد:\n'
+      'رقم الطلب: #$orderId\n'
+      'المبلغ الإجمالي: ${total.toStringAsFixed(0)} YER\n'
+      'طريقة الدفع: $paymentName\n'
+      'رقم الحوالة: $ref',
+    );
+    // wa.me/<STORE_PHONE>?text=...
+    final phone = AppConstants.companyWhatsApp
+        .replaceFirst('https://wa.me/', '')
+        .trim();
+    final url = 'https://wa.me/$phone?text=$message';
+    try {
+      final launched = await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+      if (!launched) {
+        if (mounted) {
+          _showSnackBar('تعذر فتح الواتساب — تأكد من تثبيته');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ WhatsApp launch error: $e');
+    }
   }
 
   // ======================== البناء ========================
@@ -476,6 +618,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // =========== تفاصيل الحساب + إثبات التحويل (كريمي/جيب) ===========
+                    if (_selectedPaymentMethod == 'kuraimi' ||
+                        _selectedPaymentMethod == 'jeeb')
+                      _buildTransferProofSection(),
 
                     const SizedBox(height: 16),
 
@@ -666,6 +815,243 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   // ======================== Widget Helpers ========================
+
+  /// قسم تفاصيل الحساب وإثبات التحويل (كريمي/جيب)
+  Widget _buildTransferProofSection() {
+    final isKuraimi = _selectedPaymentMethod == 'kuraimi';
+    final accountLabel = isKuraimi ? 'رقم نقطة البيع (كريمي)' : 'معرف محفظة جيب';
+    final accountValue =
+        isKuraimi ? AppConstants.kuraimiPosNumber : AppConstants.jeebPosNumber;
+
+    return Column(
+      children: [
+        Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+                color: AppColors.primary.withValues(alpha: 0.3)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isKuraimi
+                          ? Icons.account_balance_wallet_outlined
+                          : Icons.wallet_outlined,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isKuraimi
+                          ? 'كريمي إكسبرس — بيانات التحويل'
+                          : 'محفظة جيب — بيانات التحويل',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            accountLabel,
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            accountValue,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => _copyToClipboard(accountValue),
+                        icon: const Icon(Icons.copy,
+                            size: 18, color: AppColors.primary),
+                        tooltip: 'نسخ',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isKuraimi
+                      ? 'حوّل المبلغ إلى الرقم أعلاه ثم أدخل رقم الحوالة وأرفق صورة الإيصال.'
+                      : 'حوّل المبلغ إلى معرف جيب أعلاه ثم أدخل رقم العملية وأرفق صورة الإيصال.',
+                  style: const TextStyle(
+                      fontSize: 11, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // ===== رقم الحوالة =====
+        Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+                color: AppColors.border.withValues(alpha: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Form(
+              key: _transferFormKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'رقم الحوالة / السند',
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _transferRefController,
+                    keyboardType: TextInputType.text,
+                    decoration: InputDecoration(
+                      hintText: 'مثال: 258741963',
+                      prefixIcon: const Icon(Icons.confirmation_number_outlined,
+                          size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      isDense: true,
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'أدخل رقم الحوالة لإكمال الطلب';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // ===== إرفاق صورة الإيصال =====
+                  const Text(
+                    'صورة إثبات التحويل',
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _pickReceiptImage,
+                    child: Container(
+                      height: 90,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _receiptBase64.isNotEmpty
+                              ? AppColors.success
+                              : AppColors.border,
+                        ),
+                      ),
+                      child: _receiptBase64.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  AppImage(
+                                    imageUrl: _receiptBase64,
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 300,
+                                  ),
+                                  Positioned(
+                                    top: 6,
+                                    right: 6,
+                                    child: GestureDetector(
+                                      onTap: () => setState(
+                                          () => _receiptBase64 = ''),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close,
+                                            color: Colors.white, size: 14),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 6,
+                                    left: 6,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.success,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        '✓ تم الإرفاق',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo_outlined,
+                                    size: 26,
+                                    color: AppColors.textSecondary),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'إرفاق صورة الإيصال (اختياري)',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   /// بطاقة استرداد النقاط — تبديل + رصيد + قيمة الخصم
   Widget _buildPointsRedemptionCard(
