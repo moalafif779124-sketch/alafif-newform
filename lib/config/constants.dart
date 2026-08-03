@@ -13,7 +13,7 @@ class AppConstants {
   static const String companyPhone = '+967123456789';
   static const String companyEmail = 'info@alafif-newform.com';
   static const String companyAddress = 'صنعاء، اليمن';
-  static const String companyWhatsApp = 'https://wa.me/967123456789';
+  static const String companyWhatsApp = 'https://wa.me/967784753557'; // 00967784753557
 
   // =========== فئات المنتجات ===========
   static const List<Map<String, dynamic>> categories = [
