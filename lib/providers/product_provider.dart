@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
@@ -161,6 +162,47 @@ class ProductProvider with ChangeNotifier {
     await CacheService.instance.saveBanners(bannersData);
     notifyListeners();
   }
+
+  // =================== المزامنة الفورية (Real-time Sync) ===================
+  // يستمع لتغييرات Firestore من تطبيق الإدارة (alafif-admin)
+  // أي تعديل على المنتجات أو البانرات ينعكس فوراً في تطبيق المتجر
+
+  StreamSubscription<List<Map<String, dynamic>>>? _bannersSub;
+  StreamSubscription<List<Map<String, dynamic>>>? _productsSub;
+  bool _realtimeStarted = false;
+
+  /// بدء الاستماع الفوري لتغييرات Firestore
+  void startRealtimeSync() {
+    if (_realtimeStarted) return;
+    _realtimeStarted = true;
+
+    // بث البانرات — أي تغيير من لوحة التحكم يظهر فوراً
+    _bannersSub = _firebaseService.getBannersStream().listen((data) {
+      _banners = data.map((m) => BannerModel.fromMap(m)).toList();
+      notifyListeners();
+    }, onError: (e) {
+      debugPrint('⚠️ Banners stream error: $e');
+    });
+
+    // بث المنتجات — تحديث/إضافة/حذف من لوحة التحكم ينعكس فوراً
+    _productsSub = _firebaseService.getProductsStream().listen((data) {
+      _products = data.map((m) => Product.fromMap(m)).toList();
+      _recomputeCollections();
+      // القائمة الكاملة وصلت — لا حاجة للتحميل التصفحي بعد الآن
+      _hasMore = false;
+      notifyListeners();
+    }, onError: (e) {
+      debugPrint('⚠️ Products stream error: $e');
+    });
+  }
+
+  /// إيقاف الاستماع الفوري (اختياري)
+  void stopRealtimeSync() {
+    _bannersSub?.cancel();
+    _productsSub?.cancel();
+    _realtimeStarted = false;
+  }
+
 
   // =================== تحميل المنتجات المُقسّم (Pagination) ===================
 

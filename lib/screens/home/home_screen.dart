@@ -46,9 +46,11 @@ class _HomeScreenState extends State<HomeScreen>
       // 1) استرجاع الكاش المحلي فوراً + مزامنة الفئات/البانرات في الخلفية
       final pp = context.read<ProductProvider>();
       pp.initialize();
-      // 2) تحميل المنتجات — عيّنات فورية ثم تحديث من Firestore في الخلفية
+      // 2) المزامنة الفورية — أي تغيير من تطبيق الإدارة ينعكس فوراً
+      pp.startRealtimeSync();
+      // 3) تحميل المنتجات — عيّنات فورية ثم تحديث من Firestore في الخلفية
       pp.loadInitialProducts();
-      // 3) تهيئة النقاط عند عرض الرئيسية
+      // 4) تهيئة النقاط عند عرض الرئيسية
       final auth = context.read<AuthProvider>();
       if (auth.isLoggedIn && auth.userId != null) {
         context.read<PointsProvider>().initialize(auth.userId!);

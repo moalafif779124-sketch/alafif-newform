@@ -205,6 +205,20 @@ class FirebaseService {
     }).toList();
   }
 
+  /// بث البانرات النشطة — تحديث فوري عند أي تغيير من لوحة التحكم
+  Stream<List<Map<String, dynamic>>> getBannersStream() {
+    return firestore
+        .collection('banners')
+        .where('isActive', isEqualTo: true)
+        .orderBy('order', descending: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              data['id'] = doc.id;
+              return data;
+            }).toList());
+  }
+
   // =================== إدارة البانرات (لوحة المدير) ===================
 
   Future<List<Map<String, dynamic>>> getAllBanners() async {

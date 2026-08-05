@@ -10,7 +10,6 @@ import '../auth/login_screen.dart';
 import 'orders_screen.dart';
 import 'addresses_screen.dart';
 import '../wishlist/wishlist_screen.dart';
-import '../admin/admin_dashboard_screen.dart' deferred as admin;
 
 /// شاشة الملف الشخصي وحساب المستخدم
 class ProfileScreen extends StatefulWidget {
@@ -30,15 +29,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    // ===== تسخين مسبق للوحة التحكم المؤجلة =====
-    // إذا كان المستخدم مديراً، حمّل مكتبة Admin في الخلفية فوراً
-    // حتى تكون جاهزة في الذاكرة قبل الضغط على الزر
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = context.read<AuthProvider>();
-      if (auth.user?.isAdmin == true) {
-        admin.loadLibrary(); // fire-and-forget — بدون await
-      }
-    });
   }
 
   @override
@@ -456,57 +446,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
 
           const SizedBox(height: 16),
-
-          // 🔐 لوحة التحكم (للمدير فقط)
-          if (user.isAdmin)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: AppColors.primary),
-                ),
-                child: ListTile(
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.admin_panel_settings,
-                        color: AppColors.primary),
-                  ),
-                  title: const Text(
-                    'لوحة التحكم',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'إدارة المنتجات، الفئات، الطلبات',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(
-                    Icons.chevron_left,
-                    color: AppColors.textSecondary,
-                  ),
-                  onTap: () async {
-                    // المكتبة مسخّنة مسبقاً — التنقل فوري
-                    // loadLibrary() تعيد فوراً إذا كانت محمّلة بالفعل
-                    await admin.loadLibrary();
-                    if (!context.mounted) return;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => admin.AdminDashboard()),
-                    );
-                  },
-                ),
-              ),
-            ),
 
           const SizedBox(height: 8),
 
