@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/firebase_service.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
@@ -473,6 +474,41 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
                     const SizedBox(height: 24),
 
+                    // ===== إرسال للسائق عبر الواتساب =====
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _dispatchToDriver(orderData),
+                        icon: const Icon(Icons.local_shipping, size: 18),
+                        label: const Text(
+                          'إرسال للسائق عبر الواتساب',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'يرسل تفاصيل التوصيل والتحصيل إلى رقم الواتساب الخاص بالمتجر',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary.withValues(alpha: 0.8),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
                     // تغيير الحالة
                     const Text(
                       'تغيير الحالة',
@@ -557,6 +593,50 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
           ),
         );
       }
+    }
+  }
+
+  /// إرسال تفاصيل الطلب للسائق عبر الواتساب
+  Future<void> _dispatchToDriver(Map<String, dynamic> orderData) async {
+    final order = Order.fromMap(orderData);
+    final orderId = orderData['id'] ?? order.id;
+    final customerName = order.shippingAddress.fullName;
+    // بيانات التوصيل الإقليمي (من الحقول الجديدة مع بدائل آمنة)
+    final recipientPhone = (orderData['recipientPhone'] as String?) ??
+        order.shippingAddress.phone;
+    final city = (orderData['city'] as String?) ?? '';
+    final nearestLandmark = (orderData['nearestLandmark'] as String?) ??
+        (order.shippingAddress.landmark ?? '—');
+    final streetAddress = (orderData['streetAddress'] as String?) ??
+        order.shippingAddress.fullAddress;
+    final totalAmount = order.total.toStringAsFixed(0);
+
+    final message = Uri.encodeComponent(
+      '📦 طلب جديد للتوصيل: #$orderId\n'
+      '👤 العميل: $customerName\n'
+      '📞 الهاتف: $recipientPhone\n'
+      '📍 المدينة: $city\n'
+      '🏢 المعلم: $nearestLandmark\n'
+      '🏠 العنوان: $streetAddress\n'
+      '💰 المبلغ المطلوب تحصيله (COD): $totalAmount YER',
+    );
+    final phone = AppConstants.companyWhatsApp
+        .replaceFirst('https://wa.me/', '')
+        .trim();
+    final url = 'https://wa.me/$phone?text=$message';
+    try {
+      final launched = await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تعذر فتح الواتساب — تأكد من تثبيته'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ WhatsApp dispatch error: $e');
     }
   }
 

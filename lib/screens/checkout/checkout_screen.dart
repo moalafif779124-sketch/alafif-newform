@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
+import '../../config/delivery_config.dart';
 import '../../widgets/app_image.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -32,6 +33,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _districtController = TextEditingController();
+  final TextEditingController _landmarkController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
@@ -39,6 +41,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _selectedPaymentMethod = 'cod';
   bool _isDefaultAddress = false;
   bool _isSubmitting = false;
+
+  // =========== التوصيل الإقليمي ===========
+  String? _selectedCity = DeliveryConfig.defaultCityId;
 
   // =========== نقاط الاسترداد ===========
   bool _redeemPoints = false;
@@ -74,10 +79,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _phoneController.dispose();
     _addressController.dispose();
     _districtController.dispose();
+    _landmarkController.dispose();
     _cityController.dispose();
     _notesController.dispose();
     _transferRefController.dispose();
     super.dispose();
+  }
+
+  /// حساب تكلفة التوصيل الإقليمية (مجاني للطلبات ≥ 50,000)
+  double _getShippingCost(double subtotal) {
+    return DeliveryConfig.getShippingCost(_selectedCity, subtotal: subtotal);
   }
 
   /// نسخ نص إلى الحافظة
@@ -132,8 +143,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _showSnackBar('يرجى إدخال الحي/المنطقة');
       return false;
     }
-    if (_cityController.text.trim().isEmpty) {
-      _showSnackBar('يرجى إدخال المدينة');
+    if (_selectedCity == null || _selectedCity!.isEmpty) {
+      _showSnackBar('يرجى اختيار المحافظة / المدينة');
       return false;
     }
     if (_selectedPaymentMethod == null) {
@@ -195,11 +206,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'phone': _phoneController.text.trim(),
         'fullAddress': _addressController.text.trim(),
         'district': _districtController.text.trim(),
-        'city': _cityController.text.trim(),
-        'landmark': null,
+        'city': DeliveryConfig.cityName(_selectedCity),
+        'landmark': _landmarkController.text.trim().isEmpty
+            ? null
+            : _landmarkController.text.trim(),
       };
 
-      // حفظ العنوان كعنوان افتراضي إذا تم اختياره
+      // ===== حفظ العنوان الافتراضي (عند التفعيل) =====
       if (_isDefaultAddress && authProvider.userId != null) {
         try {
           final firebaseService = FirebaseService();
@@ -211,8 +224,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             'phone': _phoneController.text.trim(),
             'street': _addressController.text.trim(),
             'district': _districtController.text.trim(),
-            'city': _cityController.text.trim(),
-            'state': 'أمانة العاصمة',
+            'city': DeliveryConfig.cityName(_selectedCity),
+            'landmark': _landmarkController.text.trim(),
+            'state': 'اليمن',
             'isDefault': true,
             'createdAt': DateTime.now().millisecondsSinceEpoch,
           });
@@ -220,6 +234,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           debugPrint('Error saving default address: $e');
         }
       }
+
+      // ===== بيانات التوصيل الإقليمي (تُحفظ في مستند الطلب) =====
+      final shippingCost = _getShippingCost(cartProvider.subtotal);
+      final deliveryInfo = <String, dynamic>{
+        'city': DeliveryConfig.cityName(_selectedCity),
+        'cityId': _selectedCity,
+        'streetAddress': _addressController.text.trim(),
+        'district': _districtController.text.trim(),
+        'nearestLandmark': _landmarkController.text.trim(),
+        'recipientPhone': _phoneController.text.trim(),
+        'deliveryNotes': _notesController.text.trim(),
+        'shippingCost': shippingCost,
+      };
 
       // إنشاء الطلب
       final orderId = await orderProvider.createOrder(
@@ -235,6 +262,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       setState(() => _isSubmitting = false);
 
       if (orderId != null && mounted) {
+        // ===== حفظ بيانات التوصيل الإقليمي في مستند الطلب =====
+        try {
+          await FirebaseService().firestore
+              .collection('orders')
+              .doc(orderId)
+              .update(deliveryInfo);
+        } catch (e) {
+          debugPrint('⚠️ Failed to save delivery info: $e');
+        }
+
         // ===== حفظ إثبات التحويل (كريمي/جيب) =====
         final isTransfer = _selectedPaymentMethod == 'kuraimi' ||
             _selectedPaymentMethod == 'jeeb';
@@ -268,8 +305,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         // ===== التحقق اليدوي من التحويل — لا حاجة لشاشات الدفع الخارجية =====
         // (كريمي/جيب يتم التحقق منها يدوياً عبر الواتساب بعد الطلب)
 
-        // حساب الإجمالي قبل تفريغ السلة
-        final finalTotal = cartProvider.total - pointsDiscount;
+        // حساب الإجمالي قبل تفريغ السلة (باستخدام التوصيل الإقليمي)
+        final finalTotal = cartProvider.subtotal +
+            cartProvider.tax +
+            shippingCost -
+            pointsDiscount;
 
         // تفريغ السلة
         cartProvider.clearCart();
@@ -542,12 +582,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: _cityController,
+                            // ===== المحافظة / المدينة (قائمة منسدلة) =====
+                            DropdownButtonFormField<String>(
+                              value: _selectedCity,
                               decoration: const InputDecoration(
-                                labelText: 'المدينة',
-                                hintText: 'أدخل المدينة',
+                                labelText: 'المحافظة / المدينة',
                                 prefixIcon: Icon(Icons.location_city),
+                              ),
+                              items: DeliveryConfig.cities
+                                  .map((city) => DropdownMenuItem(
+                                        value: city['id'] as String,
+                                        child: Text(
+                                          '${city['name']} — ${city['shippingCost']} ريال',
+                                          style: const TextStyle(
+                                              fontSize: 13),
+                                        ),
+                                      ))
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() => _selectedCity = value);
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            // ===== أقرب معلم =====
+                            TextField(
+                              controller: _landmarkController,
+                              decoration: const InputDecoration(
+                                labelText: 'أقرب معلم / جوار',
+                                hintText: 'مثال: جوار الجامع الكبير',
+                                prefixIcon: Icon(Icons.place_outlined),
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -634,7 +697,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     Consumer2<CartProvider, PointsProvider>(
                       builder: (context, cart, points, _) {
                         final subtotal = cart.subtotal;
-                        final shipping = cart.shipping;
+                        // التوصيل الإقليمي حسب المحافظة (مجاني ≥ 50,000)
+                        final shipping = _getShippingCost(subtotal);
                         final tax = cart.tax;
 
                         // حساب الخصم بالنقاط (عند التفعيل)
