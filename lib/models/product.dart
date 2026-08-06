@@ -13,6 +13,7 @@ class Product {
   final List<String> colors;         // أكواد الألوان hex
   final List<Map<String, String>> colorOptions; // {name, hex}
   final Map<String, int> stock;      // {'size_color': quantity}
+  final Map<String, int> stockVariants; // {'S': 10, 'M': 5} — مخزون حسب المقاس
   final int stockQuantity;           // كمية المخزون الكلية
   final double rating;
   final int reviewCount;
