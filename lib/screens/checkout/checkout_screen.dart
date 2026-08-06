@@ -246,6 +246,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'recipientPhone': _phoneController.text.trim(),
         'deliveryNotes': _notesController.text.trim(),
         'shippingCost': shippingCost,
+        // نقاط الولاء المستخدمة (للإحصائيات في لوحة التحكم)
+        'pointsUsed': _redeemPoints ? pointsToDeduct : 0,
+        'pointsDiscount': _redeemPoints ? pointsDiscount : 0.0,
       };
 
       // إنشاء الطلب

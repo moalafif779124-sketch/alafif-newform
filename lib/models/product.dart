@@ -41,6 +41,7 @@ class Product {
     required this.colors,
     this.colorOptions = const [],
     this.stock = const {},
+    this.stockVariants = const {},   // {'S': 10, 'M': 5} — مخزون حسب المقاس
     this.stockQuantity = 0,
     this.rating = 0.0,
     this.reviewCount = 0,
@@ -78,6 +79,7 @@ class Product {
               .toList() ??
           [],
       stock: Map<String, int>.from(map['stock'] ?? {}),
+      stockVariants: Map<String, int>.from(map['stockVariants'] ?? {}),
       stockQuantity: (map['stockQuantity'] ?? 0),
       rating: (map['rating'] ?? 0).toDouble(),
       reviewCount: map['reviewCount'] ?? 0,
@@ -111,6 +113,7 @@ class Product {
       'colors': colors,
       'colorOptions': colorOptions,
       'stock': stock,
+      'stockVariants': stockVariants,
       'stockQuantity': stockQuantity,
       'rating': rating,
       'reviewCount': reviewCount,

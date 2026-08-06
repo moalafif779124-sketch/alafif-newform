@@ -57,6 +57,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   double get _oldTotalPrice =>
       product.hasOldPrice ? (product.oldPrice! * _quantity) : _totalPrice;
 
+  // ======================== المخزون حسب المقاس ========================
+
+  /// هل نفذت كمية هذا المقاس؟
+  bool _isSizeOutOfStock(String size) {
+    // مخزون حسب المقاس (stockVariants) — الأولوية الأولى
+    if (product.stockVariants.isNotEmpty) {
+      final qty = product.stockVariants[size];
+      return qty == null || qty <= 0;
+    }
+    // بدون خريطة مقاسات — نعتمد على الكمية الكلية
+    return product.stockQuantity <= 0;
+  }
+
+  /// المقاس المحدد حالياً نفذت كميته؟
+  bool get _selectedSizeOutOfStock =>
+      _selectedSize != null && _isSizeOutOfStock(_selectedSize!);
+
   void _onShare() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -79,6 +96,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _addToCart({bool goToCheckout = false}) async {
+    if (_selectedSizeOutOfStock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('نفذت الكمية — هذا المقاس غير متوفر'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     if (_selectedSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -557,32 +584,74 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           runSpacing: 10,
           children: product.sizes.map((size) {
             final isSelected = _selectedSize == size;
+            final isOut = _isSizeOutOfStock(size);
             return ChoiceChip(
               label: Text(
                 size,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
+                  color: isOut
+                      ? AppColors.error
+                      : (isSelected ? Colors.white : AppColors.textPrimary),
+                  decoration: isOut ? TextDecoration.lineThrough : null,
                 ),
               ),
+              avatar: isOut
+                  ? const Padding(
+                      padding: EdgeInsets.only(left: 2),
+                      child: Icon(Icons.block,
+                          size: 13, color: AppColors.error),
+                    )
+                  : null,
               selected: isSelected,
               selectedColor: AppColors.primary,
               backgroundColor: AppColors.accentLight,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
                 side: BorderSide(
-                  color: isSelected ? AppColors.primary : AppColors.border,
-                  width: 1.5,
+                  color: isOut
+                      ? AppColors.error
+                      : (isSelected ? AppColors.primary : AppColors.border),
+                  width: isOut ? 1 : 1.5,
                 ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onSelected: (selected) {
-                setState(() => _selectedSize = size);
-              },
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              onSelected: isOut
+                  ? null
+                  : (selected) {
+                      setState(() => _selectedSize = size);
+                    },
             );
           }).toList(),
         ),
+        // ===== شارة نفذت الكمية للمقاس المحدد =====
+        if (_selectedSizeOutOfStock)
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.block, color: AppColors.error, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'نفذت الكمية — هذا المقاس غير متوفر حالياً',
+                    style: TextStyle(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -1431,46 +1500,67 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               const Spacer(),
 
-              // Buy Now button
-              SizedBox(
-                height: 46,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await _buyNow();
-                  },
-                  icon: const Icon(Icons.flash_on, size: 18),
-                  label: const Text('شراء'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              // ===== نفذت الكمية — أزرار معطلة =====
+              if (_selectedSizeOutOfStock)
+                SizedBox(
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.block, size: 18),
+                    label: const Text('نفذت الكمية'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.error.withValues(alpha: 0.55),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
+                  ),
+                )
+              else ...[
+                // Buy Now button
+                SizedBox(
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await _buyNow();
+                    },
+                    icon: const Icon(Icons.flash_on, size: 18),
+                    label: const Text('شراء'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
 
-              // Add to Cart button
-              SizedBox(
-                height: 46,
-                child: ElevatedButton.icon(
-                  onPressed: () => _addToCart(),
-                  icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-                  label: const Text('أضف'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryLight,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                // Add to Cart button
+                SizedBox(
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _addToCart(),
+                    icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+                    label: const Text('أضف'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryLight,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
