@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
+import '../services/notification_service.dart';
 
 /// مزود حالة المصادقة - يدعم OTP عبر واتساب والبريد الإلكتروني
 /// يحفظ جلسة OTP في SharedPreferences ويقرأها منها مباشرة عند التحقق
@@ -209,6 +210,8 @@ class AuthProvider with ChangeNotifier {
       if (userData != null) {
         _user = AppUser.fromMap(userData);
         await _saveUserSession();
+      // 🔔 ربط FCM token بالمستخدم بعد تسجيل الدخول/استرجاع الجلسة
+      await _registerUserNotifications();
         notifyListeners();
       }
     } catch (e) {
@@ -309,6 +312,8 @@ class AuthProvider with ChangeNotifier {
       
       // 💾 حفظ الجلسة بعد تسجيل الدخول
       await _saveUserSession();
+      // 🔔 ربط FCM token بالمستخدم بعد تسجيل الدخول/استرجاع الجلسة
+      await _registerUserNotifications();
       
       // 🗑️ مسح جلسة OTP بعد نجاح تسجيل الدخول
       await _clearOtpSession();
@@ -359,6 +364,8 @@ class AuthProvider with ChangeNotifier {
         phone: phone,
       );
       await _saveUserSession();
+      // 🔔 ربط FCM token بالمستخدم بعد تسجيل الدخول/استرجاع الجلسة
+      await _registerUserNotifications();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -386,6 +393,8 @@ class AuthProvider with ChangeNotifier {
         password: password,
       );
       await _saveUserSession();
+      // 🔔 ربط FCM token بالمستخدم بعد تسجيل الدخول/استرجاع الجلسة
+      await _registerUserNotifications();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -394,6 +403,18 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  /// 🔔 تسجيل FCM token للمستخدم بعد تسجيل الدخول/استرجاع الجلسة
+  Future<void> _registerUserNotifications() async {
+    try {
+      final uid = _user?.id;
+      if (uid != null && uid.isNotEmpty) {
+        await NotificationService().setUserId(uid);
+      }
+    } catch (e) {
+      debugPrint('⚠️ FCM registration failed: $e');
     }
   }
 
@@ -462,6 +483,8 @@ class AuthProvider with ChangeNotifier {
       if (userData != null) {
         _user = AppUser.fromMap(userData);
         await _saveUserSession();
+      // 🔔 ربط FCM token بالمستخدم بعد تسجيل الدخول/استرجاع الجلسة
+      await _registerUserNotifications();
         notifyListeners();
         debugPrint('♻️ User refreshed from Firestore: admin=${_user!.isAdmin}');
         return true;

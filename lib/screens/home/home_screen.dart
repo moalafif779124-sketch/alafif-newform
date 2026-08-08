@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
@@ -16,6 +18,7 @@ import '../../widgets/product_card.dart';
 import '../cart/cart_screen.dart';
 import '../catalog/product_detail_screen.dart';
 import '../catalog/catalog_screen.dart';
+import '../catalog/visual_search_screen.dart';
 import '../profile/points_screen.dart';
 
 /// الشاشة الرئيسية — متجر متكامل مع العروض والفلاش سيل
@@ -215,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen>
                     prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
-                      onPressed: () {},
+                      onPressed: _pickImageForSearch,
                       tooltip: 'بحث بالصورة',
                     ),
                     border: InputBorder.none,
@@ -236,6 +239,137 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ======================== البحث بالصورة ========================
+
+  /// فتح اختيار الصورة (كاميرا أو معرض) ثم الانتقال لشاشة البحث بالصورة
+  Future<void> _pickImageForSearch() async {
+    final picker = ImagePicker();
+
+    // اختيار المصدر: كاميرا أو المعرض
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'البحث بالصورة',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _imageSourceButton(
+                        icon: Icons.photo_camera_outlined,
+                        label: 'كاميرا',
+                        onTap: () =>
+                            Navigator.pop(sheetContext, ImageSource.camera),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _imageSourceButton(
+                        icon: Icons.photo_library_outlined,
+                        label: 'المعرض',
+                        onTap: () =>
+                            Navigator.pop(sheetContext, ImageSource.gallery),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
+    try {
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 75,
+      );
+      if (picked == null || !mounted) return;
+
+      final bytes = await picked.readAsBytes();
+      final imageBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VisualSearchScreen(imageBase64: imageBase64),
+        ),
+      );
+    } catch (e) {
+      debugPrint('⚠️ Image pick error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تعذر فتح الكاميرا/المعرض'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _imageSourceButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 30, color: AppColors.primary),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
         ),
       ),
     );
