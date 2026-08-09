@@ -68,6 +68,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
         _selectedImages.addAll(picked.take(remaining));
       });
       if (picked.length > remaining) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('يمكن إرفاق حتى 5 صور فقط'),
@@ -275,13 +276,13 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: Column(
+                    child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.add_photo_alternate_outlined,
                             size: 30, color: AppColors.textSecondary),
-                        const SizedBox(height: 4),
-                        const Text(
+                        SizedBox(height: 4),
+                        Text(
                           'إرفاق صور (اختياري)',
                           style: TextStyle(
                               fontSize: 12, color: AppColors.textSecondary),

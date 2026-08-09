@@ -70,14 +70,22 @@ jobs:
           compression-level: 9
 
       - name: Upload APK to Release
+        continue-on-error: true # release upload has been broken since June; APK ships via artifact
         run: |
+          set -o pipefail
           UPLOAD_URL="https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/333416472/assets?name=app-arm64-v8a-release.apk"
-          curl -s -X POST \
+          HTTP_CODE=$(curl -s -o /tmp/release_upload.json -w "%{http_code}" -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/vnd.android.package-archive" \
             --data-binary @build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-            "$UPLOAD_URL" -w "\nHTTP:%{http_code}\n" | tail -1
-          echo "APK uploaded"
+            "$UPLOAD_URL")
+          echo "Release upload HTTP:$HTTP_CODE"
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "::error::Release upload failed (HTTP $HTTP_CODE)"
+            cat /tmp/release_upload.json
+            exit 1
+          fi
+          echo "APK uploaded to release"
 
       - name: Show outputs
         run: |
@@ -85,6 +93,7 @@ jobs:
           ls -lh build/app/outputs/flutter-apk/
 
       - name: Deploy Firestore + Storage rules
+        continue-on-error: true # FIREBASE_TOKEN expiry must not red the APK build; rules have REST/console fallback
         uses: w9jds/firebase-action@v15.23.0
         with:
           args: deploy --only firestore:rules,firestore:indexes,storage:rules --project alafif-newform
