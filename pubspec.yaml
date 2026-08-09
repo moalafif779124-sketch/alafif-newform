@@ -38,6 +38,7 @@ dependencies:
   url_launcher: ^6.3.1
   speech_to_text: ^7.0.0
   permission_handler: ^11.3.1
+  share_plus: ^10.1.4
   
   # Payments
   http: ^1.2.2

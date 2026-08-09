@@ -47,6 +47,12 @@ class PointsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // صرف مكافآت الإحالة المعلقة (شارك واكسب) — إن وجدت
+      final claimed = await _firebaseService.claimAllPendingReferrals(userId);
+      if (claimed > 0) {
+        debugPrint('🎁 Claimed $claimed referral reward(s)');
+      }
+
       final data = await _firebaseService.getUserPoints(userId);
       if (data != null) {
         _points = data['points'] ?? 0;

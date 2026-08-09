@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../config/constants.dart';
 
@@ -829,6 +830,222 @@ class FirebaseService {
       await firestore.collection('users').doc(userId).collection('points_history').add(data);
     } catch (e) {
       debugPrint('⚠️ Failed to add points history: $e');
+    }
+  }
+
+  // =================== نظام الإحالة (شارك واكسب) ===================
+
+  /// مكافأة كل طرف عند تفعيل كود دعوة
+  static const int referralRewardPoints = 50;
+
+  /// توليد كود إحالة فريد: ALAFIF-XXXXXX (بدون أحرف ملتبسة O/0/I/1)
+  String generateReferralCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rand = Random();
+    final code = List.generate(
+        6, (_) => chars[rand.nextInt(chars.length)]).join();
+    return 'ALAFIF-$code';
+  }
+
+  /// التأكد من وجود كود إحالة للمستخدم — ينشئه ويحفظه إن لم يوجد
+  /// الكود يُخزَّن في users/{userId}.referralCode و referral_codes/{code}
+  Future<String> ensureReferralCode(String userId) async {
+    try {
+      final userRef = firestore.collection('users').doc(userId);
+      final doc = await userRef.get();
+      if (!doc.exists) return '';
+      final existing = doc.data()?['referralCode'] as String?;
+      if (existing != null && existing.isNotEmpty) return existing;
+
+      // توليد كود غير مكرر (حتى 3 محاولات)
+      var code = generateReferralCode();
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final codeRef = firestore.collection('referral_codes').doc(code);
+        final codeDoc = await codeRef.get();
+        if (!codeDoc.exists) {
+          await codeRef.set({'uid': userId, 'createdAt': DateTime.now().millisecondsSinceEpoch});
+          await userRef.update({'referralCode': code});
+          return code;
+        }
+        code = generateReferralCode();
+      }
+      return '';
+    } catch (e) {
+      debugPrint('⚠️ ensureReferralCode error: $e');
+      return '';
+    }
+  }
+
+  /// البحث عن مستخدم عبر كود إحالة (قراءة مباشرة من referral_codes)
+  Future<String?> findReferrerUidByCode(String code) async {
+    try {
+      final doc = await firestore
+          .collection('referral_codes')
+          .doc(code)
+          .get();
+      if (!doc.exists) return null;
+      return doc.data()?['uid'] as String?;
+    } catch (e) {
+      debugPrint('⚠️ findReferrerUidByCode error: $e');
+      return null;
+    }
+  }
+
+  /// تفعيل كود دعوة — معاملة آمنة:
+  /// 1) يحدّث المستخدم الحالي (referredBy + 50 نقطة)
+  /// 2) يسجّل سجل نقاط للمستخدم الحالي
+  /// 3) ينشئ حدث إحالة للمُحيل (تُصرف مكافأته عند فتح التطبيق)
+  Future<bool> activateReferral({
+    required String refereeUid,
+    required String refereeName,
+    required String code,
+  }) async {
+    try {
+      final normalized = code.trim().toUpperCase();
+      if (normalized.isEmpty) return false;
+
+      // منع التفعيل المكرر (مستعلم خارج المعاملة)
+      final already = await firestore
+          .collection('referrals')
+          .where('refereeUid', isEqualTo: refereeUid)
+          .limit(1)
+          .get();
+      if (already.docs.isNotEmpty) return false;
+
+      // البحث عن المُحيل
+      final referrerUid = await findReferrerUidByCode(normalized);
+      if (referrerUid == null || referrerUid == refereeUid) return false;
+
+      final refereeRef = firestore.collection('users').doc(refereeUid);
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      return await firestore.runTransaction((txn) async {
+        final refereeSnap = await txn.get(refereeRef);
+        if (!refereeSnap.exists) return false;
+        final data = refereeSnap.data()!;
+
+        // منع تفعيل كودين أو كود المستخدم نفسه
+        if ((data['referredBy'] ?? '') != '') return false;
+        if ((data['referralCode'] ?? '') == normalized) return false;
+
+        final currentPoints = (data['points'] ?? 0) as int;
+        final currentLifetime = (data['lifetimePoints'] ?? 0) as int;
+
+        // 1) تحديث المستخدم الحالي
+        txn.update(refereeRef, {
+          'referredBy': normalized,
+          'points': currentPoints + referralRewardPoints,
+          'lifetimePoints': currentLifetime + referralRewardPoints,
+        });
+
+        // 2) سجل نقاط المستخدم الحالي
+        txn.set(refereeRef.collection('points_history').doc(), {
+          'delta': referralRewardPoints,
+          'balance': currentPoints + referralRewardPoints,
+          'note': 'مكافأة استخدام كود دعوة',
+          'createdAt': now,
+        });
+
+        // 3) حدث إحالة للمُحيل — مكافأته تنتظر حتى فتحه التطبيق
+        txn.set(firestore.collection('referrals').doc(), {
+          'code': normalized,
+          'referrerUid': referrerUid,
+          'refereeUid': refereeUid,
+          'refereeName': refereeName,
+          'reward': referralRewardPoints,
+          'status': 'pending',
+          'createdAt': now,
+        });
+        return true;
+      });
+    } catch (e) {
+      debugPrint('⚠️ activateReferral error: $e');
+      return false;
+    }
+  }
+
+  /// جلب أحداث الإحالة المعلقة لمستخدم (كَمُحيل)
+  Future<List<Map<String, dynamic>>> getPendingReferrals(String referrerUid) async {
+    try {
+      final snap = await firestore
+          .collection('referrals')
+          .where('referrerUid', isEqualTo: referrerUid)
+          .get();
+      return snap.docs
+          .map((d) {
+            final m = d.data();
+            m['id'] = d.id;
+            return m;
+          })
+          .where((m) => m['status'] == 'pending')
+          .toList();
+    } catch (e) {
+      debugPrint('⚠️ getPendingReferrals error: $e');
+      return [];
+    }
+  }
+
+  /// صرف مكافأة إحالة واحدة للمُحيل — معاملة آمنة ومستقلة (idempotent)
+  Future<bool> claimReferralReward({
+    required String referrerUid,
+    required String referralId,
+    required int reward,
+  }) async {
+    try {
+      final userRef = firestore.collection('users').doc(referrerUid);
+      final referralRef = firestore.collection('referrals').doc(referralId);
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      return await firestore.runTransaction((txn) async {
+        // قراءة الحدث أولاً — منع الصرف المزدوج
+        final eventSnap = await txn.get(referralRef);
+        if (!eventSnap.exists) return false;
+        if (eventSnap.data()?['status'] != 'pending') return false;
+        if (eventSnap.data()?['referrerUid'] != referrerUid) return false;
+
+        final userSnap = await txn.get(userRef);
+        if (!userSnap.exists) return false;
+        final data = userSnap.data()!;
+        final currentPoints = (data['points'] ?? 0) as int;
+        final currentLifetime = (data['lifetimePoints'] ?? 0) as int;
+
+        txn.update(userRef, {
+          'points': currentPoints + reward,
+          'lifetimePoints': currentLifetime + reward,
+        });
+        txn.set(userRef.collection('points_history').doc(), {
+          'delta': reward,
+          'balance': currentPoints + reward,
+          'note': 'مكافأة دعوة صديق',
+          'createdAt': now,
+        });
+        txn.update(referralRef, {'status': 'claimed', 'claimedAt': now});
+        return true;
+      });
+    } catch (e) {
+      debugPrint('⚠️ claimReferralReward error: $e');
+      return false;
+    }
+  }
+
+  /// صرف كل مكافآت الإحالة المعلقة لمستخدم — تُستدعى عند فتح التطبيق
+  /// يعيد عدد المكافآت المصروفة
+  Future<int> claimAllPendingReferrals(String userId) async {
+    try {
+      final pending = await getPendingReferrals(userId);
+      var claimed = 0;
+      for (final event in pending) {
+        final ok = await claimReferralReward(
+          referrerUid: userId,
+          referralId: event['id'] as String,
+          reward: (event['reward'] ?? referralRewardPoints) as int,
+        );
+        if (ok) claimed++;
+      }
+      return claimed;
+    } catch (e) {
+      debugPrint('⚠️ claimAllPendingReferrals error: $e');
+      return 0;
     }
   }
 

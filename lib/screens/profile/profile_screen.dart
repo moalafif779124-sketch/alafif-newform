@@ -9,6 +9,7 @@ import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
 import 'orders_screen.dart';
 import 'addresses_screen.dart';
+import 'referral_screen.dart';
 import '../wishlist/wishlist_screen.dart';
 
 /// شاشة الملف الشخصي وحساب المستخدم
@@ -364,6 +365,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const OrdersScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 0, indent: 56),
+                _buildMenuItem(
+                  icon: Icons.card_giftcard,
+                  title: 'شارك واكسب',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ReferralScreen(),
                       ),
                     );
                   },

@@ -460,6 +460,8 @@ class AuthProvider with ChangeNotifier {
           address: _user!.address,
           createdAt: _user!.createdAt,
           isAdmin: _user!.isAdmin,  // 🐛 FIX: preserve admin role
+          referralCode: _user!.referralCode, // 🎁 preserve referral code
+          referredBy: _user!.referredBy,     // 🎁 preserve referredBy
         );
       }
 
@@ -483,6 +485,16 @@ class AuthProvider with ChangeNotifier {
       if (userData != null) {
         _user = AppUser.fromMap(userData);
         await _saveUserSession();
+
+        // 🎁 ضمان وجود كود إحالة (شارك واكسب) — يُنشأ تلقائياً إن لم يوجد
+        if ((_user!.referralCode ?? '').isEmpty) {
+          final code = await _firebaseService.ensureReferralCode(_user!.id);
+          if (code.isNotEmpty) {
+            _user = AppUser.fromMap({...userData, 'referralCode': code});
+            await _saveUserSession();
+          }
+        }
+
       // 🔔 ربط FCM token بالمستخدم بعد تسجيل الدخول/استرجاع الجلسة
       await _registerUserNotifications();
         notifyListeners();

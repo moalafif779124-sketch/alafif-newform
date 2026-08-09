@@ -8,6 +8,8 @@ class AppUser {
   final String? address;
   final DateTime createdAt;
   final bool isAdmin;
+  final String? referralCode; // كود الإحالة الخاص بالمستخدم (شارك واكسب)
+  final String? referredBy; // كود من دعاه (يمنع التفعيل المكرر)
 
   AppUser({
     required this.id,
@@ -18,6 +20,8 @@ class AppUser {
     this.address,
     DateTime? createdAt,
     this.isAdmin = false,
+    this.referralCode,
+    this.referredBy,
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory AppUser.fromMap(Map<String, dynamic> map) {
@@ -32,6 +36,8 @@ class AppUser {
           ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
           : DateTime.now(),
       isAdmin: map['isAdmin'] ?? false,
+      referralCode: map['referralCode'] as String?,
+      referredBy: map['referredBy'] as String?,
     );
   }
 
@@ -45,6 +51,8 @@ class AppUser {
       'address': address,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'isAdmin': isAdmin,
+      'referralCode': referralCode,
+      'referredBy': referredBy,
     };
   }
 }
