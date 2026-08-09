@@ -20,6 +20,8 @@ import '../catalog/product_detail_screen.dart';
 import '../catalog/catalog_screen.dart';
 import '../catalog/visual_search_screen.dart';
 import '../profile/points_screen.dart';
+import '../../services/voice_search_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// الشاشة الرئيسية — متجر متكامل مع العروض والفلاش سيل
 class HomeScreen extends StatefulWidget {
@@ -220,10 +222,20 @@ class _HomeScreenState extends State<HomeScreen>
                       fontSize: 14,
                     ),
                     prefixIcon: const Icon(Icons.search, color: AppColors.primary),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
-                      onPressed: _pickImageForSearch,
-                      tooltip: 'بحث بالصورة',
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.mic, color: AppColors.primary),
+                          onPressed: _startVoiceSearch,
+                          tooltip: 'بحث صوتي',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+                          onPressed: _pickImageForSearch,
+                          tooltip: 'بحث بالصورة',
+                        ),
+                      ],
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -345,6 +357,66 @@ class _HomeScreenState extends State<HomeScreen>
         );
       }
     }
+  }
+
+  // ======================== البحث الصوتي ========================
+
+  /// فتح البحث الصوتي: إذن الميكروفون → نافذة الاستماع → إرسال النص كبحث
+  Future<void> _startVoiceSearch() async {
+    // 1) إذن الميكروفون
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('صلاحية الميكروفون مطلوبة للبحث الصوتي'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 2) تهيئة محرك التعرف الصوتي
+    final service = VoiceSearchService();
+    final ready = await service.initialize();
+    if (!ready || !mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('التعرف الصوتي غير متوفر على هذا الجهاز'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // 3) نافذة الاستماع
+    final text = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: _VoiceSearchSheet(service: service),
+      ),
+    );
+
+    // 4) إرسال النص المعرَّف كبحث
+    if (text != null && text.trim().isNotEmpty && mounted) {
+      _submitVoiceQuery(text.trim());
+    }
+  }
+
+  /// إرسال استعلام صوتي — تماماً كما لو كتبه المستخدم يدوياً
+  void _submitVoiceQuery(String query) {
+    _searchController.text = query;
+    context.read<ProductProvider>().setSearchQuery(query);
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CatalogScreen()),
+    );
   }
 
   Widget _imageSourceButton({
@@ -889,6 +961,160 @@ class _HomeScreenState extends State<HomeScreen>
         child: SizedBox(
           width: 24, height: 24,
           child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      ),
+    );
+  }
+}
+
+/// نافذة الاستماع الصوتي السفلية — ميكروفون نابض + النص الحي + أزرار تم/إلغاء
+class _VoiceSearchSheet extends StatefulWidget {
+  final VoiceSearchService service;
+
+  const _VoiceSearchSheet({required this.service});
+
+  @override
+  State<_VoiceSearchSheet> createState() => _VoiceSearchSheetState();
+}
+
+class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
+    with SingleTickerProviderStateMixin {
+  String _recognizedText = '';
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+
+    // بدء الاستماع فور فتح النافذة
+    widget.service.startListening(onResult: (words, isFinal) {
+      if (!mounted) return;
+      setState(() => _recognizedText = words);
+      // إغلاق تلقائي عند اكتمال التعرف
+      if (isFinal && words.trim().isNotEmpty) {
+        _finish(words.trim());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    widget.service.cancel();
+    super.dispose();
+  }
+
+  Future<void> _finish(String text) async {
+    if (!mounted) return;
+    await widget.service.stop();
+    Navigator.of(context).pop(text);
+  }
+
+  void _cancel() {
+    widget.service.cancel();
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // مؤشر نبض الميكروفون
+            ScaleTransition(
+              scale: Tween(begin: 1.0, end: 1.18).animate(
+                CurvedAnimation(
+                  parent: _pulseController,
+                  curve: Curves.easeInOut,
+                ),
+              ),
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.mic,
+                  size: 34,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'تحدث الآن...',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // النص المعرَّف حتى اللحظة
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.accentLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _recognizedText.isEmpty ? '...' : _recognizedText,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _cancel,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('إلغاء'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _recognizedText.trim().isEmpty
+                        ? null
+                        : () => _finish(_recognizedText.trim()),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.border,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('تم'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

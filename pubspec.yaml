@@ -36,6 +36,8 @@ dependencies:
   image_picker: ^1.1.2
   path_provider: ^2.1.4
   url_launcher: ^6.3.1
+  speech_to_text: ^7.0.0
+  permission_handler: ^11.3.1
   
   # Payments
   http: ^1.2.2
