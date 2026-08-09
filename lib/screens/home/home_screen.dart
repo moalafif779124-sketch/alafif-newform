@@ -383,12 +383,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   final List<Map<String, dynamic>> _quickCategories = [
     {'icon': Icons.new_releases, 'label': 'جديد', 'id': 'new'},
-    {'icon': Icons.local_fire_department, 'label': 'عروض', 'id': 'flash'},
+    {'icon': Icons.local_fire_department, 'label': 'عروض', 'id': 'offers'},
     {'icon': Icons.trending_up, 'label': 'ترند', 'id': 'trends'},
     {'icon': Icons.checkroom, 'label': 'شمزان', 'id': 'shamzan'},
     {'icon': Icons.work, 'label': 'جاكتات', 'id': 'jackets'},
     {'icon': Icons.watch, 'label': 'إكسسوارات', 'id': 'accessories'},
-    {'icon': Icons.flash_on, 'label': 'أقوات', 'id': 'aqwat'},
     {'icon': Icons.percent, 'label': 'تخفيضات', 'id': 'discount'},
   ];
 
@@ -406,20 +405,30 @@ class _HomeScreenState extends State<HomeScreen>
           final cat = _quickCategories[index];
           return GestureDetector(
             onTap: () {
-              if (cat['id'] == 'new' || cat['id'] == 'flash' ||
-                  cat['id'] == 'trends' || cat['id'] == 'discount') {
-                final provider = context.read<ProductProvider>();
-                provider.setSortBy('newest');
-                if (cat['id'] == 'discount') provider.setDiscountOnly(true);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => HomeScreen()),
-                );
-              } else {
+              final id = cat['id'] as String;
+              // فلاتر العرض: جديد / عروض / ترند → كتالوج مفلتر
+              if (id == 'new' || id == 'offers' || id == 'trends') {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CatalogScreen(initialCategoryId: cat['id']),
+                    builder: (_) => CatalogScreen(initialFilter: id),
+                  ),
+                );
+              } else if (id == 'discount') {
+                // خصومات: تفعيل فلتر العروض ثم فتح الكتالوج
+                final provider = context.read<ProductProvider>();
+                provider.setSortBy('newest');
+                provider.setDiscountOnly(true);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CatalogScreen()),
+                );
+              } else {
+                // فئة عادية: شمزان / جاكتات / إكسسوارات...
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CatalogScreen(initialCategoryId: id),
                   ),
                 );
               }

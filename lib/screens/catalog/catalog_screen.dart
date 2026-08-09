@@ -12,7 +12,10 @@ import 'product_detail_screen.dart' deferred as detail;
 class CatalogScreen extends StatefulWidget {
   final String? initialCategoryId;
 
-  const CatalogScreen({super.key, this.initialCategoryId});
+  /// فلتر عرض مسبق: 'new' | 'offers' | 'trends' (من أيقونات الصفحة الرئيسية)
+  final String? initialFilter;
+
+  const CatalogScreen({super.key, this.initialCategoryId, this.initialFilter});
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -35,6 +38,10 @@ class _CatalogScreenState extends State<CatalogScreen>
         context.read<ProductProvider>().setCategoryFilter(widget.initialCategoryId!);
       });
     }
+    // تعيين/مسح فلتر العرض دائماً (يمنع تسرب فلتر سابق عند فتح فئة)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().setDisplayFilter(widget.initialFilter);
+    });
   }
 
   @override

@@ -410,6 +410,16 @@ class ProductProvider with ChangeNotifier {
   List<Product> _applyFilters(List<Product> products) {
     var result = List<Product>.from(products);
 
+    // فلترة حسب خيار العرض (جديد/عروض/ترند — من أيقونات الصفحة الرئيسية)
+    switch (_displayFilter) {
+      case 'new':
+        result = result.where((p) => p.isNewAlafif).toList();
+      case 'offers':
+        result = result.where((p) => p.isSpecialOffer).toList();
+      case 'trends':
+        result = result.where((p) => p.isFeatured).toList();
+    }
+
     // فلترة حسب الفئة
     if (_selectedCategoryId.isNotEmpty) {
       result = result.where((p) => p.categoryId == _selectedCategoryId).toList();
@@ -495,6 +505,17 @@ class ProductProvider with ChangeNotifier {
 
   void setSortBy(String sortBy) {
     _sortBy = sortBy;
+    notifyListeners();
+  }
+
+  /// فلتر عرض محدد: null | 'new' | 'offers' | 'trends'
+  String? _displayFilter;
+
+  String? get displayFilter => _displayFilter;
+
+  /// تعيين فلتر العرض (من أيقونات الفئات السريعة في الصفحة الرئيسية)
+  void setDisplayFilter(String? filter) {
+    _displayFilter = filter;
     notifyListeners();
   }
 
