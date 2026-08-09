@@ -452,6 +452,8 @@ class FirebaseService {
   /// رفع صور مراجعة المنتج إلى Firebase Storage
   /// المسار: reviews/{productId}/{userId}_{timestamp}_{index}.jpg
   /// يعيد قائمة روابط التحميل الجاهزة للحفظ في حقل imageUrls
+  /// إذا كان التخزين غير مفعل (لا يوجد bucket/billing) نستخدم base64 كبديل
+  /// للصورة الأولى فقط — حفاظاً على حجم مستند Firestore تحت حد 1MB
   Future<List<String>> uploadReviewImages({
     required String productId,
     required String userId,
@@ -459,6 +461,7 @@ class FirebaseService {
   }) async {
     final urls = <String>[];
     final timestamp = DateTime.now().millisecondsSinceEpoch;
+    var base64FallbackUsed = false;
 
     for (var i = 0; i < filePaths.length; i++) {
       try {
@@ -477,12 +480,18 @@ class FirebaseService {
         urls.add(await ref.getDownloadURL());
       } catch (e) {
         debugPrint('⚠️ Review image upload failed ($i): $e');
+        // بديل base64 (مثل uploadImage للمنتجات) — صورة واحدة فقط
+        if (!base64FallbackUsed) {
+          try {
+            final bytes = await io.File(filePaths[i]).readAsBytes();
+            urls.add('data:image/jpeg;base64,${base64Encode(bytes)}');
+            base64FallbackUsed = true;
+            debugPrint('📦 Storage unavailable — review photo stored as base64');
+          } catch (e2) {
+            debugPrint('⚠️ Base64 fallback failed: $e2');
+          }
+        }
       }
-    }
-
-    // فشل رفع كل الصور — أبلغ المتصل ليعرض الخطأ بدلاً من حفظ تقييم بلا صور
-    if (urls.isEmpty && filePaths.isNotEmpty) {
-      throw Exception('فشل رفع صور المراجعة');
     }
     return urls;
   }
