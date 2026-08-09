@@ -1,5 +1,9 @@
 # Flutter
 .dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 .packages
 build/
 *.iml
