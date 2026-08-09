@@ -123,6 +123,10 @@ class _HomeScreenState extends State<HomeScreen>
                   if (provider.products.isNotEmpty)
                     _buildFeaturedSection(provider),
 
+                  // =========== 6.5 العروض والتخفيضات (Offers) ===========
+                  if (provider.products.isNotEmpty)
+                    _buildOffersSection(provider),
+
                   // =========== 7. تحميل المزيد (Infinite Scroll Trigger) ===========
                   if (provider.hasMore && !provider.isLoading)
                     _buildLoadMoreTrigger(provider),
@@ -802,6 +806,60 @@ class _HomeScreenState extends State<HomeScreen>
               child: ProductCard(
                 product: items[i],
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(product: items[i]))),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ======================== العروض والتخفيضات ========================
+
+  Widget _buildOffersSection(ProductProvider provider) {
+    final items = provider.offerProducts.take(10).toList();
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('عروض وتخفيضات',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary)),
+              TextButton(
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const CatalogScreen())),
+                child: const Text('عرض الكل', style: TextStyle(fontSize: 13)),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 280,
+          child: ListView.separated(
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: true,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => SizedBox(
+              width: 170,
+              child: ProductCard(
+                product: items[i],
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            ProductDetailScreen(product: items[i]))),
               ),
             ),
           ),

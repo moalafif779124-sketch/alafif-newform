@@ -100,6 +100,32 @@ class ProductCard extends StatelessWidget {
                             style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                       ),
                     ),
+                  // شارات خيارات العرض (عيد/شتاء/جديد/عرض/كمية محدودة)
+                  if (product.activeDisplayBadges.isNotEmpty)
+                    Positioned(
+                      bottom: 6, left: 6,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final badge in product.activeDisplayBadges.take(2))
+                            Container(
+                              margin: const EdgeInsets.only(left: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _colorFromHex(badge.color),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                badge.label,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   // زر المفضلة
                   Positioned(
                     top: 6, left: 6,
@@ -255,5 +281,11 @@ class ProductCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// تحويل لون HEX (#RRGGBB) إلى Color
+  Color _colorFromHex(String hex) {
+    final clean = hex.replaceAll('#', '');
+    return Color(int.parse('FF$clean', radix: 16));
   }
 }

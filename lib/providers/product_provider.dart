@@ -54,6 +54,10 @@ class ProductProvider with ChangeNotifier {
   List<BannerModel> get banners => _banners;
   List<Product> get featuredProducts => _featuredProducts;
   List<Product> get newArrivals => _newArrivals;
+
+  /// منتجات العروض والتخفيضات (عبر خيار العرض displayOptions.offers)
+  List<Product> get offerProducts =>
+      products.where((p) => p.isSpecialOffer).toList();
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   bool get hasMore => _hasMore;
