@@ -9,6 +9,7 @@ import 'catalog/catalog_screen.dart';
 import 'cart/cart_screen.dart';
 import 'profile/profile_screen.dart';
 import 'live/live_screen.dart';
+import 'reels/reels_screen.dart';
 
 /// الشاشة الرئيسية — تبويبات ديناميكية من Firestore
 class MainShell extends StatefulWidget {
@@ -27,6 +28,7 @@ class _MainShellState extends State<MainShell> {
     'home': HomeScreen(),
     'category': CatalogScreen(),
     'live': LiveScreen(),
+    'reels': ReelsScreen(),
     'cart': CartScreen(),
     'profile': ProfileScreen(),
   };
@@ -52,6 +54,7 @@ class _MainShellState extends State<MainShell> {
     'home': Icons.home,
     'category': Icons.grid_view,
     'live': Icons.live_tv,
+    'reels': Icons.play_circle_fill,
     'cart': Icons.shopping_cart,
     'profile': Icons.person,
   };
@@ -182,6 +185,7 @@ class _MainShellState extends State<MainShell> {
       'home': 'الرئيسية',
       'category': 'الفئات',
       'live': 'المجتمع',
+      'reels': 'اكتشف',
       'cart': 'السلة',
       'profile': 'حسابي',
     };

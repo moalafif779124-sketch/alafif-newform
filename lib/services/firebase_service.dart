@@ -9,6 +9,7 @@ import 'dart:io' as io;
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../config/constants.dart';
+import '../models/product.dart';
 
 /// خدمة Firebase المركزية
 class FirebaseService {
@@ -830,6 +831,29 @@ class FirebaseService {
       await firestore.collection('users').doc(userId).collection('points_history').add(data);
     } catch (e) {
       debugPrint('⚠️ Failed to add points history: $e');
+    }
+  }
+
+  // =================== ريلز/اكتشف (منتجات الفيديو) ===================
+
+  /// جلب المنتجات التي تحتوي فيديو (تبويب اكتشف)
+  /// بدون orderBy لتجنب الحاجة إلى فهرس مركب — الفلترة في Dart
+  Future<List<Product>> getReelsProducts() async {
+    try {
+      final snapshot = await firestore
+          .collection('products')
+          .where('isActive', isEqualTo: true)
+          .get();
+      final products = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return Product.fromMap(data);
+      }).toList();
+      // فقط المنتجات التي لديها رابط فيديو فعلي
+      return products.where((p) => p.videoUrl.trim().isNotEmpty).toList();
+    } catch (e) {
+      debugPrint('⚠️ getReelsProducts error: $e');
+      return [];
     }
   }
 
