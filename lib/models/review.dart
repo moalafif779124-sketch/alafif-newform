@@ -7,7 +7,8 @@ class Review {
   final double rating;
   final String comment;
   final String fitFeedback; // "مناسب تماماً" / "صغير" / "كبير"
-  final String photoBase64; // صورة اختيارية (مضغوطة)
+  final String photoBase64; // صورة اختيارية قديمة (مضغوطة base64) — للتوافق
+  final List<String> imageUrls; // روابط صور المراجعة (Firebase Storage)
   final DateTime createdAt;
 
   Review({
@@ -19,6 +20,7 @@ class Review {
     required this.comment,
     this.fitFeedback = '',
     this.photoBase64 = '',
+    this.imageUrls = const [],
     required this.createdAt,
   });
 
@@ -32,6 +34,10 @@ class Review {
       comment: map['comment'] ?? '',
       fitFeedback: map['fitFeedback'] ?? '',
       photoBase64: map['photoBase64'] ?? '',
+      imageUrls: (map['imageUrls'] as List<dynamic>?)
+              ?.whereType<String>()
+              .toList() ??
+          const [],
       createdAt: map['createdAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
           : DateTime.now(),
@@ -48,6 +54,7 @@ class Review {
       'comment': comment,
       'fitFeedback': fitFeedback,
       'photoBase64': photoBase64,
+      'imageUrls': imageUrls,
       'createdAt': createdAt.millisecondsSinceEpoch,
     };
   }

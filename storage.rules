@@ -1,21 +1,25 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // المنتجات - يمكن للجميع قراءة الصور
-    // فقط المدير يمكنه رفع/حذف الصور
+    // products - public read; write allowed (OTP admin has no Firebase Auth session)
     match /products/{fileName} {
       allow read: if true;
       allow write: if true;
     }
-    
-    // المستخدمين - يمكن للجميع قراءة الصور الشخصية
-    // فقط صاحب الحساب أو المدير يمكنه رفع الصور
+
+    // users - public read; write allowed
     match /users/{userId}/{fileName} {
       allow read: if true;
       allow write: if true;
     }
-    
-    // باقي الملفات - فقط المدير
+
+    // reviews - public read; write allowed (OTP customers upload review photos)
+    match /reviews/{productId}/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // everything else - read only
     match /{allPaths=**} {
       allow read: if true;
       allow write: if false;

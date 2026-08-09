@@ -38,7 +38,8 @@ class ReviewProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// إضافة مراجعة جديدة — مع ملاءمة المقاس وصورة اختيارية
+  /// إضافة مراجعة جديدة — مع ملاءمة المقاس وصور اختيارية
+  /// [imageFilePaths] — مسارات ملفات الصور المحلية (تُرفع إلى Firebase Storage)
   Future<bool> addReview({
     required String productId,
     required String userId,
@@ -47,11 +48,22 @@ class ReviewProvider with ChangeNotifier {
     required String comment,
     String fitFeedback = '',
     String photoBase64 = '',
+    List<String> imageFilePaths = const [],
   }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
+      // رفع الصور إلى Firebase Storage والحصول على روابط التحميل
+      List<String> imageUrls = const [];
+      if (imageFilePaths.isNotEmpty) {
+        imageUrls = await _firebaseService.uploadReviewImages(
+          productId: productId,
+          userId: userId,
+          filePaths: imageFilePaths,
+        );
+      }
+
       await _firebaseService.addReview({
         'productId': productId,
         'userId': userId,
@@ -60,6 +72,7 @@ class ReviewProvider with ChangeNotifier {
         'comment': comment,
         'fitFeedback': fitFeedback,
         'photoBase64': photoBase64,
+        'imageUrls': imageUrls,
         'createdAt': DateTime.now().millisecondsSinceEpoch,
       });
       _hasReviewed = true;

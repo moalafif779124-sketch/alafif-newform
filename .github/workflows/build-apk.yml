@@ -32,6 +32,9 @@ jobs:
       - name: Install deps
         run: flutter pub get
 
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
       - name: Decode keystore
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > android/app/keystore.p12
@@ -81,10 +84,10 @@ jobs:
           echo "Build complete!"
           ls -lh build/app/outputs/flutter-apk/
 
-      - name: Deploy Firestore rules
+      - name: Deploy Firestore + Storage rules
         uses: w9jds/firebase-action@v15.23.0
         with:
-          args: deploy --only firestore:rules,firestore:indexes --project alafif-newform
+          args: deploy --only firestore:rules,firestore:indexes,storage:rules --project alafif-newform
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 

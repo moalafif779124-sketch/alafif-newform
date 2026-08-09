@@ -449,6 +449,44 @@ class FirebaseService {
     }
   }
 
+  /// رفع صور مراجعة المنتج إلى Firebase Storage
+  /// المسار: reviews/{productId}/{userId}_{timestamp}_{index}.jpg
+  /// يعيد قائمة روابط التحميل الجاهزة للحفظ في حقل imageUrls
+  Future<List<String>> uploadReviewImages({
+    required String productId,
+    required String userId,
+    required List<String> filePaths,
+  }) async {
+    final urls = <String>[];
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    for (var i = 0; i < filePaths.length; i++) {
+      try {
+        final file = io.File(filePaths[i]);
+        if (!await file.exists()) {
+          debugPrint('⚠️ Review image not found: ${filePaths[i]}');
+          continue;
+        }
+        final ref = storage
+            .ref()
+            .child('reviews/$productId/${userId}_${timestamp}_$i.jpg');
+        await ref.putFile(
+          file,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        urls.add(await ref.getDownloadURL());
+      } catch (e) {
+        debugPrint('⚠️ Review image upload failed ($i): $e');
+      }
+    }
+
+    // فشل رفع كل الصور — أبلغ المتصل ليعرض الخطأ بدلاً من حفظ تقييم بلا صور
+    if (urls.isEmpty && filePaths.isNotEmpty) {
+      throw Exception('فشل رفع صور المراجعة');
+    }
+    return urls;
+  }
+
   // =================== إدارة المنتجات (Admin) ===================
 
   /// إضافة منتج جديد

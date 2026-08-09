@@ -1044,7 +1044,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
 
                 // ===== معرض صور العملاء =====
-                if (reviewProvider.reviews.any((r) => r.photoBase64.isNotEmpty)) ...[
+                if (reviewProvider.reviews
+                    .any((r) => _reviewPhotoUrls(r).isNotEmpty)) ...[
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 84,
@@ -1052,21 +1053,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       scrollDirection: Axis.horizontal,
                       addAutomaticKeepAlives: false,
                       addRepaintBoundaries: true,
-                      itemCount: reviewProvider.reviews
-                          .where((r) => r.photoBase64.isNotEmpty)
-                          .length,
+                      itemCount:
+                          _allReviewPhotos(reviewProvider.reviews).length,
                       separatorBuilder: (_, __) => const SizedBox(width: 8),
                       itemBuilder: (context, index) {
-                        final photos = reviewProvider.reviews
-                            .where((r) => r.photoBase64.isNotEmpty)
-                            .toList();
+                        final allPhotos =
+                            _allReviewPhotos(reviewProvider.reviews);
                         return GestureDetector(
-                          onTap: () => _showPhotoFullscreen(
-                              photos[index].photoBase64),
+                          onTap: () => _showPhotoFullscreen(allPhotos[index]),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: AppImage(
-                              imageUrl: photos[index].photoBase64,
+                              imageUrl: allPhotos[index],
                               width: 84,
                               height: 84,
                               fit: BoxFit.cover,
@@ -1105,6 +1103,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
       ],
     );
+  }
+
+  /// روابط صور المراجعة: imageUrls (الجديدة) أو photoBase64 (القديمة) للتوافق
+  List<String> _reviewPhotoUrls(Review review) {
+    if (review.imageUrls.isNotEmpty) return review.imageUrls;
+    if (review.photoBase64.isNotEmpty) return [review.photoBase64];
+    return const [];
+  }
+
+  /// قائمة مسطّحة بكل صور المراجعات (لمعرض صور العملاء)
+  List<String> _allReviewPhotos(List<Review> reviews) {
+    final photos = <String>[];
+    for (final r in reviews) {
+      photos.addAll(_reviewPhotoUrls(r));
+    }
+    return photos;
   }
 
   /// عنصر تقييم واحد
@@ -1187,20 +1201,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
         ],
-        // ===== صورة مرفقة =====
-        if (review.photoBase64.isNotEmpty) ...[
+        // ===== صور مرفقة (قابلة للنقر) =====
+        if (_reviewPhotoUrls(review).isNotEmpty) ...[
           const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () => _showPhotoFullscreen(review.photoBase64),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: AppImage(
-                imageUrl: review.photoBase64,
-                width: 120,
-                height: 120,
-                fit: BoxFit.cover,
-                cacheWidth: 240,
-              ),
+          SizedBox(
+            height: 88,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _reviewPhotoUrls(review).length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final urls = _reviewPhotoUrls(review);
+                return GestureDetector(
+                  onTap: () => _showPhotoFullscreen(urls[index]),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: AppImage(
+                      imageUrl: urls[index],
+                      width: 88,
+                      height: 88,
+                      fit: BoxFit.cover,
+                      cacheWidth: 176,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -1281,8 +1306,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  /// عرض الصورة المرفقة بالمراجعة بملء الشاشة
-  void _showPhotoFullscreen(String photoBase64) {
+  /// عرض الصورة المرفقة بالمراجعة بملء الشاشة (رابط Storage أو base64 قديم)
+  void _showPhotoFullscreen(String imageUrl) {
     showDialog(
       context: context,
       builder: (dialogContext) => Directionality(
@@ -1294,7 +1319,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: SizedBox(
               width: double.infinity,
               child: AppImage(
-                imageUrl: photoBase64,
+                imageUrl: imageUrl,
                 fit: BoxFit.contain,
                 cacheWidth: 800,
               ),

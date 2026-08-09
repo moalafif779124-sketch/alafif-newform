@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/review_provider.dart';
-import '../../widgets/app_image.dart';
 import '../auth/login_screen.dart';
 
 /// شاشة إضافة تقييم للمنتج
@@ -35,8 +34,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
   static const List<String> _fitOptions = ['مناسب تماماً', 'صغير', 'كبير'];
   String _fitFeedback = '';
 
-  // ===== الصورة المرفقة =====
-  String _photoBase64 = '';
+  // ===== الصور المرفقة =====
+  static const int _maxImages = 5;
+  final List<XFile> _selectedImages = [];
 
   @override
   void dispose() {
@@ -44,21 +44,45 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
     super.dispose();
   }
 
-  /// اختيار صورة من المعرض وضغطها (800x800، جودة 75%)
-  Future<void> _pickPhoto() async {
+  /// اختيار صور متعددة من المعرض (حتى 5 صور، مضغوطة 1080px)
+  Future<void> _pickPhotos() async {
     try {
-      final XFile? picked = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 75,
+      if (_selectedImages.length >= _maxImages) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('يمكن إرفاق حتى 5 صور فقط'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+      final picked = await _picker.pickMultiImage(
+        maxWidth: 1080,
+        maxHeight: 1080,
+        imageQuality: 80,
       );
-      if (picked == null) return;
-      final bytes = await picked.readAsBytes();
-      setState(() => _photoBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}');
+      if (picked.isEmpty) return;
+      final remaining = _maxImages - _selectedImages.length;
+      setState(() {
+        _selectedImages.addAll(picked.take(remaining));
+      });
+      if (picked.length > remaining) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('يمكن إرفاق حتى 5 صور فقط'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
     } catch (e) {
-      debugPrint('⚠️ Photo pick error: $e');
+      debugPrint('⚠️ Photos pick error: $e');
     }
+  }
+
+  void _removeImage(int index) {
+    setState(() => _selectedImages.removeAt(index));
   }
 
   Future<void> _submitReview() async {
@@ -91,7 +115,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
       rating: _rating,
       comment: _commentController.text.trim(),
       fitFeedback: _fitFeedback,
-      photoBase64: _photoBase64,
+      imageFilePaths: _selectedImages.map((f) => f.path).toList(),
     );
 
     setState(() => _isSubmitting = false);
@@ -239,63 +263,101 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
 
               const SizedBox(height: 20),
 
-              // ===== صورة اختيارية =====
-              GestureDetector(
-                onTap: _pickPhoto,
-                child: Container(
-                  height: 120,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
+              // ===== صور مرفقة (متعددة) =====
+              if (_selectedImages.isEmpty)
+                GestureDetector(
+                  onTap: _pickPhotos,
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_photo_alternate_outlined,
+                            size: 30, color: AppColors.textSecondary),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'إرفاق صور (اختياري)',
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: _photoBase64.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              AppImage(
-                                imageUrl: _photoBase64,
-                                fit: BoxFit.cover,
-                                cacheWidth: 300,
-                              ),
-                              Positioned(
-                                top: 6,
-                                right: 6,
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _photoBase64 = ''),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black54,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.close,
-                                        color: Colors.white, size: 14),
-                                  ),
+                )
+              else
+                SizedBox(
+                  height: 100,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedImages.length + 1,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      // زر إضافة المزيد
+                      if (index == _selectedImages.length) {
+                        return GestureDetector(
+                          onTap: _pickPhotos,
+                          child: Container(
+                            width: 84,
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: const Icon(Icons.add_a_photo_outlined,
+                                color: AppColors.textSecondary),
+                          ),
+                        );
+                      }
+                      // معاينة الصورة مع زر إزالة
+                      return Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.file(
+                              io.File(_selectedImages[index].path),
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              cacheWidth: 200,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 100,
+                                height: 100,
+                                color:
+                                    AppColors.border.withValues(alpha: 0.3),
+                                child: const Icon(
+                                  Icons.broken_image_outlined,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
-                            ],
-                          ),
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_a_photo_outlined,
-                                size: 30, color: AppColors.textSecondary),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'إرفاق صورة (اختياري)',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary),
                             ),
-                          ],
-                        ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () => _removeImage(index),
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close,
+                                    color: Colors.white, size: 13),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
 
               const SizedBox(height: 32),
 
