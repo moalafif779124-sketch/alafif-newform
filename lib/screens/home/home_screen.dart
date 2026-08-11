@@ -745,14 +745,18 @@ class _HomeScreenState extends State<HomeScreen>
 
   /// شبكة 2x2 لأفضل الفئات من Firestore
   Widget _buildBentoGrid(ProductProvider provider) {
+    // عدد المنتجات الفعلي لكل فئة — محسوب من المنتجات المحمّلة (دقيق وحي)
+    final products = provider.products;
     final cats = provider.categories
         .where((c) => c.isActive)
         .toList()
-      ..sort((a, b) => b.productCount.compareTo(a.productCount));
+      ..sort((a, b) {
+        final ca = products.where((p) => p.categoryId == a.id).length;
+        final cb = products.where((p) => p.categoryId == b.id).length;
+        return cb.compareTo(ca);
+      });
     if (cats.isEmpty) return const SizedBox.shrink();
     final tiles = cats.take(4).toList();
-    // عدد المنتجات الفعلي لكل فئة — محسوب من المنتجات المحمّلة (دقيق وحي)
-    final products = provider.products;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
