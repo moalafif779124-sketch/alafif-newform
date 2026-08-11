@@ -16,8 +16,22 @@ class AppColors {
   static const Color accentLight = Color(0xFFE8E8E8);
   static const Color accentDark = Color(0xFF8A8A8A);
 
+  // =========== باقة ألوان أمازون (Amazon Palette) ===========
+  /// خلفية التطبيق الداكنة (Amazon dark)
+  static const Color amazonDark = Color(0xFF131921);
+  /// رأس الصفحة — الأزرق الكحلي الداكن (Amazon header)
+  static const Color amazonNavy = Color(0xFF232F3E);
+  /// أزرق متوسط للتدرجات (Amazon teal)
+  static const Color amazonTeal = Color(0xFF37475A);
+  /// برتقالي أمازون للعبارات والعروض
+  static const Color amazonOrange = Color(0xFFFF9900);
+  /// أصفر أمازون لأزرار الإضافة
+  static const Color amazonYellow = Color(0xFFFEBD69);
+  /// خلفية الصفحة الفاتحة (Amazon grey)
+  static const Color amazonBg = Color(0xFFEAEDED);
+
   // =========== ألوان الخلفية ===========
-  static const Color background = Color(0xFFF5F5F5);
+  static const Color background = Color(0xFFEAEDED);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color cardBackground = Color(0xFFFFFFFF);
 
@@ -43,10 +57,25 @@ class AppColors {
   static const Color rating = Color(0xFFF59E0B);
 
   // =========== ألوان الخلفيات المتدرجة ===========
+  /// تدرج رأس الصفحة — أزرق أمازون
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primary, primaryLight],
+    colors: [amazonNavy, amazonTeal],
+  );
+
+  /// تدرج زر الإضافة — أصفر أمازون
+  static const LinearGradient amazonYellowGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [amazonYellow, amazonOrange],
+  );
+
+  /// تدرج صفقة اليوم — برتقالي أمازون
+  static const LinearGradient amazonOrangeGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [amazonOrange, Color(0xFFE8890C)],
   );
 
   static const LinearGradient accentGradient = LinearGradient(

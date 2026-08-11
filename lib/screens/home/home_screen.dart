@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
+import '../../models/category.dart';
 import '../../models/banner.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/points_provider.dart';
@@ -111,6 +112,12 @@ class _HomeScreenState extends State<HomeScreen>
                   // =========== 2. الفئات السريعة ===========
                   _buildQuickCategories(),
 
+                  // =========== 2.5 صفقة اليوم ===========
+                  _buildDealOfDay(provider),
+
+                  // =========== 2.6 شبكة الفئات (Bento 2x2) ===========
+                  _buildBentoGrid(provider),
+
                   // =========== 3. الفلاش سيل ===========
                   _buildFlashSale(provider),
 
@@ -159,6 +166,17 @@ class _HomeScreenState extends State<HomeScreen>
               // صف الأيقونات العلوي
               Row(
                 children: [
+                  // الشعار — أسلوب أمازون
+                  const Text(
+                    'العفيف نيوفورم',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'NotoKufiArabic',
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   // النقاط
                   if (points.isLoading == false)
                     GestureDetector(
@@ -253,10 +271,42 @@ class _HomeScreenState extends State<HomeScreen>
                   },
                 ),
               ),
+              const SizedBox(height: 10),
+              // شريط الموقع — التوصيل إلى [المستخدم]
+              _buildLocationBar(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// شريط الموقع — يعرض اسم المستخدم أو عنوانه من Firestore مباشرة
+  Widget _buildLocationBar() {
+    final auth = context.read<AuthProvider>();
+    final name = auth.user?.fullName?.trim();
+    final address = auth.user?.address?.trim();
+    final label = (name != null && name.isNotEmpty)
+        ? name
+        : (address != null && address.isNotEmpty ? address : 'موقعك');
+    return Row(
+      children: [
+        const Icon(Icons.location_on_outlined, color: Colors.white, size: 15),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            'التوصيل إلى $label 📍',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 16),
+      ],
     );
   }
 
@@ -465,14 +515,14 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildQuickCategories() {
     return SizedBox(
-      height: 80,
+      height: 56,
       child: ListView.separated(
         addAutomaticKeepAlives: false,
         addRepaintBoundaries: true,
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         itemCount: _quickCategories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 4),
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (context, index) {
           final cat = _quickCategories[index];
           return GestureDetector(
@@ -505,30 +555,309 @@ class _HomeScreenState extends State<HomeScreen>
                 );
               }
             },
-            child: Column(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
                   ),
-                  child: Icon(cat['icon'], color: AppColors.primary, size: 22),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  cat['label'],
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w500,
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(cat['icon'], color: AppColors.amazonOrange, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    cat['label'],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ======================== صفقة اليوم (Deal of the Day) ========================
+
+  /// بانر صفقة اليوم — أعلى منتج مخفّض مع عداد تنازلي
+  Widget _buildDealOfDay(ProductProvider provider) {
+    final deals = provider.products.where((p) => p.hasDiscount).toList()
+      ..sort((a, b) => b.discountPercentage.compareTo(a.discountPercentage));
+    if (deals.isEmpty) return const SizedBox.shrink();
+    final deal = deals.first;
+
+    final hours = _flashTimeRemaining.inHours;
+    final minutes = _flashTimeRemaining.inMinutes.remainder(60);
+    final seconds = _flashTimeRemaining.inSeconds.remainder(60);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.amazonOrangeGradient,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            // صورة المنتج
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: AppImage(
+                imageUrl: deal.images.isNotEmpty ? deal.images.first : '',
+                width: 90,
+                height: 112,
+                fit: BoxFit.cover,
+                backgroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'صفقة اليوم 🔥',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    deal.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        '${deal.price.toStringAsFixed(0)} ${AppConstants.currency}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (deal.hasOldPrice) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '${deal.oldPrice!.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      Text(
+                        '-${deal.discountPercentage}%',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // عداد تنازلي
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'ينتهي خلال ',
+                          style: TextStyle(color: Colors.white, fontSize: 10),
+                        ),
+                        _buildTimeUnit(hours.toString().padLeft(2, '0'), 'س'),
+                        const SizedBox(width: 4),
+                        _buildTimeUnit(minutes.toString().padLeft(2, '0'), 'د'),
+                        const SizedBox(width: 4),
+                        _buildTimeUnit(seconds.toString().padLeft(2, '0'), 'ث'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 34,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailScreen(product: deal),
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.amazonDark,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      child: const Text('تسوق الآن'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ======================== شبكة الفئات (Bento 2x2) ========================
+
+  /// شبكة 2x2 لأفضل الفئات من Firestore
+  Widget _buildBentoGrid(ProductProvider provider) {
+    final cats = provider.categories
+        .where((c) => c.isActive)
+        .toList()
+      ..sort((a, b) => b.productCount.compareTo(a.productCount));
+    if (cats.isEmpty) return const SizedBox.shrink();
+    final tiles = cats.take(4).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'تسوق حسب الفئة',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CatalogScreen()),
+                ),
+                child: const Text('عرض الكل', style: TextStyle(fontSize: 13)),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.35,
+            children: tiles.map(_buildBentoTile).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// بلاطة فئة داخل الشبكة — صورة + اسم + عدد المنتجات
+  Widget _buildBentoTile(Category cat) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CatalogScreen(initialCategoryId: cat.id),
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: cat.imageUrl != null && cat.imageUrl!.isNotEmpty
+                    ? AppImage(
+                        imageUrl: cat.imageUrl!,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        width: double.infinity,
+                        color: AppColors.accentLight,
+                        child: const Icon(
+                          Icons.category_outlined,
+                          color: AppColors.amazonOrange,
+                          size: 32,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              cat.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Text(
+              '${cat.productCount} منتج',
+              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
       ),
     );
   }

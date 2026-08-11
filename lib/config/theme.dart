@@ -27,7 +27,7 @@ class AppTheme {
 
       // =========== شريط التطبيق ===========
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.amazonNavy,
         foregroundColor: AppColors.textOnPrimary,
         centerTitle: true,
         elevation: 0,
@@ -45,7 +45,7 @@ class AppTheme {
       // =========== الأزرار ===========
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.amazonNavy,
           foregroundColor: AppColors.textOnPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -219,7 +219,7 @@ class AppTheme {
 
       // =========== شريط التطبيق ===========
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF0A0A1A),
+        backgroundColor: AppColors.amazonDark,
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,

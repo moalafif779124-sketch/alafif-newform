@@ -86,6 +86,26 @@ class ProductCard extends StatelessWidget {
                         child: const Text('جديد', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                       ),
                     ),
+                  // شارة EXPRESS — للمنتجات ذات المخزون الجاهز الكبير
+                  if (product.stockQuantity >= 20)
+                    Positioned(
+                      top: 40, left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.amazonOrange,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.bolt, size: 11, color: Colors.white),
+                            SizedBox(width: 2),
+                            Text('EXPRESS', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          ],
+                        ),
+                      ),
+                    ),
                   // شارة المخزون المحدود
                   if (product.stockQuantity > 0 && product.stockQuantity < 5)
                     Positioned(
@@ -167,13 +187,23 @@ class ProductCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  // التقييم
+                  // التقييم — نجوم بأسلوب أمازون
                   Row(
                     children: [
-                      Icon(Icons.star, size: 12, color: AppColors.rating),
-                      const SizedBox(width: 3),
-                      Text('${product.rating.toStringAsFixed(1)}',
-                          style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                      for (var i = 1; i <= 5; i++)
+                        Icon(
+                          i <= product.rating.round()
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          size: 13,
+                          color: i <= product.rating.round()
+                              ? AppColors.rating
+                              : AppColors.accent,
+                        ),
+                      const SizedBox(width: 4),
+                      if (product.rating > 0)
+                        Text('${product.rating.toStringAsFixed(1)}',
+                            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                       if (product.reviewCount > 0)
                         Text(' (${product.reviewCount})',
                             style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
@@ -213,7 +243,7 @@ class ProductCard extends StatelessWidget {
                         }).toList(),
                       ),
                     ),
-                  // السعر + زر الإضافة
+                  // السعر
                   Row(
                     children: [
                       Expanded(
@@ -238,41 +268,62 @@ class ProductCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // زر الإضافة السريعة
-                      Consumer<CartProvider>(
-                        builder: (context, cart, _) {
-                          final inCart = cart.items.any((i) => i.product.id == product.id);
-                          return GestureDetector(
-                            onTap: inCart
-                                ? null
-                                : () {
-                                    cart.addItem(CartItem(
-                                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                                      product: product,
-                                      size: product.sizes.isNotEmpty ? product.sizes.first : '',
-                                      color: '',
-                                      quantity: 1,
-                                    ));
-                                  },
-                            child: Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: inCart
-                                    ? AppColors.success.withValues(alpha: 0.1)
-                                    : AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                inCart ? Icons.check : Icons.add_shopping_cart,
-                                size: 16,
-                                color: inCart ? AppColors.success : AppColors.primary,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  // زر الإضافة — أصفر أمازون بتدرج
+                  Consumer<CartProvider>(
+                    builder: (context, cart, _) {
+                      final inCart = cart.items.any((i) => i.product.id == product.id);
+                      return GestureDetector(
+                        onTap: inCart
+                            ? null
+                            : () {
+                                cart.addItem(CartItem(
+                                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                  product: product,
+                                  size: product.sizes.isNotEmpty ? product.sizes.first : '',
+                                  color: '',
+                                  quantity: 1,
+                                ));
+                              },
+                        child: Container(
+                          height: compact ? 32 : 38,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            gradient: inCart ? null : AppColors.amazonYellowGradient,
+                            color: inCart
+                                ? AppColors.success.withValues(alpha: 0.08)
+                                : null,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: inCart
+                                  ? AppColors.success.withValues(alpha: 0.4)
+                                  : const Color(0xFFE08E0B),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                inCart ? Icons.check_circle : Icons.add_shopping_cart,
+                                size: compact ? 14 : 16,
+                                color: inCart ? AppColors.success : AppColors.amazonDark,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                inCart ? 'أضيف للسلة' : 'إضافة للسلة',
+                                style: TextStyle(
+                                  fontSize: compact ? 11 : 12.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: inCart ? AppColors.success : AppColors.amazonDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
