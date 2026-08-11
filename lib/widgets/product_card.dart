@@ -174,158 +174,163 @@ class ProductCard extends StatelessWidget {
               ),
             ),
             // =========== التفاصيل ===========
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // الاسم
-                  Text(
-                    product.name,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  // التقييم — نجوم بأسلوب أمازون
-                  Row(
-                    children: [
-                      for (var i = 1; i <= 5; i++)
-                        Icon(
-                          i <= product.rating.round()
-                              ? Icons.star_rounded
-                              : Icons.star_outline_rounded,
-                          size: 13,
-                          color: i <= product.rating.round()
-                              ? AppColors.rating
-                              : AppColors.accent,
-                        ),
-                      const SizedBox(width: 4),
-                      if (product.rating > 0)
-                        Text('${product.rating.toStringAsFixed(1)}',
-                            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                      if (product.reviewCount > 0)
-                        Text(' (${product.reviewCount})',
-                            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                      const Spacer(),
-                      // شارة الأكثر مبيعاً
-                      if (product.reviewCount > 20)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: AppColors.warning.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text('الأكثر مبيعاً',
-                              style: TextStyle(fontSize: 8, color: AppColors.warning, fontWeight: FontWeight.bold)),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  // ألوان المنتج (نقاط)
-                  if (product.colorOptions.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: product.colorOptions.take(4).map((c) {
-                          final hex = c['hex'] ?? '#000000';
-                          final color = Color(int.parse(hex.replaceFirst('#', '0xFF')));
-                          return Container(
-                            width: 12,
-                            height: 12,
-                            margin: const EdgeInsets.only(right: 3),
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade300, width: 1),
-                            ),
-                          );
-                        }).toList(),
-                      ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // الاسم
+                    Text(
+                      product.name,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  // السعر
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${product.price.toStringAsFixed(0)} ${AppConstants.currency}',
-                              style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary,
-                              ),
+                    const SizedBox(height: 4),
+                    // التقييم — نجوم بأسلوب أمازون
+                    Row(
+                      children: [
+                        for (var i = 1; i <= 5; i++)
+                          Icon(
+                            i <= product.rating.round()
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 13,
+                            color: i <= product.rating.round()
+                                ? AppColors.rating
+                                : AppColors.accent,
+                          ),
+                        const SizedBox(width: 4),
+                        if (product.rating > 0)
+                          Text('${product.rating.toStringAsFixed(1)}',
+                              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                        if (product.reviewCount > 0)
+                          Text(' (${product.reviewCount})',
+                              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                        const Spacer(),
+                        // شارة الأكثر مبيعاً
+                        if (product.reviewCount > 20)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                            if (product.hasOldPrice)
-                              Text(
-                                '${product.oldPrice!.toStringAsFixed(0)} ${AppConstants.currency}',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  decoration: TextDecoration.lineThrough,
-                                  color: AppColors.textSecondary,
-                                ),
+                            child: const Text('الأكثر مبيعاً',
+                                style: TextStyle(fontSize: 8, color: AppColors.warning, fontWeight: FontWeight.bold)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // ألوان المنتج (نقاط)
+                    if (product.colorOptions.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: product.colorOptions.take(4).map((c) {
+                            final hex = c['hex'] ?? '#000000';
+                            final color = Color(int.parse(hex.replaceFirst('#', '0xFF')));
+                            return Container(
+                              width: 12,
+                              height: 12,
+                              margin: const EdgeInsets.only(right: 3),
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.grey.shade300, width: 1),
                               ),
-                          ],
+                            );
+                          }).toList(),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // زر الإضافة — أصفر أمازون بتدرج
-                  Consumer<CartProvider>(
-                    builder: (context, cart, _) {
-                      final inCart = cart.items.any((i) => i.product.id == product.id);
-                      return GestureDetector(
-                        onTap: inCart
-                            ? null
-                            : () {
-                                cart.addItem(CartItem(
-                                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                                  product: product,
-                                  size: product.sizes.isNotEmpty ? product.sizes.first : '',
-                                  color: '',
-                                  quantity: 1,
-                                ));
-                              },
-                        child: Container(
-                          height: compact ? 32 : 38,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            gradient: inCart ? null : AppColors.amazonYellowGradient,
-                            color: inCart
-                                ? AppColors.success.withValues(alpha: 0.08)
-                                : null,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: inCart
-                                  ? AppColors.success.withValues(alpha: 0.4)
-                                  : const Color(0xFFE08E0B),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                    // السعر
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                inCart ? Icons.check_circle : Icons.add_shopping_cart,
-                                size: compact ? 14 : 16,
-                                color: inCart ? AppColors.success : AppColors.amazonDark,
-                              ),
-                              const SizedBox(width: 5),
                               Text(
-                                inCart ? 'أضيف للسلة' : 'إضافة للسلة',
-                                style: TextStyle(
-                                  fontSize: compact ? 11 : 12.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: inCart ? AppColors.success : AppColors.amazonDark,
+                                '${product.price.toStringAsFixed(0)} ${AppConstants.currency}',
+                                style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary,
                                 ),
                               ),
+                              if (product.hasOldPrice)
+                                Text(
+                                  '${product.oldPrice!.toStringAsFixed(0)} ${AppConstants.currency}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    decoration: TextDecoration.lineThrough,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                      ],
+                    ),
+                    // يدفع زر الإضافة لأسفل البطاقة
+                    const Spacer(),
+                    const SizedBox(height: 4),
+                    // زر الإضافة — أصفر أمازون بتدرج
+                    Consumer<CartProvider>(
+                      builder: (context, cart, _) {
+                        final inCart = cart.items.any((i) => i.product.id == product.id);
+                        return GestureDetector(
+                          onTap: inCart
+                              ? null
+                              : () {
+                                  cart.addItem(CartItem(
+                                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                    product: product,
+                                    size: product.sizes.isNotEmpty ? product.sizes.first : '',
+                                    color: '',
+                                    quantity: 1,
+                                  ));
+                                },
+                          child: Container(
+                            height: compact ? 32 : 38,
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              gradient: inCart ? null : AppColors.amazonYellowGradient,
+                              color: inCart
+                                  ? AppColors.success.withValues(alpha: 0.08)
+                                  : null,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: inCart
+                                    ? AppColors.success.withValues(alpha: 0.4)
+                                    : const Color(0xFFE08E0B),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  inCart ? Icons.check_circle : Icons.add_shopping_cart,
+                                  size: compact ? 14 : 16,
+                                  color: inCart ? AppColors.success : AppColors.amazonDark,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  inCart ? 'أضيف للسلة' : 'إضافة للسلة',
+                                  style: TextStyle(
+                                    fontSize: compact ? 11 : 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: inCart ? AppColors.success : AppColors.amazonDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

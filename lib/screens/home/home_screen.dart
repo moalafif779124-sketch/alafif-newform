@@ -284,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen>
   /// شريط الموقع — يعرض اسم المستخدم أو عنوانه من Firestore مباشرة
   Widget _buildLocationBar() {
     final auth = context.read<AuthProvider>();
-    final name = auth.user?.fullName?.trim();
+    final name = auth.user?.fullName.trim();
     final address = auth.user?.address?.trim();
     final label = (name != null && name.isNotEmpty)
         ? name
@@ -751,6 +751,8 @@ class _HomeScreenState extends State<HomeScreen>
       ..sort((a, b) => b.productCount.compareTo(a.productCount));
     if (cats.isEmpty) return const SizedBox.shrink();
     final tiles = cats.take(4).toList();
+    // عدد المنتجات الفعلي لكل فئة — محسوب من المنتجات المحمّلة (دقيق وحي)
+    final products = provider.products;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -787,7 +789,12 @@ class _HomeScreenState extends State<HomeScreen>
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
             childAspectRatio: 1.35,
-            children: tiles.map(_buildBentoTile).toList(),
+            children: [
+              for (final cat in tiles)
+                _buildBentoTile(cat, products
+                    .where((p) => p.categoryId == cat.id)
+                    .length),
+            ],
           ),
         ),
       ],
@@ -795,7 +802,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   /// بلاطة فئة داخل الشبكة — صورة + اسم + عدد المنتجات
-  Widget _buildBentoTile(Category cat) {
+  Widget _buildBentoTile(Category cat, int productCount) {
+    final hasImage = cat.imageUrl != null && cat.imageUrl!.isNotEmpty;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -823,7 +831,7 @@ class _HomeScreenState extends State<HomeScreen>
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: cat.imageUrl != null && cat.imageUrl!.isNotEmpty
+                child: hasImage
                     ? AppImage(
                         imageUrl: cat.imageUrl!,
                         width: double.infinity,
@@ -832,11 +840,15 @@ class _HomeScreenState extends State<HomeScreen>
                       )
                     : Container(
                         width: double.infinity,
-                        color: AppColors.accentLight,
-                        child: const Icon(
-                          Icons.category_outlined,
-                          color: AppColors.amazonOrange,
-                          size: 32,
+                        decoration: BoxDecoration(
+                          gradient: _categoryGradient(cat.id),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            _categoryIcon(cat.icon),
+                            color: Colors.white,
+                            size: 34,
+                          ),
                         ),
                       ),
               ),
@@ -852,13 +864,64 @@ class _HomeScreenState extends State<HomeScreen>
                 color: AppColors.textPrimary,
               ),
             ),
-            Text(
-              '${cat.productCount} منتج',
-              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
-            ),
+            if (productCount > 0)
+              Text(
+                '$productCount منتج',
+                style: const TextStyle(
+                    fontSize: 10, color: AppColors.textSecondary),
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  /// أيقونة الفئة من حقل icon النصي
+  IconData _categoryIcon(String icon) {
+    switch (icon.toLowerCase()) {
+      case 'vest':
+      case 'mawaz':
+      case 'thobe':
+      case 'fanail':
+      case 'underwear':
+        return Icons.checkroom;
+      case 'pants':
+        return Icons.airline_seat_recline_normal;
+      case 'accessories':
+        return Icons.watch;
+      case 'belts':
+        return Icons.swap_horiz;
+      case 'bisht':
+        return Icons.man_2;
+      case 'jackets':
+      case 'pajamas':
+        return Icons.work;
+      case 'perfume':
+        return Icons.local_florist;
+      case 'shamzan':
+        return Icons.air;
+      case 'ghutra':
+      case 'shemagh':
+        return Icons.workspaces;
+      default:
+        return Icons.category_outlined;
+    }
+  }
+
+  /// تدرج لوني ثابت لكل فئة (بديل الصورة عند غيابها)
+  LinearGradient _categoryGradient(String catId) {
+    const gradients = [
+      [Color(0xFF232F3E), Color(0xFF37475A)],
+      [Color(0xFFFF9900), Color(0xFFE8890C)],
+      [Color(0xFF0D1B3E), Color(0xFF1A2D5E)],
+      [Color(0xFF10B981), Color(0xFF0E8F6D)],
+    ];
+    final idx = catId.hashCode.abs() % gradients.length;
+    final g = gradients[idx];
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [g[0], g[1]],
     );
   }
 
@@ -924,7 +987,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         // قائمة منتجات الفلاش سيل
         SizedBox(
-          height: 280,
+          height: 340,
           child: ListView.separated(
             addAutomaticKeepAlives: false,
             addRepaintBoundaries: true,
@@ -1160,7 +1223,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         SizedBox(
-          height: 280,
+          height: 340,
           child: ListView.separated(
             addAutomaticKeepAlives: false,
             addRepaintBoundaries: true,
@@ -1203,7 +1266,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         SizedBox(
-          height: 280,
+          height: 340,
           child: ListView.separated(
             addAutomaticKeepAlives: false,
             addRepaintBoundaries: true,
@@ -1253,7 +1316,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         SizedBox(
-          height: 280,
+          height: 340,
           child: ListView.separated(
             addAutomaticKeepAlives: false,
             addRepaintBoundaries: true,
