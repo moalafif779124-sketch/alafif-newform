@@ -15,6 +15,7 @@ import '../../providers/points_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/skeleton_widget.dart';
 import '../../widgets/app_image.dart';
+import '../../widgets/dynamic_multi_item_banner.dart';
 import '../../widgets/product_card.dart';
 import '../cart/cart_screen.dart';
 import '../catalog/product_detail_screen.dart';
@@ -1026,7 +1027,15 @@ class _HomeScreenState extends State<HomeScreen>
     // لا توجد بانرات حقيقية — بانرات ديناميكية من أول 10 منتجات (بديل تلقائي)
     final List<Widget> slides;
     if (banners.isNotEmpty) {
-      slides = banners.map((b) => _buildBannerItem(b)).toList();
+      slides = [
+        for (var i = 0; i < banners.length; i++)
+          DynamicMultiItemBanner(
+            banner: banners[i],
+            products: provider.products,
+            isActive: i == _bannerIndex,
+            onTap: () => _openBannerTarget(banners[i], provider),
+          ),
+      ];
     } else {
       final fallback = provider.products.take(10).toList();
       if (fallback.isEmpty) return const SizedBox.shrink();
@@ -1096,78 +1105,24 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildBannerItem(BannerModel banner) {
-    return Stack(
-      children: [
-        Container(
-          height: 220,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.primary, AppColors.primaryLight],
-            ),
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-          ),
-          child: banner.imageUrl.isNotEmpty
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: AppImage(
-                    imageUrl: banner.imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    backgroundColor: AppColors.primaryLight,
-                  ),
-                )
-              : null,
+  /// فتح وجهة البانر: منتج مرتبط أو فئة
+  void _openBannerTarget(BannerModel banner, ProductProvider provider) {
+    if (banner.productId != null) {
+      final p = provider.getProductById(banner.productId!);
+      if (p != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ProductDetailScreen(product: p)),
+        );
+      }
+    } else if (banner.categoryId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CatalogScreen(initialCategoryId: banner.categoryId),
         ),
-        Positioned(
-          right: 20, left: 20, top: 20,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(banner.title,
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(banner.subtitle,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
-            ],
-          ),
-        ),
-        Positioned(
-          bottom: 16, right: 20, left: 20,
-          child: ElevatedButton(
-            onPressed: () {
-              if (banner.productId != null) {
-                final p = context.read<ProductProvider>().getProductById(banner.productId!);
-                if (p != null) Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(product: p)));
-              } else if (banner.categoryId != null) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => CatalogScreen(initialCategoryId: banner.categoryId)));
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white, foregroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: Text(banner.buttonText, style: const TextStyle(fontFamily: 'NotoKufiArabic', fontSize: 13, fontWeight: FontWeight.bold)),
-          ),
-        ),
-        if (banner.imageUrl.isNotEmpty)
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.3)],
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+      );
+    }
   }
 
   Widget _buildDynamicBanner(Product product) {
