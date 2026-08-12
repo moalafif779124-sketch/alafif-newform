@@ -40,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen>
   final TextEditingController _searchController = TextEditingController();
   Timer? _flashTimer;
   Duration _flashTimeRemaining = const Duration(hours: 8, minutes: 45, seconds: 30);
+  int _bannerIndex = 0;
 
   @override
   void initState() {
@@ -1022,25 +1023,76 @@ class _HomeScreenState extends State<HomeScreen>
       );
     }
 
-    // لا توجد بانرات حقيقية — اترك المساحة فارغة (لا بينرات افتراضية)
-    if (banners.isEmpty) {
-      return const SizedBox.shrink();
+    // لا توجد بانرات حقيقية — بانرات ديناميكية من أول 10 منتجات (بديل تلقائي)
+    final List<Widget> slides;
+    if (banners.isNotEmpty) {
+      slides = banners.map((b) => _buildBannerItem(b)).toList();
+    } else {
+      final fallback = provider.products.take(10).toList();
+      if (fallback.isEmpty) return const SizedBox.shrink();
+      slides = fallback.map((p) => _buildDynamicBanner(p)).toList();
     }
 
-    // بانرات حقيقية من Firestore — اعرضها
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: CarouselSlider(
-        options: CarouselOptions(
-          height: 180,
-          autoPlay: true,
-          autoPlayInterval: const Duration(seconds: 4),
-          enlargeCenterPage: true,
-          enlargeFactor: 0.2,
-          viewportFraction: 0.9,
+    // حماية المؤشر بعد تغيّر عدد الشرائح
+    final safeIndex = _bannerIndex >= slides.length ? 0 : _bannerIndex;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              CarouselSlider(
+                options: CarouselOptions(
+                  height: 220,
+                  autoPlay: true,
+                  autoPlayInterval: const Duration(seconds: 4),
+                  autoPlayAnimationDuration: const Duration(milliseconds: 700),
+                  viewportFraction: 1.0,
+                  enableInfiniteScroll: slides.length > 1,
+                  onPageChanged: (index, _) {
+                    if (index != _bannerIndex) {
+                      setState(() => _bannerIndex = index);
+                    }
+                  },
+                ),
+                items: slides,
+              ),
+              // مؤشر النقاط — أسفل منتصف الكاروسيل
+              Positioned(
+                bottom: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 0; i < slides.length; i++)
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                          width: i == safeIndex ? 18 : 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: i == safeIndex
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        items: banners.map((b) => _buildBannerItem(b)).toList(),
-      ),
+        const SizedBox(height: 12),
+      ],
     );
   }
 
@@ -1048,7 +1100,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Stack(
       children: [
         Container(
-          height: 180,
+          height: 220,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -1124,7 +1176,7 @@ class _HomeScreenState extends State<HomeScreen>
       child: Stack(
         children: [
           Container(
-            height: 180,
+            height: 220,
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: AppColors.primaryLight),
             child: product.images.isNotEmpty
                 ? ClipRRect(

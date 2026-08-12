@@ -98,6 +98,30 @@ class AppImage extends StatelessWidget {
   // ===================== Network =====================
 
   Widget _buildNetwork(String url) {
+    // صور GIF المتحركة: Image.network الأصلي يدعم تشغيل الإطارات مباشرة،
+    // بينما CachedNetworkImage مع memCacheWidth يعرقل حركة الـ GIF (فك إطار واحد)
+    final isGif = url.toLowerCase().contains('.gif');
+    if (isGif) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Image.network(
+          url,
+          width: width,
+          height: height,
+          fit: fit,
+          gaplessPlayback: true,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return _buildPlaceholder();
+          },
+          errorBuilder: (context, error, stack) {
+            debugPrint('🧩 AppImage gif error: $error');
+            return _errorWidget();
+          },
+        ),
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: CachedNetworkImage(
