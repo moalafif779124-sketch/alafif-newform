@@ -115,8 +115,8 @@ class _HomeScreenState extends State<HomeScreen>
                   // =========== 2.5 صفقة اليوم ===========
                   _buildDealOfDay(provider),
 
-                  // =========== 2.6 شبكة الفئات (Bento 2x2) ===========
-                  _buildBentoGrid(provider),
+                  // =========== 2.6 الفئات (أفاتار دائرية مدمجة) ===========
+                  _buildCategoryRow(provider),
 
                   // =========== 3. الفلاش سيل ===========
                   _buildFlashSale(provider),
@@ -741,11 +741,10 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ======================== شبكة الفئات (Bento 2x2) ========================
+  // ======================== الفئات (شريط أفقي مدمج) ========================
 
-  /// شبكة 2x2 لأفضل الفئات من Firestore
-  Widget _buildBentoGrid(ProductProvider provider) {
-    // عدد المنتجات الفعلي لكل فئة — محسوب من المنتجات المحمّلة (دقيق وحي)
+  /// شريط أفقي مدمج للفئات — أفاتار دائري 64px + الاسم تحته
+  Widget _buildCategoryRow(ProductProvider provider) {
     final products = provider.products;
     final cats = provider.categories
         .where((c) => c.isActive)
@@ -756,7 +755,6 @@ class _HomeScreenState extends State<HomeScreen>
         return cb.compareTo(ca);
       });
     if (cats.isEmpty) return const SizedBox.shrink();
-    final tiles = cats.take(4).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -784,30 +782,41 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.35,
-            children: [
-              for (final cat in tiles)
-                _buildBentoTile(cat, products
-                    .where((p) => p.categoryId == cat.id)
-                    .length),
-            ],
+        SizedBox(
+          height: 92,
+          child: ListView.separated(
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: true,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: cats.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final cat = cats[index];
+              return _buildCategoryAvatar(cat, products);
+            },
           ),
         ),
+        const SizedBox(height: 8),
       ],
     );
   }
 
-  /// بلاطة فئة داخل الشبكة — صورة + اسم + عدد المنتجات
-  Widget _buildBentoTile(Category cat, int productCount) {
-    final hasImage = cat.imageUrl != null && cat.imageUrl!.isNotEmpty;
+  /// أفاتار دائري صغير (64px) — صورة حقيقية للفئة + الاسم تحتها
+  Widget _buildCategoryAvatar(Category cat, List<Product> products) {
+    // صورة الفئة: imageUrl إن وُجد، وإلا أول صورة منتج تابع للفئة (صور حقيقية)
+    final hasOwnImage = cat.imageUrl != null && cat.imageUrl!.isNotEmpty;
+    String? productImage;
+    if (!hasOwnImage) {
+      for (final p in products) {
+        if (p.categoryId == cat.id && p.images.isNotEmpty) {
+          productImage = p.images.first;
+          break;
+        }
+      }
+    }
+    final imageUrl = hasOwnImage ? cat.imageUrl : productImage;
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -815,101 +824,47 @@ class _HomeScreenState extends State<HomeScreen>
           builder: (_) => CatalogScreen(initialCategoryId: cat.id),
         ),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(10),
+      child: SizedBox(
+        width: 72,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: hasImage
-                    ? AppImage(
-                        imageUrl: cat.imageUrl!,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: _categoryGradient(cat.id),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            _categoryIcon(cat.icon),
-                            color: Colors.white,
-                            size: 34,
-                          ),
-                        ),
-                      ),
+            // أفاتار دائري 64px
+            Container(
+              width: 64,
+              height: 64,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border, width: 1),
+                gradient:
+                    imageUrl == null ? _categoryGradient(cat.id) : null,
               ),
+              child: imageUrl != null
+                  ? AppImage(
+                      imageUrl: imageUrl,
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                      cacheWidth: 128,
+                    )
+                  : null,
             ),
             const SizedBox(height: 6),
             Text(
               cat.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
             ),
-            if (productCount > 0)
-              Text(
-                '$productCount منتج',
-                style: const TextStyle(
-                    fontSize: 10, color: AppColors.textSecondary),
-              ),
           ],
         ),
       ),
     );
-  }
-
-  /// أيقونة الفئة من حقل icon النصي
-  IconData _categoryIcon(String icon) {
-    switch (icon.toLowerCase()) {
-      case 'vest':
-      case 'mawaz':
-      case 'thobe':
-      case 'fanail':
-      case 'underwear':
-        return Icons.checkroom;
-      case 'pants':
-        return Icons.airline_seat_recline_normal;
-      case 'accessories':
-        return Icons.watch;
-      case 'belts':
-        return Icons.swap_horiz;
-      case 'bisht':
-        return Icons.man_2;
-      case 'jackets':
-      case 'pajamas':
-        return Icons.work;
-      case 'perfume':
-        return Icons.local_florist;
-      case 'shamzan':
-        return Icons.air;
-      case 'ghutra':
-      case 'shemagh':
-        return Icons.workspaces;
-      default:
-        return Icons.category_outlined;
-    }
   }
 
   /// تدرج لوني ثابت لكل فئة (بديل الصورة عند غيابها)
