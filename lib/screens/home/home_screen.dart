@@ -15,7 +15,6 @@ import '../../providers/points_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/skeleton_widget.dart';
 import '../../widgets/app_image.dart';
-import '../../widgets/dynamic_multi_item_banner.dart';
 import '../../widgets/product_card.dart';
 import '../cart/cart_screen.dart';
 import '../catalog/product_detail_screen.dart';
@@ -1016,30 +1015,20 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildBannerCarousel(ProductProvider provider) {
     final banners = provider.banners;
 
-    // حالة التحميل — شيمر
+    // حالة التحميل — شيمر بمقاس البانر الطويل
     if (provider.isLoading && banners.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: BannerSkeleton(),
-      );
+      return const BannerSkeleton();
     }
 
-    // لا توجد بانرات حقيقية — بانرات ديناميكية من أول 10 منتجات (بديل تلقائي)
+    // الشرائح: بانرات Firestore كاملة العرض، أو بانر افتراضي نظيف عند غيابها
     final List<Widget> slides;
     if (banners.isNotEmpty) {
       slides = [
         for (var i = 0; i < banners.length; i++)
-          DynamicMultiItemBanner(
-            banner: banners[i],
-            products: provider.products,
-            isActive: i == _bannerIndex,
-            onTap: () => _openBannerTarget(banners[i], provider),
-          ),
+          _buildFullBleedBanner(banners[i], provider),
       ];
     } else {
-      final fallback = provider.products.take(10).toList();
-      if (fallback.isEmpty) return const SizedBox.shrink();
-      slides = fallback.map((p) => _buildDynamicBanner(p)).toList();
+      slides = [_buildDefaultBanner(provider)];
     }
 
     // حماية المؤشر بعد تغيّر عدد الشرائح
@@ -1047,61 +1036,223 @@ class _HomeScreenState extends State<HomeScreen>
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              CarouselSlider(
-                options: CarouselOptions(
-                  height: 220,
-                  autoPlay: true,
-                  autoPlayInterval: const Duration(seconds: 4),
-                  autoPlayAnimationDuration: const Duration(milliseconds: 700),
-                  viewportFraction: 1.0,
-                  enableInfiniteScroll: slides.length > 1,
-                  onPageChanged: (index, _) {
-                    if (index != _bannerIndex) {
-                      setState(() => _bannerIndex = index);
-                    }
-                  },
-                ),
-                items: slides,
+        Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            CarouselSlider(
+              options: CarouselOptions(
+                height: 420,
+                autoPlay: true,
+                autoPlayInterval: const Duration(seconds: 4),
+                autoPlayAnimationDuration: const Duration(milliseconds: 700),
+                viewportFraction: 1.0,
+                enableInfiniteScroll: slides.length > 1,
+                onPageChanged: (index, _) {
+                  if (index != _bannerIndex) {
+                    setState(() => _bannerIndex = index);
+                  }
+                },
               ),
-              // مؤشر النقاط — أسفل منتصف الكاروسيل
-              Positioned(
-                bottom: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (var i = 0; i < slides.length; i++)
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                          width: i == safeIndex ? 18 : 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: i == safeIndex
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+              items: slides,
+            ),
+            // مؤشر النقاط — أسفل منتصف الكاروسيل
+            Positioned(
+              bottom: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < slides.length; i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                        width: i == safeIndex ? 18 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: i == safeIndex
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(4),
                         ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  /// بانر كامل العرض — صورة تغطي المساحة بالكامل (BoxFit.cover) مع شعار العلامة
+  Widget _buildFullBleedBanner(BannerModel banner, ProductProvider provider) {
+    final hasImage = banner.imageUrl.isNotEmpty;
+    return GestureDetector(
+      onTap: () => _openBannerTarget(banner, provider),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // خلفية اللون (تظهر لحظة تحميل الصورة)
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF232F3E), Color(0xFF0D1B3E)],
+              ),
+            ),
+          ),
+          // صورة البانر كاملة العرض — base64 أو URL أو GIF متحرك
+          if (hasImage)
+            AppImage(
+              imageUrl: banner.imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              backgroundColor: const Color(0xFF0D1B3E),
+            ),
+          // تدرج سفلي خفيف لوضوح النص
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.45),
                     ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // نص البانر — أسفل اليسار
+          if (banner.title.isNotEmpty)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 44,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    banner.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      height: 1.15,
+                      shadows: [
+                        Shadow(color: Colors.black45, blurRadius: 6),
+                      ],
+                    ),
+                  ),
+                  if (banner.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      banner.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// بانر افتراضي نظيف بمقاس البانر الطويل — عند غياب بانرات Firestore
+  Widget _buildDefaultBanner(ProductProvider provider) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CatalogScreen()),
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF232F3E), Color(0xFF0D1B3E), Color(0xFF1A2D5E)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: const Text(
+                  'ALAFIF NEWFORM',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'العفيف نيوفورم',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'تشكيلة الرجال الأنيقة — تسوق أحدث الواصل',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.amazonYellow,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Text(
+                  'تسوق الآن',
+                  style: TextStyle(
+                    color: AppColors.amazonDark,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
-      ],
+      ),
     );
   }
 
@@ -1123,48 +1274,6 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
     }
-  }
-
-  Widget _buildDynamicBanner(Product product) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product))),
-      child: Stack(
-        children: [
-          Container(
-            height: 220,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: AppColors.primaryLight),
-            child: product.images.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: AppImage(imageUrl: product.images.first, fit: BoxFit.cover, width: double.infinity, height: double.infinity, backgroundColor: AppColors.primaryLight),
-                  )
-                : null,
-          ),
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)],
-                ),
-              ),
-            ),
-          ),
-          Positioned(right: 20, left: 20, bottom: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(product.name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text('${product.price.toStringAsFixed(0)} ريال',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 15)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   // ======================== أحدث المنتجات ========================
