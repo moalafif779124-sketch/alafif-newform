@@ -122,18 +122,19 @@ class BannerSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 420,
+      height: 280,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(0),
+        borderRadius: BorderRadius.circular(16),
         gradient: const LinearGradient(
           colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(0),
+        borderRadius: BorderRadius.circular(16),
         child: const SkeletonWidget(
           width: double.infinity,
-          height: 420,
+          height: 280,
           borderRadius: 0,
         ),
       ),

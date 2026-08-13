@@ -1020,12 +1020,12 @@ class _HomeScreenState extends State<HomeScreen>
       return const BannerSkeleton();
     }
 
-    // الشرائح: بانرات Firestore كاملة العرض، أو بانر افتراضي نظيف عند غيابها
+    // الشرائح: بطاقات ترويجية من Firestore، أو بطاقة افتراضية نظيفة عند غيابها
     final List<Widget> slides;
     if (banners.isNotEmpty) {
       slides = [
         for (var i = 0; i < banners.length; i++)
-          _buildFullBleedBanner(banners[i], provider),
+          _buildPromoBannerCard(banners[i], provider),
       ];
     } else {
       slides = [_buildDefaultBanner(provider)];
@@ -1036,128 +1036,161 @@ class _HomeScreenState extends State<HomeScreen>
 
     return Column(
       children: [
-        Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            CarouselSlider(
-              options: CarouselOptions(
-                height: 420,
-                autoPlay: true,
-                autoPlayInterval: const Duration(seconds: 4),
-                autoPlayAnimationDuration: const Duration(milliseconds: 700),
-                viewportFraction: 1.0,
-                enableInfiniteScroll: slides.length > 1,
-                onPageChanged: (index, _) {
-                  if (index != _bannerIndex) {
-                    setState(() => _bannerIndex = index);
-                  }
-                },
-              ),
-              items: slides,
-            ),
-            // مؤشر النقاط — أسفل منتصف الكاروسيل
-            Positioned(
-              bottom: 14,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              CarouselSlider(
+                options: CarouselOptions(
+                  height: 280,
+                  autoPlay: true,
+                  autoPlayInterval: const Duration(seconds: 4),
+                  autoPlayAnimationDuration: const Duration(milliseconds: 700),
+                  viewportFraction: 1.0,
+                  enableInfiniteScroll: slides.length > 1,
+                  onPageChanged: (index, _) {
+                    if (index != _bannerIndex) {
+                      setState(() => _bannerIndex = index);
+                    }
+                  },
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (var i = 0; i < slides.length; i++)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                        width: i == safeIndex ? 18 : 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: i == safeIndex
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(4),
+                items: slides,
+              ),
+              // مؤشر النقاط — أسفل منتصف البطاقة
+              Positioned(
+                bottom: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 0; i < slides.length; i++)
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                          width: i == safeIndex ? 18 : 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: i == safeIndex
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 12),
       ],
     );
   }
 
-  /// بانر كامل العرض — صورة تغطي المساحة بالكامل (BoxFit.cover) مع شعار العلامة
-  Widget _buildFullBleedBanner(BannerModel banner, ProductProvider provider) {
+  /// بطاقة ترويجية بأسلوب أمازون — زوايا دائرية، ظل، عنوان علوي + زر إجراء
+  Widget _buildPromoBannerCard(BannerModel banner, ProductProvider provider) {
     final hasImage = banner.imageUrl.isNotEmpty;
     return GestureDetector(
       onTap: () => _openBannerTarget(banner, provider),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // خلفية اللون (تظهر لحظة تحميل الصورة)
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF232F3E), Color(0xFF0D1B3E)],
-              ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
+          ],
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF232F3E), Color(0xFF0D1B3E)],
           ),
-          // صورة البانر كاملة العرض — base64 أو URL أو GIF متحرك
-          if (hasImage)
-            AppImage(
-              imageUrl: banner.imageUrl,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-              backgroundColor: const Color(0xFF0D1B3E),
-            ),
-          // تدرج سفلي خفيف لوضوح النص
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.45),
-                    ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // صورة البانر المرفوعة من لوحة التحكم — تغطي البطاقة بالكامل
+            if (hasImage)
+              AppImage(
+                imageUrl: banner.imageUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                backgroundColor: const Color(0xFF0D1B3E),
+              ),
+            // تدرج احترافي لوضوح النص (سفلي أثقل + علوي خفيف)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: const [0.0, 0.45, 1.0],
+                      colors: [
+                        Colors.black.withValues(alpha: 0.15),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.6),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          // نص البانر — أسفل اليسار
-          if (banner.title.isNotEmpty)
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: 44,
+            // المحتوى: شعار + عنوان علوي + زر إجراء سفلي
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    banner.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      height: 1.15,
-                      shadows: [
-                        Shadow(color: Colors.black45, blurRadius: 6),
-                      ],
+                  // شارة العلامة
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: const Text(
+                      'ALAFIF NEWFORM',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
+                  const Spacer(),
+                  // العنوان الرئيسي
+                  if (banner.title.isNotEmpty)
+                    Text(
+                      banner.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        height: 1.15,
+                        shadows: [
+                          Shadow(color: Colors.black54, blurRadius: 8),
+                        ],
+                      ),
+                    ),
                   if (banner.subtitle.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
@@ -1165,20 +1198,51 @@ class _HomeScreenState extends State<HomeScreen>
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withValues(alpha: 0.92),
                         fontSize: 14,
+                        shadows: const [
+                          Shadow(color: Colors.black45, blurRadius: 6),
+                        ],
                       ),
                     ),
                   ],
+                  const SizedBox(height: 12),
+                  // زر الإجراء — تسوق الآن
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 22, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: AppColors.amazonYellow,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      banner.buttonText.isNotEmpty
+                          ? banner.buttonText
+                          : 'تسوق الآن',
+                      style: const TextStyle(
+                        color: AppColors.amazonDark,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  /// بانر افتراضي نظيف بمقاس البانر الطويل — عند غياب بانرات Firestore
+  /// بطاقة افتراضية نظيفة بأسلوب أمازون — عند غياب بانرات Firestore
   Widget _buildDefaultBanner(ProductProvider provider) {
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -1186,71 +1250,98 @@ class _HomeScreenState extends State<HomeScreen>
         MaterialPageRoute(builder: (_) => const CatalogScreen()),
       ),
       child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Color(0xFF232F3E), Color(0xFF0D1B3E), Color(0xFF1A2D5E)],
           ),
         ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // توهج ناعم خلفي لإحساس البطاقات الترويجية
+            Positioned(
+              right: -40,
+              top: -40,
+              child: Container(
+                width: 220,
+                height: 220,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                  color: AppColors.amazonOrange.withValues(alpha: 0.18),
+                ),
+              ),
+            ),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: const Text(
+                      'ALAFIF NEWFORM',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                      ),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'ALAFIF NEWFORM',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
+                  const SizedBox(height: 16),
+                  const Text(
+                    'العفيف نيوفورم',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'العفيف نيوفورم',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'تشكيلة الرجال الأنيقة — تسوق أحدث الواصل',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.amazonYellow,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Text(
-                  'تسوق الآن',
-                  style: TextStyle(
-                    color: AppColors.amazonDark,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 8),
+                  Text(
+                    'تشكيلة الرجال الأنيقة — تسوق أحدث الواصل',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 14,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.amazonYellow,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Text(
+                      'تسوق الآن',
+                      style: TextStyle(
+                        color: AppColors.amazonDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
