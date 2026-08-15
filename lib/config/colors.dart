@@ -27,6 +27,7 @@ class AppColors {
   static const Color amazonOrange = Color(0xFFFF9900);
   /// أصفر أمازون لأزرار الإضافة
   static const Color amazonYellow = Color(0xFFFEBD69);
+  static const Color amazonBlue = Color(0xFF146EB4);
   /// خلفية الصفحة الفاتحة (Amazon grey)
   static const Color amazonBg = Color(0xFFEAEDED);
 

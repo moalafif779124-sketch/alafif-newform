@@ -12,6 +12,7 @@ import '../../providers/review_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/app_image.dart';
+import '../../widgets/virtual_size_guide_sheet.dart';
 import '../cart/cart_screen.dart' deferred as cart;
 import '../checkout/checkout_screen.dart' deferred as checkout;
 import '../try_on/ar_try_on_screen.dart' deferred as tryon;
@@ -579,6 +580,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ),
         const SizedBox(height: 10),
+        // ===== زر دليل المقاسات الذكي =====
+        _buildSizeGuideButton(),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -653,6 +657,64 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  /// زر دليل المقاسات الذكي — يفتح ورقة حساب المقاس بناءً على الطول والوزن
+  Widget _buildSizeGuideButton() {
+    return InkWell(
+      onTap: () => showVirtualSizeGuide(
+        context: context,
+        product: product,
+        onApply: (size) {
+          if (mounted) {
+            setState(() => _selectedSize = size);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('تم اختيار المقاس $size ✅'),
+                duration: const Duration(seconds: 2),
+                backgroundColor: AppColors.success,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.amazonBlue.withValues(alpha: 0.12),
+              AppColors.amazonBlue.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.amazonBlue.withValues(alpha: 0.35),
+          ),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.straighten, color: AppColors.amazonBlue, size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'احسب مقاسك بدقة 📏',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.amazonBlue,
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_left,
+                color: AppColors.amazonBlue, size: 20),
+          ],
+        ),
+      ),
     );
   }
 
