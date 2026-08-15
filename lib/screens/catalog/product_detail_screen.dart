@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/app_image.dart';
 import '../../widgets/virtual_size_guide_sheet.dart';
+import '../../widgets/outfit_bundle_section.dart';
 import '../cart/cart_screen.dart' deferred as cart;
 import '../checkout/checkout_screen.dart' deferred as checkout;
 import '../try_on/ar_try_on_screen.dart' deferred as tryon;
@@ -377,6 +378,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
             // الوصف
             _buildDescriptionSection(),
+            const SizedBox(height: 16),
+
+            // ===== إطلالة كاملة (طقم مكمّل) =====
+            OutfitBundleSection(product: product),
             const SizedBox(height: 16),
 
             // معلومات إضافية
