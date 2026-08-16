@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/app_image.dart';
 import '../../widgets/virtual_size_guide_sheet.dart';
@@ -38,6 +39,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isDescriptionExpanded = false;
   bool _isFavorite = false;
 
+  // ===== تنبيه توفر المخزن =====
+  bool _notifyRequested = false; // هل طلب المستخدم التنبيه لهذا المقاس؟
+  bool _checkingRestock = false; // جارٍ التحقق من الطلب السابق
+
   Product get product => widget.product;
 
   @override
@@ -47,6 +52,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (product.sizes.isNotEmpty) {
       _selectedSize = product.sizes.first;
     }
+    _checkPendingRestock();
   }
 
   @override
@@ -95,6 +101,100 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  // ======================== تنبيه توفر المخزن ========================
+
+  /// هل المستخدم مسجّل الدخول؟
+  bool get _isLoggedIn =>
+      context.read<AuthProvider>().isLoggedIn;
+
+  /// التحقق من وجود طلب تنبيه معلّق لنفس المنتج + المقاس
+  Future<void> _checkPendingRestock() async {
+    if (!_isLoggedIn || _selectedSize == null) return;
+    final userId = context.read<AuthProvider>().userId ?? '';
+    setState(() => _checkingRestock = true);
+    final exists = await FirebaseService().hasPendingRestockRequest(
+      userId: userId,
+      productId: product.id,
+      size: _selectedSize!,
+    );
+    if (mounted && exists) {
+      setState(() => _notifyRequested = true);
+    }
+    if (mounted) setState(() => _checkingRestock = false);
+  }
+
+  /// طلب إشعار عند توفر المقاس المحدد
+  Future<void> _requestRestock() async {
+    if (_selectedSize == null) return;
+
+    // مكافحة التكرار — لا نكتب إذا كان الطلب موجوداً مسبقاً
+    if (_notifyRequested) return;
+
+    if (!_isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تسجيل الدخول أولاً لطلب التنبيه'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _checkingRestock = true);
+    final userId = context.read<AuthProvider>().userId ?? '';
+    try {
+      final exists = await FirebaseService().hasPendingRestockRequest(
+        userId: userId,
+        productId: product.id,
+        size: _selectedSize!,
+      );
+      if (exists) {
+        if (mounted) {
+          setState(() {
+            _notifyRequested = true;
+            _checkingRestock = false;
+          });
+        }
+        return;
+      }
+
+      await FirebaseService().addRestockRequest({
+        'userId': userId,
+        'productId': product.id,
+        'productName': product.name,
+        'requestedSize': _selectedSize,
+        'status': 'pending',
+      });
+
+      if (mounted) {
+        setState(() {
+          _notifyRequested = true;
+          _checkingRestock = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('سنقوم بإبلاغك فور توفر هذا المقاس! ✅'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ Restock request failed: $e');
+      if (mounted) {
+        setState(() => _checkingRestock = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تعذر إرسال طلب التنبيه، حاول مرة أخرى'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _addToCart({bool goToCheckout = false}) async {
@@ -629,7 +729,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               onSelected: isOut
                   ? null
                   : (selected) {
-                      setState(() => _selectedSize = size);
+                      setState(() {
+                        _selectedSize = size;
+                        // مقاس جديد → إعادة التحقق من طلب التنبيه
+                        _notifyRequested = false;
+                      });
+                      _checkPendingRestock();
                     },
             );
           }).toList(),
@@ -673,7 +778,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         product: product,
         onApply: (size) {
           if (mounted) {
-            setState(() => _selectedSize = size);
+            setState(() {
+              _selectedSize = size;
+              // مقاس جديد → إعادة التحقق من طلب التنبيه
+              _notifyRequested = false;
+            });
+            _checkPendingRestock();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('تم اختيار المقاس $size ✅'),
@@ -1592,22 +1702,50 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               const Spacer(),
 
-              // ===== نفذت الكمية — أزرار معطلة =====
+              // ===== نفذت الكمية — زر تنبيه توفر المخزن =====
               if (_selectedSizeOutOfStock)
                 SizedBox(
                   height: 46,
-                  child: ElevatedButton.icon(
-                    onPressed: null,
-                    icon: const Icon(Icons.block, size: 18),
-                    label: const Text('نفذت الكمية'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.error.withValues(alpha: 0.55),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: OutlinedButton.icon(
+                    onPressed: _notifyRequested || _checkingRestock
+                        ? null
+                        : _requestRestock,
+                    icon: _checkingRestock
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.amazonBlue,
+                            ),
+                          )
+                        : Icon(
+                            _notifyRequested
+                                ? Icons.check_circle_outline
+                                : Icons.notifications_active_outlined,
+                            size: 18,
+                          ),
+                    label: Text(
+                      _notifyRequested
+                          ? 'تم طلب التنبيه مسبقاً ✓'
+                          : 'أبلغني عند التوفر 🔔',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.amazonBlue,
+                      backgroundColor: AppColors.amazonBlue.withValues(alpha: 0.06),
+                      disabledForegroundColor: AppColors.success,
+                      disabledBackgroundColor:
+                          AppColors.success.withValues(alpha: 0.08),
+                      side: BorderSide(
+                        color: _notifyRequested
+                            ? AppColors.success
+                            : AppColors.amazonBlue,
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 0,
                     ),
                   ),
                 )

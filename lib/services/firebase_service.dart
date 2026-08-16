@@ -709,6 +709,44 @@ class FirebaseService {
     return docRef.id;
   }
 
+  // =================== تنبيهات توفر المخزن ===================
+
+  /// تسجيل طلب تنبيه عند توفر مقاس/منتج نفذت كميته
+  Future<String> addRestockRequest(Map<String, dynamic> data) async {
+    data['createdAt'] = DateTime.now().millisecondsSinceEpoch;
+    final docRef = await firestore.collection('restock_requests').add(data);
+    return docRef.id;
+  }
+
+  /// هل يوجد طلب تنبيه معلّق لنفس المنتج + المقاس؟
+  Future<bool> hasPendingRestockRequest({
+    required String userId,
+    required String productId,
+    required String size,
+  }) async {
+    try {
+      // استعلام بحقل واحد (userId) لتجنب الحاجة لفهرس مركّب —
+      // الفلترة الدقيقة تتم في الذاكرة
+      final snapshot = await firestore
+          .collection('restock_requests')
+          .where('userId', isEqualTo: userId)
+          .limit(50)
+          .get();
+      for (final doc in snapshot.docs) {
+        final d = doc.data();
+        if (d['productId'] == productId &&
+            d['requestedSize'] == size &&
+            d['status'] == 'pending') {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('⚠️ Failed to check restock request: $e');
+      return false;
+    }
+  }
+
   /// تحديث متوسط التقييم للمنتج بناءً على المراجعات
   Future<void> _updateProductRating(String productId) async {
     try {
