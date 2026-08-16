@@ -351,6 +351,19 @@ class FirebaseService {
     }
   }
 
+  /// بث مباشر لطلب واحد — يتحدث فورياً عند تغيير الحالة من لوحة التحكم
+  Stream<Map<String, dynamic>> getOrderStream(String orderId) {
+    return firestore
+        .collection('orders')
+        .doc(orderId)
+        .snapshots()
+        .map((doc) {
+          final data = doc.data() ?? <String, dynamic>{};
+          data['id'] = doc.id;
+          return data;
+        });
+  }
+
   Future<String> createOrder(Map<String, dynamic> orderData) async {
     final docRef = await firestore.collection('orders').add(orderData);
     return docRef.id;

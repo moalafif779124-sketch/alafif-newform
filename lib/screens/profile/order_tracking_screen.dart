@@ -5,9 +5,11 @@ import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
 import '../../widgets/app_image.dart';
+import '../../widgets/live_tracking_timeline.dart';
 
-/// شاشة تتبع الطلب مع خط زمني
+/// شاشة تتبع الطلب مع خط زمني حي
 class OrderTrackingScreen extends StatefulWidget {
   final Order order;
 
@@ -18,76 +20,24 @@ class OrderTrackingScreen extends StatefulWidget {
 }
 
 class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
-  Order get order => widget.order;
+  late Order _order = widget.order;
+  Stream<Map<String, dynamic>>? _orderStream;
 
-  /// قائمة حالات الطلب مرتبة حسب التسلسل الزمني
-  List<_OrderStatusStep> get _statusSteps {
-    final steps = <_OrderStatusStep>[
-      _OrderStatusStep(
-        status: 'pending',
-        label: 'قيد المراجعة',
-        icon: Icons.receipt_long_outlined,
-        date: order.createdAt,
-        isCompleted: _isStatusCompleted('pending'),
-      ),
-      _OrderStatusStep(
-        status: 'confirmed',
-        label: 'تم التأكيد',
-        icon: Icons.check_circle_outline,
-        date: order.status == 'confirmed' || order.status == 'processing' ||
-                order.status == 'shipped' || order.status == 'delivered'
-            ? (order.updatedAt ?? order.createdAt)
-            : null,
-        isCompleted: _isStatusCompleted('confirmed'),
-      ),
-      _OrderStatusStep(
-        status: 'processing',
-        label: 'قيد التجهيز',
-        icon: Icons.inventory_2_outlined,
-        date: order.status == 'processing' || order.status == 'shipped' ||
-                order.status == 'delivered'
-            ? (order.updatedAt ?? order.createdAt)
-            : null,
-        isCompleted: _isStatusCompleted('processing'),
-      ),
-      _OrderStatusStep(
-        status: 'shipped',
-        label: 'تم الشحن',
-        icon: Icons.local_shipping_outlined,
-        date: order.status == 'shipped' || order.status == 'delivered'
-            ? (order.updatedAt ?? order.createdAt)
-            : null,
-        isCompleted: _isStatusCompleted('shipped'),
-      ),
-      _OrderStatusStep(
-        status: 'delivered',
-        label: 'تم التوصيل',
-        icon: Icons.verified_outlined,
-        date: order.deliveredAt ?? (order.status == 'delivered' ? order.updatedAt : null),
-        isCompleted: order.status == 'delivered',
-      ),
-    ];
-
-    if (order.status == 'cancelled') {
-      steps.add(_OrderStatusStep(
-        status: 'cancelled',
-        label: 'ملغي',
-        icon: Icons.cancel_outlined,
-        date: order.updatedAt ?? order.createdAt,
-        isCompleted: true,
-        isCancel: true,
-      ));
-    }
-
-    return steps;
+  @override
+  void initState() {
+    super.initState();
+    // اشتراك مباشر — يتحدث فورياً عند تغيير حالة الطلب من لوحة التحكم
+    _orderStream = FirebaseService().getOrderStream(widget.order.id);
+    _orderStream!.listen((data) {
+      if (!mounted || data.isEmpty) return;
+      final updated = Order.fromMap(data);
+      if (updated.status != _order.status || updated.paymentStatus != _order.paymentStatus) {
+        setState(() => _order = updated);
+      }
+    });
   }
 
-  bool _isStatusCompleted(String status) {
-    const order = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
-    final currentIndex = order.indexOf(widget.order.status);
-    final stepIndex = order.indexOf(status);
-    return stepIndex <= currentIndex && widget.order.status != 'cancelled';
-  }
+  Order get order => _order;
 
   Color _statusColor(String status) {
     switch (status) {
@@ -178,22 +128,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                 ),
               ),
 
-              // ===== الخط الزمني =====
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Text(
-                  'حالة الطلب',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-
-              ..._statusSteps.map((step) => _buildTimelineStep(step)),
-
-              const SizedBox(height: 24),
+              // ===== الخط الزمني الحي =====
+              LiveTrackingTimeline(order: order),
+              const SizedBox(height: 20),
 
               // ===== تفاصيل التوصيل =====
               const Padding(
@@ -342,83 +279,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     );
   }
 
-  Widget _buildTimelineStep(_OrderStatusStep step) {
-    final isActive = step.isCompleted;
-    final isLast = step == _statusSteps.last;
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // العمود الرأسي للخط الزمني
-          SizedBox(
-            width: 40,
-            child: Column(
-              children: [
-                Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: step.isCancel
-                        ? AppColors.error
-                        : isActive
-                            ? AppColors.primary
-                            : AppColors.border,
-                  ),
-                  child: Icon(
-                    step.icon,
-                    size: 16,
-                    color: isActive || step.isCancel ? Colors.white : AppColors.textSecondary,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: isActive ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // المحتوى
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 24, right: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    step.label,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: isActive || step.isCancel ? FontWeight.bold : FontWeight.normal,
-                      color: step.isCancel
-                          ? AppColors.error
-                          : isActive
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
-                    ),
-                  ),
-                  if (step.date != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatDate(step.date!),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInfoRow(IconData icon, String text, {Color? valueColor}) {
     return Row(
       children: [
@@ -446,30 +306,4 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       default: return method;
     }
   }
-
-  String _formatDate(DateTime date) {
-    final months = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year} - ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-}
-
-class _OrderStatusStep {
-  final String status;
-  final String label;
-  final IconData icon;
-  final DateTime? date;
-  final bool isCompleted;
-  final bool isCancel;
-
-  _OrderStatusStep({
-    required this.status,
-    required this.label,
-    required this.icon,
-    this.date,
-    required this.isCompleted,
-    this.isCancel = false,
-  });
 }
