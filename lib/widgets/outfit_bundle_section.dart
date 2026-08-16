@@ -38,67 +38,26 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
     }
   }
 
-  // ======================= منطق الاقتراح الذكي =======================
+  // ======================= منطق الاقتراح الصارم =======================
+  //
+  // ⚠️ لا اقتراحات عشوائية ولا فئات ولا أعلى تقييماً.
+  // الإطلالة تُعرض حصرياً من المنتجات التي ربطها المدير يدوياً
+  // في linkedOutfitIds — وإلا تُخفى القسم بالكامل.
 
   List<BundleItem> _buildBundleItems() {
     final all = context.read<ProductProvider>().products;
-    final catName = widget.product.categoryName.toLowerCase();
-    final catId = widget.product.categoryId.toLowerCase();
+    final linkedIds = widget.product.linkedOutfitIds;
+    if (linkedIds.isEmpty) return [];
 
-    // فئات مستهدفة حسب نوع المنتج الحالي
-    List<String> targetCategoryIds = [];
-
-    // رسمي/بدلات → قمصان (شمزان) + حزامات
-    final isFormal = catName.contains('بدلات') ||
-        catName.contains('بذل') ||
-        catName.contains('ثياب') ||
-        catName.contains('ثوب') ||
-        catId.contains('badlat') ||
-        catId.contains('suit') ||
-        catId.contains('thob');
-    if (isFormal) {
-      targetCategoryIds = ['shamzan', 'belts'];
-    }
-    // كاجوال/شمزان → بنطلونات أو جاكتات
-    else if (catId.contains('shamzan') || catName.contains('شمزان')) {
-      targetCategoryIds = ['aZ1VDCIdr7OO7mGSPHjj', 'jackets']; // بنطلونات، جاكتات
-    }
-    // فنايل/قمصان → جاكتات أو شمزان
-    else if (catId.contains('fanail') || catName.contains('فنايل') || catName.contains('فانيل')) {
-      targetCategoryIds = ['jackets', 'shamzan'];
-    }
-
+    final byId = {for (final p in all) p.id: p};
     final picked = <Product>[];
-    // 1) من الفئات المستهدفة
-    for (final id in targetCategoryIds) {
-      for (final p in all) {
-        if (p.id == widget.product.id) continue;
-        if (!p.isActive) continue;
-        if (p.categoryId == id && p.images.isNotEmpty) {
-          picked.add(p);
-        }
-        if (picked.length >= 3) break;
-      }
-      if (picked.length >= 3) break;
+    for (final id in linkedIds) {
+      final p = byId[id];
+      if (p == null || p.id == widget.product.id || !p.isActive) continue;
+      picked.add(p);
     }
-    // 2) بديل: أعلى تقييماً من فئات أخرى (غير فئة المنتج الحالي)
-    if (picked.length < 2) {
-      final others = all
-          .where((p) =>
-              p.id != widget.product.id &&
-              p.isActive &&
-              p.categoryId != widget.product.categoryId &&
-              p.images.isNotEmpty)
-          .toList()
-        ..sort((a, b) => b.rating.compareTo(a.rating));
-      for (final p in others) {
-        picked.add(p);
-        if (picked.length >= 3) break;
-      }
-    }
-
     // حوّل إلى عناصر طقم مع تحديد افتراضي
-    return picked.take(3).map((p) => BundleItem(product: p)).toList();
+    return picked.map((p) => BundleItem(product: p)).toList();
   }
 
   // ======================= الحسابات =======================
