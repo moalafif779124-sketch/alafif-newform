@@ -52,17 +52,21 @@ class NotificationService {
     );
 
     // إنشاء قناة الإشعارات صراحةً (مطلوب في Android 8+ وإلا تُسقط الإشعارات)
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(
-          const AndroidNotificationChannel(
-            'order_updates',
-            'تحديثات الطلبات',
-            description: 'إشعارات تحديث حالة الطلبات وتوفر المقاسات',
-            importance: Importance.high,
-          ),
-        );
+    try {
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'order_updates',
+              'تحديثات الطلبات',
+              description: 'إشعارات تحديث حالة الطلبات وتوفر المقاسات',
+              importance: Importance.high,
+            ),
+          );
+    } catch (e) {
+      debugPrint('⚠️ Failed to create notification channel: $e');
+    }
 
     _initialized = true;
     debugPrint('🔔 NotificationService initialized');
