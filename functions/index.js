@@ -102,6 +102,71 @@ exports.sendFlashSaleNotification = onDocumentCreated(
 );
 
 // ════════════════════════════════════════════
+//  4. إشعار توفر المقاس — عند تحديد طلب توفر كمُتوفّر
+//  (المدير يضغط "تحديث وتوفر ✅" في لوحة التحكم → status='resolved')
+// ════════════════════════════════════════════
+
+exports.sendRestockNotification = onDocumentWritten(
+  {
+    document: 'restock_requests/{requestId}',
+    region: 'us-central1',
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    if (!beforeData || !afterData) return;
+
+    // نريد الانتقال pending → resolved فقط
+    const beforeStatus = beforeData.status || '';
+    const afterStatus = afterData.status || '';
+    if (beforeStatus !== 'pending' || afterStatus !== 'resolved') return;
+
+    const userId = afterData.userId || '';
+    const productId = afterData.productId || '';
+    const productName = afterData.productName || 'منتجنا';
+    const requestedSize = afterData.requestedSize || '';
+    if (!userId) {
+      console.log('⚠️ Restock request has no userId — skipping');
+      return;
+    }
+
+    console.log(
+      `🔔 Restock resolved: ${productName} (${requestedSize}) → user ${userId}`
+    );
+
+    // جلب FCM tokens من وثيقة المستخدم
+    let fcmTokens = [];
+    try {
+      const userDoc = await getFirestore().collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        fcmTokens = userDoc.data()?.fcmTokens || [];
+      }
+    } catch (err) {
+      console.error('⚠️ Failed to fetch user FCM tokens:', err);
+    }
+
+    if (fcmTokens.length === 0) {
+      console.log('⚠️ No FCM tokens found for user', userId, '— skipping gracefully');
+      return;
+    }
+
+    const title = 'خبر سعيد! مقاسك توفر 🥳';
+    const body = `مقاس ${requestedSize} من ${productName} أصبح متوفراً الآن. سارع بالطلب قبل نفاد الكمية!`;
+
+    console.log(`📱 Sending restock notification to ${fcmTokens.length} device(s)`);
+
+    const { sent, failed } = await _sendToTokens(fcmTokens, title, body, {
+      type: 'restock',
+      productId: productId,
+      requestedSize: requestedSize,
+      productName: productName,
+    });
+
+    console.log(`📊 Restock results: ${sent} sent, ${failed} failed`);
+  }
+);
+
+// ════════════════════════════════════════════
 //  1. إشعار للعميل — عند تحديث حالة الطلب
 // ════════════════════════════════════════════
 

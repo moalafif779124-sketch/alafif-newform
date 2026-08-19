@@ -51,6 +51,19 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
+    // إنشاء قناة الإشعارات صراحةً (مطلوب في Android 8+ وإلا تُسقط الإشعارات)
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'order_updates',
+            'تحديثات الطلبات',
+            description: 'إشعارات تحديث حالة الطلبات وتوفر المقاسات',
+            importance: Importance.high,
+          ),
+        );
+
     _initialized = true;
     debugPrint('🔔 NotificationService initialized');
   }
@@ -169,6 +182,15 @@ class NotificationService {
 
     // إشعار تخفيض خاطف — افتح صفحة المنتج مباشرة
     if (type == 'flash_sale') {
+      final productId = data['productId'] as String?;
+      if (productId != null && productId.isNotEmpty) {
+        _navigateToProduct(productId);
+      }
+      return;
+    }
+
+    // إشعار توفر المقاس — افتح صفحة المنتج مباشرة
+    if (type == 'restock') {
       final productId = data['productId'] as String?;
       if (productId != null && productId.isNotEmpty) {
         _navigateToProduct(productId);
