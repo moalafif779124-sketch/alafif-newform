@@ -66,12 +66,11 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       final authProvider = context.read<AuthProvider>();
 
-      // ===== تشغيل أساسي فقط: المصادقة والإشعارات =====
+      // ===== تشغيل أساسي فقط: المصادقة ثم الإشعارات =====
       // (لا يُحمّل ProductProvider هنا — يُشغَّل بعد عرض أول إطار)
-      await Future.wait([
-        authProvider.initialize(),
-        NotificationService().initialize(),
-      ]);
+      // ملاحظة: الإشعارات تحتاج Firebase مهيأ — لذا ننتظر المصادقة أولاً
+      await authProvider.initialize();
+      await NotificationService().initialize();
 
       // طلب صلاحية الإشعارات بعد التهيئة
       NotificationService().requestPermission();
