@@ -21,6 +21,7 @@ import '../catalog/product_detail_screen.dart';
 import '../catalog/catalog_screen.dart';
 import '../catalog/visual_search_screen.dart';
 import '../profile/points_screen.dart';
+import '../stylist/ai_stylist_screen.dart';
 import '../../services/voice_search_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -505,6 +506,7 @@ class _HomeScreenState extends State<HomeScreen>
   // ======================== الفئات السريعة ========================
 
   final List<Map<String, dynamic>> _quickCategories = [
+    {'icon': Icons.auto_awesome, 'label': 'المصمم الذكي', 'id': 'stylist'},
     {'icon': Icons.new_releases, 'label': 'جديد', 'id': 'new'},
     {'icon': Icons.local_fire_department, 'label': 'عروض', 'id': 'offers'},
     {'icon': Icons.trending_up, 'label': 'ترند', 'id': 'trends'},
@@ -529,6 +531,14 @@ class _HomeScreenState extends State<HomeScreen>
           return GestureDetector(
             onTap: () {
               final id = cat['id'] as String;
+              // المصمم الذكي — شاشة الذكاء الاصطناعي
+              if (id == 'stylist') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AiStylistScreen()),
+                );
+                return;
+              }
               // فلاتر العرض: جديد / عروض / ترند → كتالوج مفلتر
               if (id == 'new' || id == 'offers' || id == 'trends') {
                 Navigator.push(

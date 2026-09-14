@@ -30,6 +30,11 @@ class Product {
   final String careInstructions;
   final String videoUrl;             // رابط فيديو المنتج (ريلز/اكتشف)
   final List<String> linkedOutfitIds; // معرفات منتجات الإطلالة المنسقة يدوياً (اختياري)
+
+  /// بيانات التصنيف للمصمم الذكي — خريطة مرنة (اختياري):
+  /// {category: 'shirts', style_type: 'formal', color_family: 'white',
+  ///  available_sizes: [...]}
+  final Map<String, dynamic> stylingMetadata;
   final bool isActive;
   final DateTime createdAt;
 
@@ -62,6 +67,7 @@ class Product {
     this.careInstructions = '',
     this.videoUrl = '',              // رابط فيديو المنتج (ريلز/اكتشف)
     this.linkedOutfitIds = const [],
+    this.stylingMetadata = const {},
     this.isActive = true,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
@@ -105,6 +111,9 @@ class Product {
       careInstructions: map['careInstructions'] ?? '',
       videoUrl: map['videoUrl'] ?? '',
       linkedOutfitIds: List<String>.from(map['linkedOutfitIds'] ?? []),
+      stylingMetadata: map['styling_metadata'] != null
+          ? Map<String, dynamic>.from(map['styling_metadata'] as Map)
+          : const {},
       isActive: map['isActive'] ?? true,
       createdAt: map['createdAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
@@ -170,6 +179,7 @@ class Product {
       'careInstructions': careInstructions,
       'videoUrl': videoUrl,
       'linkedOutfitIds': linkedOutfitIds,
+      'styling_metadata': stylingMetadata,
       'isActive': isActive,
       'createdAt': createdAt.millisecondsSinceEpoch,
     };
