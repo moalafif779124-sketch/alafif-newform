@@ -202,6 +202,11 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
         ),
         filteredProducts: products,
       );
+      debugPrint(
+        '🎨 Stylist returned ${outfit.selectedProducts.length} piece(s) '
+        'for ${products.length} candidates: '
+        '${outfit.selectedProducts.map((p) => '${p.productId}/${p.size}').join(', ')}',
+      );
       if (!mounted) return;
       setState(() {
         _outfit = outfit;
@@ -230,9 +235,28 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
       final Product? product = productProvider.getProductById(pick.productId);
       if (product == null) {
         missing.add(pick.productId);
+        debugPrint('⚠️ Stylist piece not found in catalogue: ${pick.productId}');
         continue;
       }
-      final size = pick.size.isNotEmpty ? pick.size : (_size ?? '');
+
+      // ===== ضبط المقاس: يجب أن يكون مقاساً فعلياً متاحاً للمنتج =====
+      final requested = _size ?? '';
+      String size = pick.size;
+      if (product.sizes.isEmpty) {
+        // منتج بلا قائمة مقاسات — لا يمكن التحقق، فنستخدم مقاس المستخدم
+        size = requested.isNotEmpty ? requested : pick.size;
+      } else if (!product.sizes.contains(size)) {
+        // مقاس الذكاء الاصطناعي غير متاح → نجرّب مقاس المستخدم
+        if (product.sizes.contains(requested)) {
+          size = requested;
+        } else {
+          // لا المقاس المطلوب ولا مقاس الذكاء الاصطناعي متاح → تخطَّ القطعة
+          debugPrint('⚠️ Skipping ${product.name}: no valid size (ai=$pick.size, user=$requested)');
+          missing.add(pick.productId);
+          continue;
+        }
+      }
+
       final colorName = product.colorOptions.isNotEmpty
           ? (product.colorOptions.first['name'] ?? '')
           : (product.colors.isNotEmpty ? product.colors.first : '');
@@ -253,18 +277,24 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
       added++;
     }
 
+    debugPrint('🛒 Stylist add-to-cart: $added added, ${missing.length} skipped');
     if (!mounted) return;
 
+    final skippedNote = missing.isNotEmpty ? ' (تعذّرت ${missing.length} قطعة)' : '';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            Icon(
+              added > 0 ? Icons.check_circle : Icons.error_outline,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 added > 0
-                    ? 'تمت إضافة $added قطعة إلى السلة ✓'
+                    ? 'تمت إضافة $added قطعة إلى السلة ✓$skippedNote'
                     : 'تعذّرت الإضافة — المنتجات غير متوفرة',
               ),
             ),
