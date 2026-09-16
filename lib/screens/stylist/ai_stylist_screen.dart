@@ -228,7 +228,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
 
     final productProvider = context.read<ProductProvider>();
     final cart = context.read<CartProvider>();
-    int added = 0;
+    final batch = <CartItem>[];
     final missing = <String>[];
 
     for (final pick in outfit.selectedProducts) {
@@ -264,7 +264,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
           ? (product.colorOptions.first['hex'] ?? '#000000')
           : '#000000';
 
-      cart.addItem(
+      batch.add(
         CartItem(
           id: '${product.id}_${size}_stylist_${DateTime.now().millisecondsSinceEpoch}',
           product: product,
@@ -274,8 +274,11 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
           quantity: 1,
         ),
       );
-      added++;
     }
+
+    // ===== إضافة واحدة مجمّعة: كتابة محلية + مزامنة سحابية + إشعار مرة واحدة =====
+    final added = batch.length;
+    cart.addItems(batch);
 
     debugPrint('🛒 Stylist add-to-cart: $added added, ${missing.length} skipped');
     if (!mounted) return;

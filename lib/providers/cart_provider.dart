@@ -47,6 +47,34 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// إضافة عدة عناصر دفعة واحدة (إطلالة كاملة مثلاً).
+  ///
+  /// كانت إضافة كل قطعة على حدة تستدعي: كتابة محلية + كتابة Firestore +
+  /// notifyListeners() لكل قطعة — أي 3-4 كتابات سحابية وإعادة بناء كامل
+  /// للواجهة في تتابع سريع، وهو ما يسبب تجمّد الواجهة بعد «أضف الإطلالة
+  /// كاملة إلى السلة». هنا نجمع الكل في الذاكرة ثم نكتب/نزامن/نُخطر مرة واحدة.
+  void addItems(List<CartItem> newItems) {
+    if (newItems.isEmpty) return;
+
+    for (final item in newItems) {
+      final index = _items.indexWhere(
+        (i) =>
+            i.product.id == item.product.id &&
+            i.size == item.size &&
+            i.color == item.color,
+      );
+      if (index >= 0) {
+        _items[index].quantity += item.quantity;
+      } else {
+        _items.add(item);
+      }
+    }
+
+    _saveToLocal();
+    _syncToFirebase();
+    notifyListeners();
+  }
+
   void removeItem(String itemId) {
     _items.removeWhere((item) => item.id == itemId);
     _saveToLocal();
