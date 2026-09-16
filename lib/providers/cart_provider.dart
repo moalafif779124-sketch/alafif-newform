@@ -180,21 +180,32 @@ class CartProvider with ChangeNotifier {
       if (service.isInitialized) {
         final cartData = await service.getCart(_userId!);
         if (cartData != null) {
-          // Load products for each cart item
-          for (final itemData in cartData) {
-            final productData = await service.getProduct(itemData['productId']);
-            if (productData != null) {
-              final product = Product.fromMap(productData);
-              final item = CartItem(
+          // تفريغ القائمة قبل التحميل — وإلا تُضاف عناصر السلة السحابية
+          // فوق العناصر الحالية في كل تشغيل، فتتضخم السلة وتصبح القراءات
+          // (حاصل × عدد العناصر) بطيئة جداً وتُثقل الواجهة.
+          _items.clear();
+
+          // تحميل بيانات كل منتج (بالتوازي بدل التتابع)
+          final productFutures = cartData
+              .map((itemData) => service.getProduct(itemData['productId']))
+              .toList();
+          final products = await Future.wait(productFutures);
+
+          for (var i = 0; i < cartData.length; i++) {
+            final itemData = cartData[i];
+            final productData = products[i];
+            if (productData == null) continue;
+            final product = Product.fromMap(productData);
+            _items.add(
+              CartItem(
                 id: itemData['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
                 product: product,
                 size: itemData['size'] ?? '',
                 color: itemData['color'] ?? '',
                 colorHex: itemData['colorHex'] ?? '#000000',
                 quantity: itemData['quantity'] ?? 1,
-              );
-              _items.add(item);
-            }
+              ),
+            );
           }
         }
       }
