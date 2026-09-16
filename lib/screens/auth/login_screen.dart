@@ -183,8 +183,13 @@ class _LoginScreenState extends State<LoginScreen>
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: TextButton(
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(
+                onPressed: () async {
+                  // إنشاء جلسة Firebase مجهولة (زائر) — بدونها تفشل كتابة
+                  // Firestore مثل طلب غرفة القياس في الوضع الذكي
+                  final navigator = Navigator.of(context);
+                  final auth = context.read<AuthProvider>();
+                  await auth.loginAsGuest();
+                  navigator.pushReplacement(
                     MaterialPageRoute(
                       builder: (_) => const MainShell(),
                     ),

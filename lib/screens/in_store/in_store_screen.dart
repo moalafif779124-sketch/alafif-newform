@@ -1,3 +1,6 @@
+// show: FirebaseAuth فقط — لأن firebase_auth يصدّر أيضاً AuthProvider
+// الذي يتعارض مع AuthProvider الخاص بالتطبيق
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -562,13 +565,16 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
     final store = widget.store;
     final product = store.scannedProduct!;
     final variants = product.stockVariants;
-    // المقاسات المتوفرة فعلاً هي فقط القابلة للطلب
-    final availableSizes = variants.isEmpty
-        ? product.sizes
-        : variants.entries
+    // المقاسات المتوفرة فعلاً هي فقط القابلة للطلب.
+    // ملاحظة: كثير من منتجات المتجر (معاوز/فنائل/بجائم) بلا مقاسات إطلاقاً —
+    // في هذه الحالة نعرض خيار «مقاس موحّد» لتفعيل الطلب بدل تعطيله.
+    final availableSizes = variants.isNotEmpty
+        ? variants.entries
             .where((e) => e.value > 0)
             .map((e) => e.key)
-            .toList();
+            .toList()
+        : (product.sizes.isNotEmpty ? product.sizes : const <String>['مقاس موحّد']);
+    final isOneSize = variants.isEmpty && product.sizes.isEmpty;
     _size ??= availableSizes.isNotEmpty ? availableSizes.first : null;
     _color = _color.isEmpty && product.colorOptions.isNotEmpty
         ? (product.colorOptions.first['name'] ?? '')
@@ -614,8 +620,8 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
               style: TextStyle(fontSize: 12, color: AppColors.error),
             )
           else ...[
-            const Text('اختر المقاس',
-                style: TextStyle(
+            Text(isOneSize ? 'القطعة بمقاس موحّد (بدون مقاسات)' : 'اختر المقاس',
+                style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary)),
@@ -766,7 +772,9 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
   Future<void> _dispatch(BuildContext context) async {
     final store = context.read<InStoreProvider>();
     final auth = context.read<AuthProvider>();
-    final userId = auth.userId ?? 'guest';
+    // معرّف المستخدم يجب أن يطابق request.auth.uid في قواعد Firestore،
+    // لذا نأخذ uid من Firebase Auth مباشرة (يعمل مع تسجيل الدخول أو الزائر).
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? auth.userId ?? 'guest';
 
     final ok = await store.requestFittingRoom(
       size: _size ?? '',

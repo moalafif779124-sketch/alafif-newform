@@ -418,6 +418,30 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // =================== الدخول كزائر (تصفح بدون تسجيل) ===================
+  //
+  // مهم جداً: نُنشئ جلسة Firebase Auth مجهولة حتى لو تخطى المستخدم التسجيل.
+  // بدون ذلك يكون request.auth = null في قواعد Firestore، فتفشل كل عمليات
+  // الكتابة (مثل طلب «إحضار لغرفة القياس» في الوضع الذكي داخل الفرع).
+  Future<void> loginAsGuest() async {
+    try {
+      final existing = _firebaseService.auth.currentUser;
+      if (existing != null) {
+        _user ??= AppUser(id: existing.uid, fullName: 'زائر', phone: '');
+      } else {
+        final credential = await _firebaseService.auth.signInAnonymously();
+        final uid = credential.user?.uid ?? '';
+        debugPrint('👤 Guest Firebase Auth UID: $uid');
+        if (uid.isNotEmpty) {
+          _user = AppUser(id: uid, fullName: 'زائر', phone: '');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Guest sign-in error: $e');
+    }
+    notifyListeners();
+  }
+
   // =================== تسجيل الخروج ===================
 
   Future<void> logout() async {
