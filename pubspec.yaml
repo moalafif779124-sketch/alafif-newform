@@ -42,7 +42,8 @@ dependencies:
   share_plus: ^10.1.4
 
   # In-Store Smart Mode — مسح باركود/QR لبطاقات المنتجات في الفرع
-  mobile_scanner: ^7.0.1
+  # ملاحظة: 7.x يتطلب compileSdk 36 (يحتاج AGP 8.9+) — المشروع على AGP 8.7.3/SDK 35
+  mobile_scanner: ^6.0.7
   
   # Payments
   http: ^1.2.2

@@ -154,7 +154,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
                           setState(() => _cameraError = 'تعذّر تشغيل الكاميرا');
                         }
                       },
-                      errorBuilder: (context, error) {
+                      errorBuilder: (context, error, child) {
                         return _buildCameraError();
                       },
                     ),
