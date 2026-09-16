@@ -11,6 +11,7 @@ import 'providers/review_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/points_provider.dart';
 import 'providers/navigation_provider.dart';
+import 'providers/in_store_provider.dart';
 import 'services/notification_service.dart';
 import 'services/cache_service.dart';
 import 'screens/splash/splash_screen.dart';
@@ -38,6 +39,7 @@ class ALAFIFApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()..load()),
         ChangeNotifierProvider(create: (_) => PointsProvider()),
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
+        ChangeNotifierProvider(create: (_) => InStoreProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

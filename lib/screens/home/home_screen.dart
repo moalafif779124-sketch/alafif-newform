@@ -22,6 +22,8 @@ import '../catalog/catalog_screen.dart';
 import '../catalog/visual_search_screen.dart';
 import '../profile/points_screen.dart';
 import '../stylist/ai_stylist_screen.dart';
+import '../in_store/in_store_screen.dart';
+import '../../providers/in_store_provider.dart';
 import '../../services/voice_search_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -212,11 +214,56 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                   const Spacer(),
-                  // QR Scanner
+                  // ===== الوضع الذكي داخل الفرع =====
+                  Consumer<InStoreProvider>(
+                    builder: (context, store, _) => Tooltip(
+                      message: store.enabled
+                          ? 'الوضع الذكي مُفعّل'
+                          : 'تفعيل الوضع الذكي داخل الفرع',
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.storefront,
+                              color: Colors.white, size: 18),
+                          Transform.scale(
+                            scale: 0.72,
+                            child: Switch(
+                              value: store.enabled,
+                              activeColor: AppColors.success,
+                              inactiveThumbColor: Colors.white70,
+                              inactiveTrackColor: Colors.white24,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              onChanged: (value) async {
+                                final navigator = Navigator.of(context);
+                                await store.toggleMode(value);
+                                if (!value) return;
+                                navigator.push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const InStoreScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // الماسح الضوئي — يفتح الوضع الذكي مباشرة
                   IconButton(
                     icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
-                    onPressed: () {},
-                    tooltip: 'مسح QR',
+                    onPressed: () async {
+                      final store = context.read<InStoreProvider>();
+                      final navigator = Navigator.of(context);
+                      if (!store.enabled) await store.toggleMode(true);
+                      navigator.push(
+                        MaterialPageRoute(
+                          builder: (_) => const InStoreScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'مسح بطاقة منتج (الوضع الذكي)',
                   ),
                   // الإشعارات
                   IconButton(
