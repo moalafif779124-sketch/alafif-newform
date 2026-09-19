@@ -232,14 +232,17 @@ class InStoreService {
     required String color,
     required String userId,
     required String sessionId,
+    String sku = '',
     String note = '',
   }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
     final docRef = await _firestore.collection('fitting_room_requests').add({
       'branchId': branch.id,
       'branchName': branch.name,
       'productId': product.id,
       'productName': product.name,
       'productImage': product.images.isNotEmpty ? product.images.first : '',
+      'sku': sku,
       'size': size,
       'color': color,
       'userId': userId,
@@ -247,19 +250,36 @@ class InStoreService {
       'note': note,
       'source': 'in_store_smart_mode',
       'status': 'pending',
-      'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'createdAt': now,
+      'updatedAt': now,
     });
     debugPrint('🛎️ Fitting-room request sent: ${docRef.id}');
     return docRef.id;
   }
 
   /// طلبات العميل الحالية (لمتابعة حالتها داخل الفرع)
+  ///
+  /// ⚠️ لا يُستخدم orderBy هنا: `where(userId) + orderBy(createdAt)` يحتاج
+  /// فهرساً مركّباً (userId ASC, createdAt DESC) وإلا يفشل الاستعلام بـ
+  /// `failed-precondition`. الفرز يجري في الواجهة (أحدث 20 طلباً تكفي).
   Stream<QuerySnapshot<Map<String, dynamic>>> watchMyRequests(String userId) {
     return _firestore
         .collection('fitting_room_requests')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .limit(10)
+        .limit(20)
         .snapshots();
+  }
+
+  /// إلغاء العميل لطلبه — مسموح فقط وهو بحالة `pending`
+  /// (قاعدة Firestore ترفض أي انتقال آخر من جهة العميل).
+  Future<void> cancelFittingRoomRequest(String docId) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _firestore.collection('fitting_room_requests').doc(docId).update({
+      'status': 'cancelled',
+      'cancelledAt': now,
+      'updatedAt': now,
+      'cancelledBy': 'customer',
+    });
+    debugPrint('🚫 Fitting-room request cancelled by customer: $docId');
   }
 }

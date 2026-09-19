@@ -11,6 +11,7 @@ import '../../providers/in_store_provider.dart';
 import '../../services/in_store_service.dart';
 import '../../widgets/app_image.dart';
 import '../../widgets/barcode_scanner_sheet.dart';
+import '../../widgets/fitting_room_status_chip.dart';
 
 /// الوضع الذكي داخل الفرع 🏬
 ///
@@ -35,24 +36,41 @@ class InStoreScreen extends StatelessWidget {
         ),
         body: Consumer<InStoreProvider>(
           builder: (context, store, _) {
-            return ListView(
-              padding: const EdgeInsets.all(16),
+            final auth = context.watch<AuthProvider>();
+            // معرّف المستخدم يجب أن يطابق request.auth.uid في قواعد Firestore
+            final uid =
+                FirebaseAuth.instance.currentUser?.uid ?? auth.userId ?? '';
+            return Column(
               children: [
-                _BranchSelector(store: store),
-                const SizedBox(height: 14),
-                _ScanCard(store: store),
-                const SizedBox(height: 16),
-                if (store.error.isNotEmpty) _ErrorCard(message: store.error),
-                if (store.scannedProduct != null) ...[
-                  _ProductResultCard(store: store),
-                  const SizedBox(height: 14),
-                  _StylistVideoCard(store: store),
-                  const SizedBox(height: 16),
-                  _FittingRoomRequestCard(store: store),
-                ] else if (store.error.isEmpty && !store.scanning) ...[
-                  const _EmptyHint(),
-                ],
-                const SizedBox(height: 30),
+                // حالة طلب غرفة القياس — تظهر فقط لصاحب حساب مسجّل
+                if (uid.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: FittingRoomStatusChip(userId: uid),
+                  ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _BranchSelector(store: store),
+                      const SizedBox(height: 14),
+                      _ScanCard(store: store),
+                      const SizedBox(height: 16),
+                      if (store.error.isNotEmpty)
+                        _ErrorCard(message: store.error),
+                      if (store.scannedProduct != null) ...[
+                        _ProductResultCard(store: store),
+                        const SizedBox(height: 14),
+                        _StylistVideoCard(store: store),
+                        const SizedBox(height: 16),
+                        _FittingRoomRequestCard(store: store),
+                      ] else if (store.error.isEmpty && !store.scanning) ...[
+                        const _EmptyHint(),
+                      ],
+                      const SizedBox(height: 30),
+                    ],
+                  ),
+                ),
               ],
             );
           },

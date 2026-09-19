@@ -154,6 +154,7 @@ class InStoreProvider extends ChangeNotifier {
         color: color,
         userId: userId,
         sessionId: sessionId,
+        sku: _rawCode,
         note: note,
       );
       _lastRequestId = id;
