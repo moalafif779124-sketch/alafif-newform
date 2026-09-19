@@ -792,17 +792,31 @@ class FirebaseService {
     try {
       final userDoc = firestore.collection('users').doc(userId);
       final existing = await userDoc.get();
-      if (existing.exists) {
-        // إضافة token إلى مصفوفة fcmTokens (لنفقد لا شيء)
-        final currentTokens = List<String>.from(existing.data()?['fcmTokens'] ?? []);
-        if (!currentTokens.contains(token)) {
-          currentTokens.add(token);
-          // الحفاظ على آخر 5 tokens فقط
-          while (currentTokens.length > 5) {
-            currentTokens.removeAt(0);
-          }
-          await userDoc.update({'fcmTokens': currentTokens});
+      if (!existing.exists) {
+        // إنشاء المستند إن لم يوجد (مثال: مستخدم زائر عبر الدخول المجهول)
+        // بدون ذلك يُفقد التوكن ولا يصل أي إشعار لهذا المستخدم.
+        await userDoc.set({
+          'id': userId,
+          'fullName': 'زائر',
+          'phone': '',
+          'email': '',
+          'isAdmin': false,
+          'fcmTokens': [token],
+          'createdAt': DateTime.now().millisecondsSinceEpoch,
+        }, SetOptions(merge: true));
+        debugPrint('🔔 Created users/$userId to store its FCM token');
+        return;
+      }
+
+      // إضافة token إلى مصفوفة fcmTokens (لنفقد لا شيء)
+      final currentTokens = List<String>.from(existing.data()?['fcmTokens'] ?? []);
+      if (!currentTokens.contains(token)) {
+        currentTokens.add(token);
+        // الحفاظ على آخر 5 tokens فقط
+        while (currentTokens.length > 5) {
+          currentTokens.removeAt(0);
         }
+        await userDoc.update({'fcmTokens': currentTokens});
       }
     } catch (e) {
       debugPrint('⚠️ Failed to save FCM token: $e');

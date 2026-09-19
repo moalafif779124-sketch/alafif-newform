@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
@@ -16,8 +18,21 @@ import 'services/notification_service.dart';
 import 'services/cache_service.dart';
 import 'screens/splash/splash_screen.dart';
 
+/// معالج الرسائل في الخلفية (التطبيق مغلق أو في الخلفية)
+///
+/// مطلوب في القمة (top-level) مع @pragma('vm:entry-point') — بدونه تُهمَل
+/// رسائل FCM التي تحمل data فقط أثناء وجود التطبيق في الخلفية/مغلقاً.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint('🔔 Background FCM message: ${message.messageId} '
+      'type=${message.data['type']}');
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // تسجيل معالج الخلفية قبل أي تهيئة أخرى
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // تهيئة الكاش المحلي قبل الإقلاع — يضمن عرض فوري
   CacheService.instance.init();
   runApp(const ALAFIFApp());

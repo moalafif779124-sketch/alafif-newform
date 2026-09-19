@@ -436,6 +436,9 @@ class AuthProvider with ChangeNotifier {
           _user = AppUser(id: uid, fullName: 'زائر', phone: '');
         }
       }
+      // 🔔 ربط FCM token بجلسة الزائر — بدونه لا يصل أي إشعار للزائر
+      // (مثال: إشعار «طلبك في غرفة القياس» من الوضع الذكي داخل الفرع)
+      await _registerUserNotifications();
     } catch (e) {
       debugPrint('⚠️ Guest sign-in error: $e');
     }
