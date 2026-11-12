@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/wishlist_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/app_image.dart';
@@ -37,7 +38,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _selectedColorIndex = 0;
   int _quantity = 1;
   bool _isDescriptionExpanded = false;
-  bool _isFavorite = false;
+
+  /// حالة المفضلة تُقرأ من WishlistProvider (المحفوظة محلياً وعلى Firestore)
+  /// بدل حالة محلية تضيع عند مغادرة الشاشة أو إعادة تشغيل التطبيق.
+  bool get _isFavorite =>
+      context.watch<WishlistProvider>().isWishlisted(product.id);
 
   // ===== تنبيه توفر المخزن =====
   bool _notifyRequested = false; // هل طلب المستخدم التنبيه لهذا المقاس؟
@@ -92,12 +97,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   void _onToggleFavorite() {
-    setState(() {
-      _isFavorite = !_isFavorite;
-    });
+    final wishlist = context.read<WishlistProvider>();
+    final wasFav = wishlist.isWishlisted(product.id);
+    wishlist.toggleWishlist(product.id);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isFavorite ? 'تمت الإضافة إلى المفضلة' : 'تمت الإزالة من المفضلة'),
+        content: Text(wasFav ? 'تمت الإزالة من المفضلة' : 'تمت الإضافة إلى المفضلة'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -208,7 +213,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return;
     }
 
-    if (_selectedSize == null) {
+    if (product.sizes.isNotEmpty && _selectedSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('يرجى اختيار المقاس'),
@@ -227,9 +232,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         : '#000000';
 
     final cartItem = CartItem(
-      id: '${product.id}_${_selectedSize}_${_selectedColorIndex}_${DateTime.now().millisecondsSinceEpoch}',
+      id: '${product.id}_${_selectedSize ?? 'one'}_${_selectedColorIndex}_${DateTime.now().millisecondsSinceEpoch}',
       product: product,
-      size: _selectedSize!,
+      size: _selectedSize ?? '',
       color: colorName,
       colorHex: colorHex,
       quantity: _quantity,
@@ -888,6 +893,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             }
 
             return GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
                 setState(() => _selectedColorIndex = index);
               },

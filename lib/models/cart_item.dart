@@ -7,6 +7,15 @@ class CartItem {
   final String size;
   final String color;
   final String colorHex;
+
+  /// مصدر القطعة: `stylist` (توصية المصمم الذكي) أو `outfit` (طقم منسّق في
+  /// الإدارة) أو '' للقطعة المفردة.
+  final String bundleSource;
+
+  /// معرّف الطقم الذي تنتمي إليه القطعة. فارغ = قطعة مفردة لا تدخل في
+  /// حساب خصم الطقم (انظر `BundlePricing`).
+  final String bundleGroupId;
+
   int quantity;
 
   CartItem({
@@ -15,8 +24,13 @@ class CartItem {
     required this.size,
     required this.color,
     this.colorHex = '#000000',
+    this.bundleSource = '',
+    this.bundleGroupId = '',
     this.quantity = 1,
   });
+
+  /// هل هذه القطعة جزء من طقم مؤهّل لخصم الطقم؟
+  bool get isBundled => bundleGroupId.isNotEmpty;
 
   double get totalPrice => product.price * quantity;
 
@@ -29,6 +43,8 @@ class CartItem {
       size: map['size'] ?? '',
       color: map['color'] ?? '',
       colorHex: map['colorHex'] ?? '#000000',
+      bundleSource: map['bundleSource'] ?? '',
+      bundleGroupId: map['bundleGroupId'] ?? '',
       quantity: map['quantity'] ?? 1,
     );
   }
@@ -40,6 +56,8 @@ class CartItem {
       'size': size,
       'color': color,
       'colorHex': colorHex,
+      'bundleSource': bundleSource,
+      'bundleGroupId': bundleGroupId,
       'quantity': quantity,
     };
   }

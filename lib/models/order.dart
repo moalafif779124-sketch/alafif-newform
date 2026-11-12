@@ -9,6 +9,11 @@ class Order {
   final double shippingCost;
   final double tax;
   final double discount;
+
+  /// تفصيل خصم الطقم (الشريحة، عدد القطع، المبلغ، ومجموعات الأطقم) كما
+  /// حُسب في السلة — يراه الموظفون في لوحة الإدارة.
+  final Map<String, dynamic>? bundle;
+
   final double total;
   final String paymentMethod;
   final String paymentStatus;
@@ -29,6 +34,7 @@ class Order {
     required this.shippingCost,
     required this.tax,
     this.discount = 0,
+    this.bundle,
     required this.total,
     required this.paymentMethod,
     required this.paymentStatus,
@@ -60,6 +66,11 @@ class Order {
   }
 
   String get paymentStatusText {
+    // الدفع عند الاستلام: لا يُعدّ مدفوعاً حتى استلام النقد — نتجاهل أي حالة
+    // «مدفوعة» قديمة كُتبت بالخطأ من نسخ سابقة.
+    if (paymentMethod == 'cod') {
+      return 'الدفع عند الاستلام';
+    }
     switch (paymentStatus) {
       case 'pending':
         return 'في انتظار الدفع';
@@ -88,6 +99,9 @@ class Order {
       shippingCost: (map['shippingCost'] ?? 0).toDouble(),
       tax: (map['tax'] ?? 0).toDouble(),
       discount: (map['discount'] ?? 0).toDouble(),
+      bundle: map['bundle'] != null
+          ? Map<String, dynamic>.from(map['bundle'] as Map)
+          : null,
       total: (map['total'] ?? 0).toDouble(),
       paymentMethod: map['paymentMethod'] ?? '',
       paymentStatus: map['paymentStatus'] ?? 'pending',
@@ -117,6 +131,7 @@ class Order {
       'shippingCost': shippingCost,
       'tax': tax,
       'discount': discount,
+      'bundle': bundle,
       'total': total,
       'paymentMethod': paymentMethod,
       'paymentStatus': paymentStatus,
@@ -139,6 +154,12 @@ class OrderItem {
   final double price;
   final int quantity;
 
+  /// مصدر القطعة: `stylist` / `outfit` / '' — لتمييز قطع الطقم في الفاتورة
+  final String bundleSource;
+
+  /// معرّف الطقم الذي جاءت منه القطعة (فارغ = قطعة مفردة)
+  final String bundleGroupId;
+
   OrderItem({
     required this.productId,
     required this.productName,
@@ -147,7 +168,11 @@ class OrderItem {
     required this.color,
     required this.price,
     required this.quantity,
+    this.bundleSource = '',
+    this.bundleGroupId = '',
   });
+
+  bool get isBundled => bundleGroupId.isNotEmpty;
 
   double get total => price * quantity;
 
@@ -160,6 +185,8 @@ class OrderItem {
       color: map['color'] ?? '',
       price: (map['price'] ?? 0).toDouble(),
       quantity: map['quantity'] ?? 1,
+      bundleSource: map['bundleSource'] ?? '',
+      bundleGroupId: map['bundleGroupId'] ?? '',
     );
   }
 
@@ -172,6 +199,8 @@ class OrderItem {
       'color': color,
       'price': price,
       'quantity': quantity,
+      'bundleSource': bundleSource,
+      'bundleGroupId': bundleGroupId,
     };
   }
 }

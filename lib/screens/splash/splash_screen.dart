@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/wishlist_provider.dart';
 import '../../services/notification_service.dart';
 import '../auth/login_screen.dart';
 import '../shell_screen.dart';
@@ -80,6 +81,12 @@ class _SplashScreenState extends State<SplashScreen>
           (authProvider.userId != null && authProvider.userId!.isNotEmpty)) {
         await NotificationService().setUserId(authProvider.userId);
         context.read<CartProvider>().setUserId(authProvider.userId);
+        // تحميل المفضلة (محلياً + Firestore) — بدون هذا لم تُحمَّل تفضيلات
+        // المستخدم فيظهر القلب مطفأً رغم وجود مفضلة محفوظة.
+        context.read<WishlistProvider>().setUserId(authProvider.userId);
+      } else {
+        // زائر: حمّل المفضلة المحلية من SharedPreferences
+        context.read<WishlistProvider>().setUserId(null);
       }
 
       // إعداد معالجات الرسائل الواردة من FCM

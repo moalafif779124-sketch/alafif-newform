@@ -15,7 +15,7 @@ import '../../providers/order_provider.dart';
 import '../../providers/points_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
-import '../home/home_screen.dart';
+import '../shell_screen.dart';
 
 /// شاشة إتمام الطلب (Checkout)
 class CheckoutScreen extends StatefulWidget {
@@ -216,9 +216,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (_isDefaultAddress && authProvider.userId != null) {
         try {
           final firebaseService = FirebaseService();
-          await firebaseService.firestore
-              .collection('addresses')
-              .add({
+          final newAddrId = await firebaseService.saveAddress({
             'userId': authProvider.userId,
             'fullName': _nameController.text.trim(),
             'phone': _phoneController.text.trim(),
@@ -227,9 +225,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             'city': DeliveryConfig.cityName(_selectedCity),
             'landmark': _landmarkController.text.trim(),
             'state': 'اليمن',
-            'isDefault': true,
+            'isDefault': false,
             'createdAt': DateTime.now().millisecondsSinceEpoch,
           });
+          // عنوان افتراضي واحد فقط: ألغِ الافتراضي عن البقية
+          await firebaseService.setDefaultAddress(
+              authProvider.userId!, newAddrId);
         } catch (e) {
           debugPrint('Error saving default address: $e');
         }
@@ -260,6 +261,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        // مرّر القيم الفعلية كي يطابق إجمالي الطلب المحفوظ ما رآه العميل
+        shippingCost: shippingCost,
+        pointsDiscount: pointsDiscount,
       );
 
       setState(() => _isSubmitting = false);
@@ -312,7 +316,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final finalTotal = cartProvider.subtotal +
             cartProvider.tax +
             shippingCost -
-            pointsDiscount;
+            pointsDiscount -
+            cartProvider.discountAmount;
 
         // تفريغ السلة
         cartProvider.clearCart();
@@ -437,10 +442,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop(); // إغلاق الحوار
-                  // التنقل إلى الرئيسية وإزالة جميع الشاشات السابقة
+                  // العودة إلى الهيكل الرئيسي (MainShell) لا إلى HomeScreen مجرّداً —
+                  // كان فتح HomeScreen مباشرةً يُفقد شريط التبويبات السفلي.
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
-                      builder: (_) => const HomeScreen(),
+                      builder: (_) => const MainShell(),
                     ),
                     (route) => false,
                   );
@@ -703,13 +709,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         // التوصيل الإقليمي حسب المحافظة (مجاني ≥ 50,000)
                         final shipping = _getShippingCost(subtotal);
                         final tax = cart.tax;
+                        // خصم الطقم — مبلغ فعلي لا نص عرض (نفس محرك السلة)
+                        final bundleDiscount = cart.discountAmount;
 
                         // حساب الخصم بالنقاط (عند التفعيل)
                         final pointsDiscount = _redeemPoints
                             ? _calculatePointsDiscount(points.points, subtotal)
                             : 0.0;
-                        final total =
-                            subtotal + shipping + tax - pointsDiscount;
+                        final total = subtotal +
+                            shipping +
+                            tax -
+                            pointsDiscount -
+                            bundleDiscount;
 
                         return Column(
                           children: [
@@ -726,6 +737,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                       'المجموع الفرعي',
                                       '${AppConstants.currency} ${_formatPrice(subtotal)}',
                                     ),
+                                    // ===== خصم الطقم (Full-Look) =====
+                                    if (bundleDiscount > 0) ...[
+                                      const SizedBox(height: 12),
+                                      _buildSummaryRow(
+                                        'خصم الطقم (${cart.bundleSummary.bestTier.percent}%)',
+                                        '-${AppConstants.currency} ${_formatPrice(bundleDiscount)}',
+                                      ),
+                                    ],
                                     const Divider(height: 24),
                                     // ===== بطاقة استرداد النقاط =====
                                     if (points.points >=

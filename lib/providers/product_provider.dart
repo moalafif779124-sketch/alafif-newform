@@ -432,6 +432,8 @@ class ProductProvider with ChangeNotifier {
           .where((p) =>
               p.name.toLowerCase().contains(query) ||
               p.description.toLowerCase().contains(query) ||
+              p.brand.toLowerCase().contains(query) ||
+              p.categoryName.toLowerCase().contains(query) ||
               p.tags.any((tag) => tag.toLowerCase().contains(query)))
           .toList();
     }

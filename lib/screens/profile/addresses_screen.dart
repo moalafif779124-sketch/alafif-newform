@@ -122,7 +122,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
         textDirection: TextDirection.rtl,
         child: Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom +
+                MediaQuery.of(ctx).padding.bottom +
+                16,
             left: 24,
             right: 24,
             top: 24,
@@ -347,11 +349,11 @@ class _AddressesScreenState extends State<AddressesScreen> {
         'createdAt': DateTime.now().millisecondsSinceEpoch,
       };
 
-      await _firebaseService.saveAddress(addressData);
+      final savedId = await _firebaseService.saveAddress(addressData);
 
-      // إذا كان العنوان افتراضياً، حدّث باقي العناوين
+      // عنوان افتراضي واحد فقط: إن عُيّن هذا افتراضياً، ألغِ الافتراضي عن البقية
       if (_isDefault && userId.isNotEmpty) {
-        // سيتم التعامل معه لاحقاً بعد استرجاع الـ id
+        await _firebaseService.setDefaultAddress(userId, savedId);
       }
 
       if (mounted) {
@@ -527,18 +529,27 @@ class _AddressesScreenState extends State<AddressesScreen> {
   // ======================== قائمة العناوين ========================
 
   Widget _buildAddressList(List<Address> addresses) {
+    // عنوان افتراضي واحد فقط للعرض — حتى لو احتوت البيانات القديمة عدة
+    // عناوين بخاصية isDefault (من نسخ سابقة)، نُظهر الوسام على عنوان واحد.
+    String? defaultId;
+    for (final a in addresses) {
+      if (a.isDefault) {
+        defaultId = a.id;
+        break;
+      }
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: addresses.length,
       itemBuilder: (context, index) {
-        return _buildAddressCard(addresses[index]);
+        return _buildAddressCard(addresses[index], defaultId);
       },
     );
   }
 
   // ======================== بطاقة عنوان ========================
 
-  Widget _buildAddressCard(Address address) {
+  Widget _buildAddressCard(Address address, String? defaultId) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -567,7 +578,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                     color: AppColors.primary,
                   ),
                 ),
-                if (address.isDefault) ...[
+                if (address.isDefault && address.id == defaultId) ...[
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(

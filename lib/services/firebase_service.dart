@@ -397,11 +397,16 @@ class FirebaseService {
 
   // =================== العناوين ===================
 
-  Future<void> saveAddress(Map<String, dynamic> addressData) async {
-    if (addressData['id'] != null && addressData['id'].isNotEmpty) {
-      await firestore.collection('addresses').doc(addressData['id']).set(addressData);
+  /// يحفظ العنوان ويعيد معرّف المستند — يلزم لضبط الخلافة في «الافتراضي».
+  Future<String> saveAddress(Map<String, dynamic> addressData) async {
+    if (addressData['id'] != null && (addressData['id'] as String).isNotEmpty) {
+      final id = addressData['id'] as String;
+      await firestore.collection('addresses').doc(id).set(addressData);
+      return id;
     } else {
-      await firestore.collection('addresses').add(addressData);
+      final data = Map<String, dynamic>.from(addressData)..remove('id');
+      final ref = await firestore.collection('addresses').add(data);
+      return ref.id;
     }
   }
 

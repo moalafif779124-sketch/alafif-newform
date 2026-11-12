@@ -231,6 +231,10 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
     final batch = <CartItem>[];
     final missing = <String>[];
 
+    // كل قطع هذه الإطلالة تنتمي لطقم واحد → يحسب محرك BundlePricing شريحتها
+    // (قطعتان 10%، ثلاث قطع أو أكثر 15%) وتظهر اللافتة في السلة تلقائياً.
+    final bundleGroupId = 'stylist_${DateTime.now().millisecondsSinceEpoch}';
+
     for (final pick in outfit.selectedProducts) {
       final Product? product = productProvider.getProductById(pick.productId);
       if (product == null) {
@@ -271,6 +275,8 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
           size: size,
           color: colorName,
           colorHex: colorHex,
+          bundleSource: 'stylist',
+          bundleGroupId: bundleGroupId,
           quantity: 1,
         ),
       );

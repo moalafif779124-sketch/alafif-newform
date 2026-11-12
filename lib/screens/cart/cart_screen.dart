@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_image.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../providers/cart_provider.dart';
 import '../../models/cart_item.dart';
+import '../../models/bundle_pricing.dart';
 import '../shell_screen.dart';
 import '../checkout/checkout_screen.dart' deferred as checkout;
 
@@ -190,41 +191,23 @@ class _CartScreenState extends State<CartScreen>
         padding: const EdgeInsets.all(8),
         child: Row(
           children: [
-            // صورة المنتج
+            // صورة المنتج — AppImage يفكّ روابط base64 (لا Storage bucket)،
+            // بينما CachedNetworkImage السابق كان يُظهر أيقونة صورة مكسورة.
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
                 width: 80,
                 height: 100,
-                child: item.product.images.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: item.product.images.first,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(
-                          color: AppColors.background,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
-                        errorWidget: (_, __, ___) => Container(
-                          color: AppColors.background,
-                          child: const Icon(
-                            Icons.image_not_supported_outlined,
-                            color: AppColors.accent,
-                            size: 32,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        color: AppColors.background,
-                        child: const Icon(
-                          Icons.image_outlined,
-                          color: AppColors.accent,
-                          size: 32,
-                        ),
-                      ),
+                child: AppImage(
+                  imageUrl: item.product.images.isNotEmpty
+                      ? item.product.images.first
+                      : '',
+                  fit: BoxFit.cover,
+                  width: 80,
+                  height: 100,
+                  backgroundColor: AppColors.background,
+                  cacheWidth: 160,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -331,6 +314,11 @@ class _CartScreenState extends State<CartScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // لافتة شريحة الطقم (تقدّم نحو 15%) — فوق الإجماليات مباشرة
+            if (cart.bundleSummary.hasBundle) ...[
+              _buildBundleTierBanner(cart),
+              const SizedBox(height: 12),
+            ],
             _buildPriceRow(
               'المجموع الفرعي',
               '${cart.subtotal.toStringAsFixed(0)} ${AppConstants.currency}',
@@ -347,6 +335,15 @@ class _CartScreenState extends State<CartScreen>
               'الضريبة (5%)',
               '${cart.tax.toStringAsFixed(0)} ${AppConstants.currency}',
             ),
+            // خصم الطقم — مبلغ فعلي مخصوم من الإجمالي (لا نص عرض فقط)
+            if (cart.discountAmount > 0) ...[
+              const SizedBox(height: 8),
+              _buildPriceRow(
+                'خصم الطقم (${cart.bundleSummary.bestTier.percent}%)',
+                '-${cart.discountAmount.toStringAsFixed(0)} ${AppConstants.currency}',
+                valueColor: AppColors.success,
+              ),
+            ],
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Divider(color: AppColors.border, height: 1),
@@ -401,6 +398,7 @@ class _CartScreenState extends State<CartScreen>
     String label,
     String value, {
     bool isTotal = false,
+    Color? valueColor,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -418,10 +416,83 @@ class _CartScreenState extends State<CartScreen>
           style: TextStyle(
             fontSize: isTotal ? 16 : 14,
             fontWeight: FontWeight.bold,
-            color: isTotal ? AppColors.primary : AppColors.textPrimary,
+            color: valueColor ??
+                (isTotal ? AppColors.primary : AppColors.textPrimary),
           ),
         ),
       ],
+    );
+  }
+
+  /// لافتة تقدّم الطقم: كم قطعة تفصل العميل عن الشريحة التالية، أو تأكيد
+  /// الخصم المطبَّق. تُبنى من نفس محرك `BundlePricing` الذي يحسب الخصم فعلياً.
+  Widget _buildBundleTierBanner(CartProvider cart) {
+    final summary = cart.bundleSummary;
+    final hint = summary.progressHint(
+      (v) => '${v.toStringAsFixed(0)} ${AppConstants.currency}',
+    );
+    if (hint.isEmpty) return const SizedBox.shrink();
+
+    final reachedTop = summary.piecesToNextTier == 0;
+    final color = reachedTop ? AppColors.success : AppColors.warning;
+    final target = reachedTop
+        ? BundleTier.fullOutfit
+        : summary.nextTier;
+    final progress = (summary.pieces / target.minPieces).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                reachedTop ? Icons.celebration : Icons.local_offer,
+                size: 18,
+                color: color,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  hint,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              if (!reachedTop)
+                Text(
+                  '${summary.pieces}/${target.minPieces}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+            ],
+          ),
+          if (!reachedTop) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                backgroundColor: color.withValues(alpha: 0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

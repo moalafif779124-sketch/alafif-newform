@@ -3,13 +3,11 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/constants.dart';
 import '../../models/cart_item.dart';
+import '../../models/bundle_pricing.dart';
 import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import 'app_image.dart';
-
-/// نسبة خصم الطقم (خصم إضافي عند شراء الإطلالة كاملة)
-const double _bundleDiscountRate = 0.10; // 10%
 
 /// قسم "صمم إطلالتك الكاملة" — عناصر مكمّلة مقترحة مع خصم الطقم
 class OutfitBundleSection extends StatefulWidget {
@@ -65,7 +63,12 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
   double get _originalTotal =>
       _items.where((i) => i.selected).fold(0.0, (s, i) => s + i.product.price);
 
-  double get _discountedTotal => _originalTotal * (1 - _bundleDiscountRate);
+  /// الشريحة المطبَّقة حسب عدد القطع المختارة — نفس محرك السلة حرفياً
+  /// (`BundlePricing`: قطعتان = 10%، ثلاث قطع أو أكثر = 15%)، فلا يمكن أن
+  /// يعرض هذا القسم خصماً لا تطبّقه السلة عند الدفع.
+  BundleTier get _tier => BundlePricing.tierFor(_selectedCount);
+
+  double get _discountedTotal => _originalTotal * (1 - _tier.rate);
 
   double get _savings => _originalTotal - _discountedTotal;
 
@@ -78,12 +81,18 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
     final selected = _items.where((i) => i.selected).toList();
     if (selected.isEmpty) return;
 
+    // كل قطع هذا القسم تنتمي لطقم واحد (المنتج المنسّق حوله) — فيحسب محرك
+    // السلة شريحتها حسب عدد القطع: قطعتان 10%، ثلاث 15%.
+    final groupId = 'outfit_${widget.product.id}';
+
     for (final item in selected) {
       cart.addItem(CartItem(
         id: '${DateTime.now().millisecondsSinceEpoch}_${item.product.id}',
         product: item.product,
         size: _selectedSizes[item.product.id] ?? '',
         color: '',
+        bundleSource: 'outfit',
+        bundleGroupId: groupId,
         quantity: 1,
       ));
     }
@@ -91,7 +100,8 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'تمت إضافة الإطلالة كاملة (${selected.length} منتجات) إلى السلة ✅',
+          'تمت إضافة الإطلالة كاملة (${selected.length} منتجات) إلى السلة ✅'
+          '${_tier.rate > 0 ? ' — خصم ${_tier.percent}%' : ''}',
         ),
         duration: const Duration(seconds: 3),
         backgroundColor: AppColors.success,
@@ -345,7 +355,7 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'سعر الطقم (خصم ${(_bundleDiscountRate * 100).round()}%)',
+                'سعر الطقم (خصم ${_tier.percent}%)',
                 style: const TextStyle(color: Colors.white, fontSize: 12.5),
               ),
               Text(

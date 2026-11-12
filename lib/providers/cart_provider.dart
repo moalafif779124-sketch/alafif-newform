@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product.dart';
 import '../models/cart_item.dart';
+import '../models/bundle_pricing.dart';
 import '../services/firebase_service.dart';
 import '../config/constants.dart';
 
@@ -22,10 +23,21 @@ class CartProvider with ChangeNotifier {
   double get totalEffectiveSubtotal =>
       _items.fold(0.0, (sum, item) => sum + item.totalEffectivePrice);
 
-  double get tax => subtotal * AppConstants.taxRate;
+  /// ملخص أطقم السلة (القطع القادمة من توصية المصمم الذكي أو من طقم منسّق).
+  BundleSummary get bundleSummary => BundlePricing.summarize(_items);
+
+  /// خصم الطقم المستحق على السلة (10% لقطعتين، 15% لثلاث قطع أو أكثر).
+  double get discountAmount => bundleSummary.discountAmount;
+
+  /// الضريبة تُحسب على المبلغ بعد خصم الطقم.
+  double get tax => (subtotal - discountAmount) * AppConstants.taxRate;
   double get shipping => subtotal >= 50000 ? 0 : AppConstants.shippingCost;
 
-  double get total => subtotal + tax + shipping;
+  /// المبلغ النهائي المستحق — الخصم مخصوم فعلياً لا معروضاً فقط.
+  double get totalAmount => subtotal + tax + shipping - discountAmount;
+
+  /// الاسم القديم محفوظ للتوافق — ويشمل الخصم الآن.
+  double get total => totalAmount;
 
   bool get hasItems => _items.isNotEmpty;
 
@@ -133,6 +145,8 @@ class CartProvider with ChangeNotifier {
         'size': item.size,
         'color': item.color,
         'colorHex': item.colorHex,
+        'bundleSource': item.bundleSource,
+        'bundleGroupId': item.bundleGroupId,
         'quantity': item.quantity,
       }).toList();
       await prefs.setString('cart_items', jsonEncode(itemsJson));
@@ -203,6 +217,8 @@ class CartProvider with ChangeNotifier {
                 size: itemData['size'] ?? '',
                 color: itemData['color'] ?? '',
                 colorHex: itemData['colorHex'] ?? '#000000',
+                bundleSource: itemData['bundleSource'] ?? '',
+                bundleGroupId: itemData['bundleGroupId'] ?? '',
                 quantity: itemData['quantity'] ?? 1,
               ),
             );

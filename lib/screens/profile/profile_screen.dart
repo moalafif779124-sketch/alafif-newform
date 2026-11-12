@@ -552,27 +552,34 @@ class _ProfileScreenState extends State<ProfileScreen>
     required String title,
     required VoidCallback onTap,
   }) {
+    // في الوضع الليلي تكون البطاقة داكنة؛ نستخدم ألواناً فاتحة للنص والأيقونة
+    // كي لا تختفي (كانت AppColors.textPrimary الداكنة تُرسم على خلفية داكنة).
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? Colors.white : AppColors.primary;
+    final titleColor = isDark ? Colors.white : AppColors.textPrimary;
+    final trailingColor = isDark ? Colors.white54 : AppColors.textSecondary;
+
     return ListTile(
       leading: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
+          color: iconColor.withValues(alpha: isDark ? 0.14 : 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: AppColors.primary, size: 22),
+        child: Icon(icon, color: iconColor, size: 22),
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
+          color: titleColor,
         ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.chevron_left,
-        color: AppColors.textSecondary,
+        color: trailingColor,
         size: 20,
       ),
       onTap: onTap,

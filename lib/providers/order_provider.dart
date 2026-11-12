@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/order.dart';
 import '../models/cart_item.dart';
+import '../models/bundle_pricing.dart';
 import '../services/firebase_service.dart';
 import '../services/payment_service.dart';
 import '../config/constants.dart';
@@ -46,17 +47,32 @@ class OrderProvider with ChangeNotifier {
     required String paymentMethod,
     required Map<String, dynamic> shippingAddress,
     String? notes,
+    // التوصيل الفعلي المحسوب في شاشة الدفع (قد يكون مجانياً) وخصم النقاط —
+    // يُمرَّران كي يطابق الإجمالي المحفوظ ما رآه العميل تماماً.
+    double? shippingCost,
+    double pointsDiscount = 0,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      // ===== خصم الطقم (Full-Look) =====
+      // يُحسب هنا من عناصر السلة بنفس محرك `BundlePricing` المستخدم في
+      // الواجهة — فلا يمكن أن يصل الطلب بخصم معروض وغير محسوب (أو العكس).
+      final bundle = BundlePricing.summarize(cartItems);
+      final bundleDiscount = bundle.discountAmount;
+
       // حساب المجموع
       final subtotal = cartItems.fold<double>(
           0, (sum, item) => sum + (item.product.price * item.quantity));
-      final tax = subtotal * AppConstants.taxRate;
-      final total = subtotal + tax + AppConstants.shippingCost;
+      final tax = (subtotal - bundleDiscount) * AppConstants.taxRate;
+      // التوصيل الفعلي — يُمرَّر من شاشة الدفع (مجاني ≥ 50,000 أو حسب المحافظة).
+      // كان الكود القديم يضيف AppConstants.shippingCost دائماً فيُرفع الإجمالي
+      // المحفوظ فوق ما رآه العميل (السبب الجذري لاختلاف 63,000 ← 66,000).
+      final shipping = shippingCost ??
+          (subtotal >= 50000 ? 0.0 : AppConstants.shippingCost);
+      final total = subtotal + tax + shipping - bundleDiscount - pointsDiscount;
 
       // إنشاء رقم طلب
       final orderNumber = 'ANF-${DateTime.now().millisecondsSinceEpoch}';
@@ -76,12 +92,16 @@ class OrderProvider with ChangeNotifier {
                   color: item.color,
                   price: item.product.price,
                   quantity: item.quantity,
+                  bundleSource: item.bundleSource,
+                  bundleGroupId: item.bundleGroupId,
                 ))
             .toList(),
         status: 'pending',
         subtotal: subtotal,
-        shippingCost: AppConstants.shippingCost,
+        shippingCost: shipping,
         tax: tax,
+        discount: bundleDiscount + pointsDiscount,
+        bundle: bundle.hasBundle ? bundle.toMap() : null,
         total: total,
         paymentMethod: paymentMethod,
         paymentStatus: paymentMethod == 'cod' ? 'pending' : 'pending',
@@ -108,13 +128,16 @@ class OrderProvider with ChangeNotifier {
       );
 
       // تحديث حالة الدفع
+      // الدفع عند الاستلام (cod) لا يُعلَّم «مدفوعاً» أبداً — يبقى معلّقاً حتى
+      // استلام النقد عند التسليم (كان يُعلَّم paid خطأً فيُظهر «تم الدفع»).
       if (paymentResult['success'] == true) {
+        final isCod = paymentMethod == 'cod';
         await _firebaseService.firestore
             .collection('orders')
             .doc(orderId)
             .update({
-          'paymentStatus': 'paid',
-          'paymentReference': paymentResult['transaction_id'],
+          if (!isCod) 'paymentStatus': 'paid',
+          if (!isCod) 'paymentReference': paymentResult['transaction_id'],
           'status': 'confirmed',
         });
       }
