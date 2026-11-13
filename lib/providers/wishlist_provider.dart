@@ -106,13 +106,28 @@ class WishlistProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // 1) اقرأ المفضلة المحفوظة محلياً أولاً — المصدر الأدنى المضمون حتى لو
+      //    تعذّرت كتابة Firestore (قواعد/اتصال). بدون هذا كانت المفضلة تُفرَّغ
+      //    عند إعادة تشغيل التطبيق إن لم يوجد مستند سحابي.
+      final prefs = await SharedPreferences.getInstance();
+      final savedLocal = prefs.getString('wishlist_ids');
+      final local = savedLocal != null
+          ? List<String>.from(jsonDecode(savedLocal))
+          : <String>[];
+
+      // 2) حاول قراءة السحابي إن أمكن
+      List<String>? remote;
       final service = FirebaseService();
       if (service.isInitialized) {
-        final ids = await service.getWishlist(_userId!);
-        if (ids != null) {
-          _wishlistIds = ids;
-        }
+        remote = await service.getWishlist(_userId!);
       }
+
+      // 3) دمج المحلي والسحابي (اتحاد) — لا نُسقط المحلي إن كان السحابي فارغاً
+      final merged = <String>{...local, if (remote != null) ...remote};
+      _wishlistIds = merged.toList();
+
+      // 4) أعد حفظ النتيجة محلياً (وسحابياً بأفضل جهد) لتثبيت الدمج
+      await _saveWishlist();
     } catch (e) {
       debugPrint('Error loading wishlist from Firebase: $e');
     }
