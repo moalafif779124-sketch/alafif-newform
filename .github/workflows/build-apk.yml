@@ -72,22 +72,11 @@ jobs:
           compression-level: 9
 
       - name: Upload APK to Release
-        continue-on-error: true # release upload has been broken since June; APK ships via artifact
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -o pipefail
-          UPLOAD_URL="https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/333416472/assets?name=app-arm64-v8a-release.apk"
-          HTTP_CODE=$(curl -s -o /tmp/release_upload.json -w "%{http_code}" -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/vnd.android.package-archive" \
-            --data-binary @build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-            "$UPLOAD_URL")
-          echo "Release upload HTTP:$HTTP_CODE"
-          if [ "$HTTP_CODE" != "201" ]; then
-            echo "::error::Release upload failed (HTTP $HTTP_CODE)"
-            cat /tmp/release_upload.json
-            exit 1
-          fi
-          echo "APK uploaded to release"
+          gh release upload jeeb-v1 build/app/outputs/flutter-apk/app-arm64-v8a-release.apk --clobber
 
       - name: Show outputs
         run: |
