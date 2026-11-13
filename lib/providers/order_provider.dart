@@ -5,6 +5,7 @@ import '../models/bundle_pricing.dart';
 import '../services/firebase_service.dart';
 import '../services/payment_service.dart';
 import '../config/constants.dart';
+import '../config/delivery_config.dart';
 
 /// مزود حالة الطلبات
 class OrderProvider with ChangeNotifier {
@@ -71,7 +72,8 @@ class OrderProvider with ChangeNotifier {
       // كان الكود القديم يضيف AppConstants.shippingCost دائماً فيُرفع الإجمالي
       // المحفوظ فوق ما رآه العميل (السبب الجذري لاختلاف 63,000 ← 66,000).
       final shipping = shippingCost ??
-          (subtotal >= 50000 ? 0.0 : AppConstants.shippingCost);
+          DeliveryConfig.getShippingCost(DeliveryConfig.defaultCityId,
+              subtotal: subtotal);
       final total = subtotal + tax + shipping - bundleDiscount - pointsDiscount;
 
       // إنشاء رقم طلب

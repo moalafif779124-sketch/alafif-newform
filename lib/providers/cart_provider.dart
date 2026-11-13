@@ -6,6 +6,7 @@ import '../models/cart_item.dart';
 import '../models/bundle_pricing.dart';
 import '../services/firebase_service.dart';
 import '../config/constants.dart';
+import '../config/delivery_config.dart';
 
 /// مزود حالة سلة التسوق
 class CartProvider with ChangeNotifier {
@@ -31,7 +32,13 @@ class CartProvider with ChangeNotifier {
 
   /// الضريبة تُحسب على المبلغ بعد خصم الطقم.
   double get tax => (subtotal - discountAmount) * AppConstants.taxRate;
-  double get shipping => subtotal >= 50000 ? 0 : AppConstants.shippingCost;
+  /// الشحن يساوي ما ستفرضه شاشة الدفع فعلياً لعنوان المحافظة الافتراضي
+  /// (مجاني ≥ 50,000). سابقاً كانت السلة تستخدم AppConstants.shippingCost
+  /// الثابت (3000) بينما الدفع يستخدم تعرفة المحافظة (صنعاء=2000) فيختلف
+  /// الإجمالي بين السلة والدفع.
+  double get shipping =>
+      DeliveryConfig.getShippingCost(DeliveryConfig.defaultCityId,
+          subtotal: subtotal);
 
   /// المبلغ النهائي المستحق — الخصم مخصوم فعلياً لا معروضاً فقط.
   double get totalAmount => subtotal + tax + shipping - discountAmount;

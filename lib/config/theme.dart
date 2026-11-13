@@ -199,6 +199,20 @@ class AppTheme {
         thumbColor: WidgetStateProperty.all(AppColors.accent),
         trackColor: WidgetStateProperty.all(AppColors.accentLight),
       ),
+
+      // =========== لسان الحالة (SnackBar) ===========
+      // عائم بزوايا دائرية وهامش سفلي — كي لا يغطي أزرار الإجراء السفلية
+      // (متابعة الدفع / تأكيد الطلب) ويبقى قابلاً للسحب بعيداً.
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        insetPadding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+        contentTextStyle: const TextStyle(
+          fontFamily: 'NotoKufiArabic',
+          fontSize: 13,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 
@@ -389,6 +403,17 @@ class AppTheme {
       scrollbarTheme: ScrollbarThemeData(
         thumbColor: WidgetStateProperty.all(const Color(0xFFD4A843)),
         trackColor: WidgetStateProperty.all(const Color(0xFF2A2A4A)),
+      ),
+
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        insetPadding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+        contentTextStyle: const TextStyle(
+          fontFamily: 'NotoKufiArabic',
+          fontSize: 13,
+          color: Colors.white,
+        ),
       ),
     );
   }
