@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -233,13 +232,15 @@ class ProductProvider with ChangeNotifier {
     _hasMore = true;
     _lastDocument = null;
 
-    // ===== الخطوة 1: اعرض العيّنات فوراً (صفر انتظار) =====
-    _loadSampleData();
-    _isLoading = false;
+    // ===== الخطوة 1: لا بيانات تجريبية — الكاش المحلي إن وُجد، وإلا مؤشر تحميل =====
+    _seedCategoriesIfEmpty();
+    if (_products.isEmpty) {
+      _isLoading = true;
+    }
     _error = null;
     notifyListeners();
 
-    // ===== الخطوة 2: في الخلفية، احمل المنتجات الحقيقية =====
+    // ===== الخطوة 2: حمّل المنتجات الحقيقية من Firestore =====
     try {
       final result = await _firebaseService.getProducts(
         limit: _pageSize,
@@ -250,6 +251,7 @@ class ProductProvider with ChangeNotifier {
       _lastDocument = result['lastDocument'] as DocumentSnapshot?;
       _hasMore = result['hasMore'] as bool;
 
+      _isLoading = false;
       _products = productsData.map((data) => Product.fromMap(data)).toList();
       _recomputeCollections();
       notifyListeners();
@@ -261,8 +263,11 @@ class ProductProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error loading initial products: $e');
-      // العيّنات لا تزال معروضة، لا داعي للتبديل
+      // أبقِ ما في الكاش (إن وجد) وأوقف الترقيم — لا نعرض بيانات وهمية
+      _isLoading = false;
       _hasMore = false;
+      _error = 'تعذّر تحميل المنتجات';
+      notifyListeners();
     }
   }
 
@@ -285,6 +290,8 @@ class ProductProvider with ChangeNotifier {
 
       final newProducts =
           productsData.map((data) => Product.fromMap(data)).toList();
+      // حماية: لا تخلط أبداً بيانات وهمية (sample_) مع منتجات المتجر الحقيقية
+      _products.removeWhere((p) => p.id.startsWith('sample_'));
       _products.addAll(newProducts);
       _recomputeCollections();
     } catch (e) {
@@ -333,94 +340,24 @@ class ProductProvider with ChangeNotifier {
     return loadInitialProducts();
   }
 
-  // =================== بيانات تجريبية (عند فشل الاتصال) ===================
+  // =================== تهيئة أولية (بدون بيانات وهمية) ===================
 
-  void _loadSampleData() {
+  /// تعبئة الفئات الافتراضية فقط عندما لا توجد فئات من Firestore بعد،
+  /// حتى تظهر شرائح الفئات في أول إطار. المنتجات لا تُولَّد إطلاقاً:
+  /// ما يظهر في المتجر هو بيانات الأدمن فقط (من Firestore أو الكاش).
+  void _seedCategoriesIfEmpty() {
+    if (_categories.isNotEmpty) return;
     _categories = AppConstants.categories
-        .map((data) => Category(
-              id: data['id'],
-              name: data['name'],
-              nameEn: data['nameEn'],
-              icon: data['icon'],
+        .asMap()
+        .entries
+        .map((e) => Category(
+              id: e.value['id'],
+              name: e.value['name'],
+              nameEn: e.value['nameEn'],
+              icon: e.value['icon'],
+              order: e.key,
             ))
         .toList();
-
-    _products = _generateSampleProducts(_pageSize); // تطابق حجم الصفحة
-    _featuredProducts = _products.where((p) => p.isFeatured).toList();
-    _newArrivals = _products.where((p) => p.isNewArrival).toList();
-    _banners = _generateSampleBanners();
-  }
-
-  List<Product> _generateSampleProducts(int count) {
-    final random = Random();
-    return List.generate(count, (index) {
-      final isFeatured = index < 6;
-      final isNew = index >= 6 && index < 12;
-      final hasDiscount = index % 3 == 0;
-      final categoryIndex = index % _categories.length;
-      final category = _categories[categoryIndex];
-
-      return Product(
-        id: 'sample_${index + 1}',
-        name: _sampleNames[index % _sampleNames.length],
-        description: _sampleDescriptions[index % _sampleDescriptions.length],
-        price: 15000.0 + (index * 5000),
-        oldPrice: hasDiscount ? 25000.0 + (index * 5000) : null,
-        categoryId: category.id,
-        categoryName: category.name,
-        images: [
-          '',
-          '',
-          '',
-        ],
-        sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
-        colors: ['أسود', 'كحلي', 'رمادي', 'بيج'],
-        colorOptions: [
-          {'name': 'أسود', 'hex': '#000000'},
-          {'name': 'كحلي', 'hex': '#0D1B3E'},
-          {'name': 'رمادي', 'hex': '#808080'},
-          {'name': 'بيج', 'hex': '#F5F5DC'},
-        ],
-        rating: 3.5 + (random.nextDouble() * 1.5),
-        reviewCount: random.nextInt(50) + 5,
-        isFeatured: isFeatured,
-        isNewArrival: isNew,
-        hasDiscount: hasDiscount,
-        discountPercentage: hasDiscount ? 20 + random.nextInt(30) : 0,
-        brand: 'ALAFIF NEWFORM',
-        material: index % 2 == 0 ? 'قطن مصري فاخر' : 'صوف إيطالي',
-        careInstructions: 'غسيل جاف فقط - كي بدرجة حرارة متوسطة',
-      );
-    });
-  }
-
-  List<BannerModel> _generateSampleBanners() {
-    return [
-      BannerModel(
-        id: 'banner1',
-        title: 'المجموعة الشتوية 2026',
-        subtitle: 'تصاميم عصرية بأقمشة فاخرة',
-        imageUrl: '',
-        buttonText: 'تسوق الآن',
-        order: 1,
-      ),
-      BannerModel(
-        id: 'banner2',
-        title: 'خصومات تصل إلى 50%',
-        subtitle: 'على تشكيلة الثياب والبذلات',
-        imageUrl: '',
-        buttonText: 'استفد من العرض',
-        order: 2,
-      ),
-      BannerModel(
-        id: 'banner3',
-        title: 'أزياء العيد',
-        subtitle: 'أفخم التصاميم للمناسبات السعيدة',
-        imageUrl: '',
-        buttonText: 'اكتشف المجموعة',
-        order: 3,
-      ),
-    ];
   }
 
   // =================== الفلترة والفرز ===================
@@ -623,26 +560,3 @@ class ProductProvider with ChangeNotifier {
         .toList();
   }
 }
-
-// =================== بيانات تجريبية ===================
-
-const List<String> _sampleNames = [
-  'ثوب رجالي فاخر - موديل 2026',
-  'بذلة رجالية إيطالية كلاسيك',
-  'قميص رجالي بقصة ضيقة',
-  'سروال رجالي رسمي',
-  'مشمل رجالي فاخر',
-  'ثوب رجالي قطني مريح',
-  'بذلة زفاف فاخرة',
-  'قميص كتان طبيعي',
-  'سروال جينز رجالي',
-  'ثوب رجالي صيفي',
-];
-
-const List<String> _sampleDescriptions = [
-  'ثوب رجالي فاخر مصنوع من أفضل أنواع الأقمشة المستوردة. يتميز بقصة عصرية تناسب جميع المناسبات. متوفر بمجموعة واسعة من المقاسات والألوان.',
-  'بذلة رجالية كلاسيك بقصة إيطالية أنيقة. مصنوعة من صوف عالي الجودة مع لمسة من الحرير الطبيعي. مناسبة للمناسبات الرسمية وأعمال المكتب.',
-  'قميص رجالي عصري بقصة ضيقة (Slim Fit). مصنوع من قماش قطني فاخر يضمن الراحة طوال اليوم. مثالي للإطلالات العصرية.',
-  'سروال رجالي رسمي أنيق. مصنوع من أقمشة عالية الجودة مع تقنيات حياكة متطورة. يناسب جميع الإطلالات الرسمية ونصف الرسمية.',
-  'مشمل رجالي فاخر من أفخر أنواع الصوف. يتميز بتصميم تقليدي مع لمسات عصرية. مثالي للإطلالات الأنيقة في المناسبات.',
-];

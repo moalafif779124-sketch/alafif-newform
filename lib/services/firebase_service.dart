@@ -82,17 +82,8 @@ class FirebaseService {
       query = query.where('isNewArrival', isEqualTo: isNewArrival);
     }
 
-    // ترتيب
-    String sortField = 'createdAt';
-    if (sortBy == 'price_asc' || sortBy == 'price_desc') {
-      sortField = 'price';
-    } else if (sortBy == 'name') {
-      sortField = 'name';
-    } else if (sortBy == 'popular') {
-      sortField = 'reviewCount';
-    }
-    query = query.orderBy(sortField, descending: sortBy == 'price_desc' || sortBy == 'popular' || sortBy == 'newest');
-
+    // ملاحظة: لا نستخدم orderBy هنا — المتجر يرتّب محلياً (ProductProvider._applyFilters)
+    // لأن orderBy مع where(isActive) يتطلب فهرساً مركّباً، وغيابه كان يوقف التحديث الفوري.
     return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
           final data = doc.data()! as Map<String, dynamic>;
           data['id'] = doc.id;
@@ -126,13 +117,8 @@ class FirebaseService {
       query = query.where('isNewArrival', isEqualTo: isNewArrival);
     }
 
-    if (sortBy != null) {
-      String sortField = 'createdAt';
-      if (sortBy == 'price_asc' || sortBy == 'price_desc') sortField = 'price';
-      else if (sortBy == 'name') sortField = 'name';
-      else if (sortBy == 'popular') sortField = 'reviewCount';
-      query = query.orderBy(sortField, descending: sortBy == 'price_desc' || sortBy == 'popular' || sortBy == 'newest');
-    }
+    // الترتيب يتم محلياً في ProductProvider (بدون orderBy) — يمنع الاعتماد على
+    // فهارس مركّبة غير منشورة، ويحافظ على ترقيم صفحات ثابت عبر __name__.
 
     if (limit != null) {
       query = query.limit(limit);
