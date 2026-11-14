@@ -108,11 +108,14 @@ class ProductProvider with ChangeNotifier {
       _loadCategoriesOnce().catchError((e) {
         debugPrint('Error loading categories: $e');
         _categories = AppConstants.categories
-            .map((data) => Category(
-                  id: data['id'],
-                  name: data['name'],
-                  nameEn: data['nameEn'],
-                  icon: data['icon'],
+            .asMap()
+            .entries
+            .map((e) => Category(
+                  id: e.value['id'],
+                  name: e.value['name'],
+                  nameEn: e.value['nameEn'],
+                  icon: e.value['icon'],
+                  order: e.key,
                 ))
             .toList();
       }),
@@ -153,7 +156,22 @@ class ProductProvider with ChangeNotifier {
     final categoriesData = await _firebaseService.getCategories();
     _categories =
         categoriesData.map((data) => Category.fromMap(data)).toList();
+    _sortCategoriesByAdminOrder(_categories);
     _categoriesLoaded = true;
+  }
+
+  /// ترتيب الفئات حسب حقل `order` الذي يضبطه الأدمن (الأصغر أولاً).
+  /// ترتيب مستقر: عند التساوي أو غياب الحقل يبقى الترتيب الأصلي كما هو.
+  static void _sortCategoriesByAdminOrder(List<Category> categories) {
+    final indexed = [
+      for (var i = 0; i < categories.length; i++) (index: i, item: categories[i]),
+    ]..sort((a, b) {
+        final byOrder = a.item.order.compareTo(b.item.order);
+        return byOrder != 0 ? byOrder : a.index.compareTo(b.index);
+      });
+    for (var i = 0; i < categories.length; i++) {
+      categories[i] = indexed[i].item;
+    }
   }
 
   /// تحميل البانرات مرة واحدة فقط — مع حفظ في الكاش

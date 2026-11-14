@@ -8,6 +8,9 @@ class Category {
   final int productCount;
   final bool isActive;
 
+  /// ترتيب الفئة في العرض — يُدار من تطبيق الإدارة (أصغر رقم = أولاً)
+  final int order;
+
   Category({
     required this.id,
     required this.name,
@@ -16,6 +19,7 @@ class Category {
     this.imageUrl,
     this.productCount = 0,
     this.isActive = true,
+    this.order = 0,
   });
 
   factory Category.fromMap(Map<String, dynamic> map) {
@@ -27,6 +31,7 @@ class Category {
       imageUrl: map['imageUrl'],
       productCount: map['productCount'] ?? 0,
       isActive: map['isActive'] ?? true,
+      order: (map['order'] is num) ? (map['order'] as num).toInt() : 0,
     );
   }
 
@@ -39,6 +44,7 @@ class Category {
       'imageUrl': imageUrl,
       'productCount': productCount,
       'isActive': isActive,
+      'order': order,
     };
   }
 }

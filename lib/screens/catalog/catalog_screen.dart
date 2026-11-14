@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/colors.dart';
 import '../../config/constants.dart';
+import '../../models/product.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/skeleton_widget.dart';
@@ -158,42 +159,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                       child: _buildEmptyState(),
                     )
                   else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 80),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.55,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final product = provider.filteredProducts[index];
-                            return ProductCard(
-                              product: product,
-                              onTap: () async {
-                                await detail.loadLibrary();
-                                if (!context.mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => detail.ProductDetailScreen(
-                                      product: product,
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                          childCount: provider.filteredProducts.length,
-                          // أداء: لا تُبقي الأطفال أحياء خارج الشاشة، اعزل مناطق الرسم
-                          addAutomaticKeepAlives: false,
-                          addRepaintBoundaries: true,
-                        ),
-                      ),
-                    ),
+                    ..._buildProductsSlivers(provider),
                   if (provider.isLoadingMore)
                     SliverToBoxAdapter(
                       child: Padding(
@@ -330,6 +296,170 @@ class _CatalogScreenState extends State<CatalogScreen>
                 provider.setSortBy(value);
               }
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// محتوى المنتجات: عند عرض "كافة المنتجات" تُرتَّب في أقسام حسب الفئة
+  /// (بترتيب الفئات الذي يضبطه الأدمن)، وعند اختيار فئة واحدة تُعرض شبكة واحدة.
+  List<Widget> _buildProductsSlivers(ProductProvider provider) {
+    final products = provider.filteredProducts;
+    final groups = _groupByCategory(provider, products);
+
+    // فئة واحدة محددة أو مجموعة واحدة فقط → شبكة مسطّحة كالسابق
+    if (provider.selectedCategoryId.isNotEmpty || groups.length <= 1) {
+      return [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 80),
+          sliver: _buildProductGrid(products),
+        ),
+      ];
+    }
+
+    return [
+      for (final group in groups) ...[
+        SliverToBoxAdapter(child: _buildCategorySectionHeader(group)),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+          sliver: _buildProductGrid(group.products),
+        ),
+      ],
+      const SliverToBoxAdapter(child: SizedBox(height: 80)),
+    ];
+  }
+
+  /// شبكة منتجات (عمودان) — تُستخدم لكل قسم فئة
+  Widget _buildProductGrid(List<Product> products) {
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.55,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final product = products[index];
+          return ProductCard(
+            product: product,
+            onTap: () async {
+              await detail.loadLibrary();
+              if (!context.mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => detail.ProductDetailScreen(product: product),
+                ),
+              );
+            },
+          );
+        },
+        childCount: products.length,
+        // أداء: لا تُبقي الأطفال أحياء خارج الشاشة، اعزل مناطق الرسم
+        addAutomaticKeepAlives: false,
+        addRepaintBoundaries: true,
+      ),
+    );
+  }
+
+  /// تجميع المنتجات حسب الفئة وترتيب المجموعات بحسب حقل order من الإدارة
+  List<_CategoryGroup> _groupByCategory(
+    ProductProvider provider,
+    List<Product> products,
+  ) {
+    final orderIndex = <String, int>{};
+    final names = <String, String>{};
+    for (var i = 0; i < provider.categories.length; i++) {
+      final c = provider.categories[i];
+      orderIndex[c.id] = i;
+      names[c.id] = c.name;
+    }
+
+    final buckets = <String, List<Product>>{};
+    for (final p in products) {
+      buckets.putIfAbsent(p.categoryId, () => []).add(p);
+    }
+
+    final groups = buckets.entries.map((e) {
+      final fallbackName =
+          e.value.first.categoryName.isNotEmpty ? e.value.first.categoryName : 'منتجات أخرى';
+      return _CategoryGroup(
+        id: e.key,
+        name: names[e.key] ?? fallbackName,
+        products: e.value,
+      );
+    }).toList()
+      ..sort((a, b) {
+        final ai = orderIndex[a.id] ?? 1 << 20;
+        final bi = orderIndex[b.id] ?? 1 << 20;
+        if (ai != bi) return ai.compareTo(bi);
+        return a.name.compareTo(b.name);
+      });
+
+    return groups;
+  }
+
+  /// عنوان قسم الفئة: اسم الفئة + عدد المنتجات + رابط عرض الكل
+  Widget _buildCategorySectionHeader(_CategoryGroup group) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 18, 12, 8),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 22,
+            decoration: BoxDecoration(
+              color: AppColors.primarySurface,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              group.name,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.primarySurface.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${group.products.length}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: () =>
+                context.read<ProductProvider>().setCategoryFilter(group.id),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'عرض الكل',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         ],
       ),
@@ -738,4 +868,17 @@ class _CatalogScreenState extends State<CatalogScreen>
     }
     return hex;
   }
+}
+
+/// مجموعة منتجات فئة واحدة داخل شاشة الكتالوج
+class _CategoryGroup {
+  final String id;
+  final String name;
+  final List<Product> products;
+
+  const _CategoryGroup({
+    required this.id,
+    required this.name,
+    required this.products,
+  });
 }
