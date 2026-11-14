@@ -1,5 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'stock_calculator.dart';
+
+// يُصبح StockUnavailableException متاحاً لمن يستورد firebase_service.dart
+export 'stock_calculator.dart' show StockUnavailableException, computeStockUpdate;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -12,16 +16,6 @@ import '../config/constants.dart';
 import '../models/product.dart';
 
 /// خدمة Firebase المركزية
-/// يُرمى عندما لا تكفي الكمية في المخزون — الطلب لا يُنشأ إطلاقاً.
-class StockUnavailableException implements Exception {
-  final String message;
-  final String? productName;
-  final String? size;
-  StockUnavailableException(this.message, {this.productName, this.size});
-  @override
-  String toString() => message;
-}
-
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
@@ -436,45 +430,19 @@ class FirebaseService {
           stockQty = int.tryParse(rawSq.toString()) ?? 0;
         }
 
-        // مخزون غير مُتتبَّع → لا حجب ولا خصم
-        if (variants.isEmpty && stockQty <= 0) continue;
-
-        final newVariants = Map<String, int>.from(variants);
-        final requested = variantQty[pid] ?? const <String, int>{};
-
-        if (variants.isNotEmpty) {
-          if (requested.isEmpty) {
-            throw StockUnavailableException(
-                'المنتج «$name» يُباع حسب المقاس — أعد إضافته واختر المقاس',
-                productName: name);
-          }
-          for (final v in requested.entries) {
-            final have = variants[v.key] ?? 0;
-            if (have < v.value) {
-              throw StockUnavailableException(
-                  'الكمية المطلوبة من «$name» (مقاس ${v.key}) غير متوفرة — '
-                  'المتاح $have',
-                  productName: name,
-                  size: v.key);
-            }
-            newVariants[v.key] = have - v.value;
-          }
-          if (stockQty > 0) {
-            stockQty -= totalQty;
-            if (stockQty < 0) stockQty = 0;
-          }
-        } else {
-          if (stockQty < totalQty) {
-            throw StockUnavailableException(
-                'الكمية المطلوبة من «$name» غير متوفرة — المتاح $stockQty',
-                productName: name);
-          }
-          stockQty -= totalQty;
-        }
+        // الحساب في دالة نقية (مُختبرة في test/stock_calculator_test.dart)
+        final update = computeStockUpdate(
+          productName: name,
+          stockVariants: variants,
+          stockQuantity: stockQty,
+          requestedTotal: totalQty,
+          requestedBySize: variantQty[pid] ?? const <String, int>{},
+        );
+        if (!update.tracked) continue; // غير مُتتبَّع — لا حجب ولا خصم
 
         updates[firestore.collection('products').doc(pid)] = {
-          'stockQuantity': stockQty,
-          'stockVariants': newVariants,
+          'stockQuantity': update.stockQuantity,
+          'stockVariants': update.stockVariants,
           'stockUpdatedAt': FieldValue.serverTimestamp(),
         };
       }

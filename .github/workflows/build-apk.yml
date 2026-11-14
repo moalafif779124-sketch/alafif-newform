@@ -90,11 +90,14 @@ jobs:
           echo "Build complete!"
           ls -lh build/app/outputs/flutter-apk/
 
-      - name: Deploy Firestore + Storage rules
-        continue-on-error: true # FIREBASE_TOKEN expiry must not red the APK build; rules have REST/console fallback
+      # Storage is NOT provisioned on this project (no bucket) — adding
+      # storage:rules aborts the whole deploy with "Firebase Storage has not
+      # been set up", which silently blocked firestore.rules from ever
+      # publishing. Deploy Firestore only, and let failures go red.
+      - name: Deploy Firestore rules + indexes
         uses: w9jds/firebase-action@v15.23.0
         with:
-          args: deploy --only firestore:rules,firestore:indexes,storage:rules --project alafif-newform
+          args: deploy --only firestore:rules,firestore:indexes --project alafif-newform
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
