@@ -207,6 +207,9 @@ class ProductProvider with ChangeNotifier {
 
     // بث المنتجات — تحديث/إضافة/حذف من لوحة التحكم ينعكس فوراً
     _productsSub = _firebaseService.getProductsStream().listen((data) {
+      // البث الفوري يسرد كل المنتجات النشطة — يصبح المصدر الوحيد للحقيقة
+      _streamDelivered = true;
+      _isLoading = false;
       _products = data.map((m) => Product.fromMap(m)).toList();
       _recomputeCollections();
       // القائمة الكاملة وصلت — لا حاجة للتحميل التصفحي بعد الآن
@@ -216,6 +219,9 @@ class ProductProvider with ChangeNotifier {
       debugPrint('⚠️ Products stream error: $e');
     });
   }
+
+  /// هل وصلت القائمة الكاملة عبر البث الفوري؟ (يمنع الترقيم من الكتابة فوقها)
+  bool _streamDelivered = false;
 
   /// إيقاف الاستماع الفوري (اختياري)
   void stopRealtimeSync() {
@@ -252,6 +258,8 @@ class ProductProvider with ChangeNotifier {
       _hasMore = result['hasMore'] as bool;
 
       _isLoading = false;
+      // إن كان البث الفوري قد أوصل القائمة الكاملة فلا نستبدلها بصفحة أولى
+      if (_streamDelivered) return;
       _products = productsData.map((data) => Product.fromMap(data)).toList();
       _recomputeCollections();
       notifyListeners();
@@ -273,7 +281,7 @@ class ProductProvider with ChangeNotifier {
 
   /// تحميل الدفعة التالية (التمرير اللانهائي)
   Future<void> loadMoreProducts() async {
-    if (_isLoadingMore || !_hasMore) return;
+    if (_isLoadingMore || !_hasMore || _streamDelivered) return;
     _isLoadingMore = true;
     notifyListeners();
 
