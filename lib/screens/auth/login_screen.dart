@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen>
         child: Column(
           children: [
             const SizedBox(height: 60),
-            const Icon(Icons.store, size: 80, color: AppColors.accentLight),
+            Icon(Icons.store, size: 80, color: AppColors.accent),
             const SizedBox(height: 16),
             const Text(
               'العفيف نيوفورم',
@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen>
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: AppColors.surface.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: TabBar(
@@ -263,14 +263,14 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
+                  borderSide: BorderSide(
                     color: AppColors.accentLight,
                     width: 2,
                   ),
                 ),
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   Icons.phone_android,
-                  color: AppColors.accentLight,
+                  color: AppColors.accent,
                 ),
               ),
               validator: (v) {
@@ -376,12 +376,12 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
+                  borderSide: BorderSide(
                     color: AppColors.accentLight,
                     width: 2,
                   ),
                 ),
-                prefixIcon: const Icon(Icons.email, color: AppColors.accentLight),
+                prefixIcon: Icon(Icons.email, color: AppColors.accent),
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'الرجاء إدخال البريد الإلكتروني';
@@ -407,12 +407,12 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
+                  borderSide: BorderSide(
                     color: AppColors.accentLight,
                     width: 2,
                   ),
                 ),
-                prefixIcon: const Icon(Icons.lock, color: AppColors.accentLight),
+                prefixIcon: Icon(Icons.lock, color: AppColors.accent),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword
@@ -483,7 +483,7 @@ class _LoginScreenState extends State<LoginScreen>
                 child: Text(
                   'ليس لديك حساب؟ أنشئ حساب جديد',
                   style: TextStyle(
-                    color: AppColors.accentLight.withValues(alpha: 0.8),
+                    color: AppColors.accent.withValues(alpha: 0.8),
                   ),
                 ),
               ),

@@ -25,7 +25,7 @@ class _VisualSearchScreenState extends State<VisualSearchScreen> {
         appBar: AppBar(
           title: const Text('البحث بالصورة'),
           centerTitle: true,
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: Colors.white,
         ),
         body: ListView(
@@ -47,7 +47,7 @@ class _VisualSearchScreenState extends State<VisualSearchScreen> {
                 errorBuilder: (_, __, ___) => Container(
                   height: 260,
                   color: AppColors.accentLight,
-                  child: const Center(
+                  child: Center(
                     child: Icon(Icons.broken_image_outlined,
                         size: 60, color: AppColors.textSecondary),
                   ),
@@ -60,10 +60,10 @@ class _VisualSearchScreenState extends State<VisualSearchScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.06),
+                color: AppColors.primarySurface.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              child: Row(
                 children: [
                   Icon(Icons.auto_awesome,
                       color: AppColors.primary, size: 22),
@@ -99,7 +99,7 @@ class _VisualSearchScreenState extends State<VisualSearchScreen> {
                 icon: const Icon(Icons.search, size: 20),
                 label: const Text('البحث بالنص بدلاً من الصورة'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primarySurface,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -119,7 +119,7 @@ class _VisualSearchScreenState extends State<VisualSearchScreen> {
                 label: const Text('إعادة اختيار صورة'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary),
+                  side: BorderSide(color: AppColors.primary),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

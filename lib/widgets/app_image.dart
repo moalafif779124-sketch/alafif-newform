@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../config/colors.dart';
 
 /// ذاكرة مؤقتة للصور Base64 — تمنع فك التشفير المتكرر لنفس الصورة
 final _b64Cache = HashMap<String, Uint8List>();
@@ -79,7 +80,7 @@ class AppImage extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.grey[100],
+        color: backgroundColor ?? AppColors.background,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       child: _Base64Image(
@@ -147,7 +148,7 @@ class AppImage extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.grey[100],
+        color: backgroundColor ?? AppColors.background,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );
@@ -158,14 +159,14 @@ class AppImage extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: AppColors.border,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       child: Center(
         child: Icon(
           Icons.image_not_supported_outlined,
           size: (width ?? 48) * 0.35,
-          color: Colors.grey[400],
+          color: AppColors.textSecondary,
         ),
       ),
     );

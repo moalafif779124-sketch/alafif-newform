@@ -169,11 +169,11 @@ class _VirtualSizeGuideSheetState extends State<VirtualSizeGuideSheet> {
                       color: AppColors.amazonBlue.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.straighten,
+                    child: Icon(Icons.straighten,
                         color: AppColors.amazonBlue, size: 22),
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -197,7 +197,7 @@ class _VirtualSizeGuideSheetState extends State<VirtualSizeGuideSheet> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close,
+                    icon: Icon(Icons.close,
                         size: 20, color: AppColors.textSecondary),
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -262,7 +262,7 @@ class _VirtualSizeGuideSheetState extends State<VirtualSizeGuideSheet> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
@@ -358,7 +358,7 @@ class _VirtualSizeGuideSheetState extends State<VirtualSizeGuideSheet> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
@@ -373,7 +373,7 @@ class _VirtualSizeGuideSheetState extends State<VirtualSizeGuideSheet> {
           ),
           child: Text(
             '${value.round()} $unit',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
@@ -396,8 +396,8 @@ Future<void> showVirtualSizeGuide({
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) => Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: VirtualSizeGuideSheet(product: product, onApply: onApply),

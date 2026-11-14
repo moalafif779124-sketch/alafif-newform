@@ -193,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen>
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: AppColors.surface.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -277,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen>
               // شريط البحث
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: TextField(
@@ -288,17 +288,17 @@ class _HomeScreenState extends State<HomeScreen>
                       color: AppColors.textSecondary.withValues(alpha: 0.6),
                       fontSize: 14,
                     ),
-                    prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                    prefixIcon: Icon(Icons.search, color: AppColors.primary),
                     suffixIcon: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.mic, color: AppColors.primary),
+                          icon: Icon(Icons.mic, color: AppColors.primary),
                           onPressed: _startVoiceSearch,
                           tooltip: 'بحث صوتي',
                         ),
                         IconButton(
-                          icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+                          icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary),
                           onPressed: _pickImageForSearch,
                           tooltip: 'بحث بالصورة',
                         ),
@@ -368,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen>
     // اختيار المصدر: كاميرا أو المعرض
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -389,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'البحث بالصورة',
                   style: TextStyle(
                     fontSize: 16,
@@ -492,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen>
     // 3) نافذة الاستماع
     final text = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       isScrollControlled: false,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -529,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
+          color: AppColors.primarySurface.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         ),
@@ -539,7 +539,7 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
@@ -616,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: AppColors.border),
                 boxShadow: [
@@ -634,7 +634,7 @@ class _HomeScreenState extends State<HomeScreen>
                   const SizedBox(width: 6),
                   Text(
                     cat['label'],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
@@ -680,7 +680,7 @@ class _HomeScreenState extends State<HomeScreen>
                 width: 90,
                 height: 112,
                 fit: BoxFit.cover,
-                backgroundColor: Colors.white,
+                backgroundColor: AppColors.surface,
               ),
             ),
             const SizedBox(width: 12),
@@ -746,7 +746,7 @@ class _HomeScreenState extends State<HomeScreen>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.25),
+                      color: AppColors.textPrimary.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -776,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: AppColors.surface,
                         foregroundColor: AppColors.amazonDark,
                         padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
@@ -822,7 +822,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'تسوق حسب الفئة',
                 style: TextStyle(
                   fontSize: 17,
@@ -913,7 +913,7 @@ class _HomeScreenState extends State<HomeScreen>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
@@ -1120,7 +1120,7 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
+                    color: AppColors.textPrimary.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -1195,9 +1195,9 @@ class _HomeScreenState extends State<HomeScreen>
                       end: Alignment.bottomCenter,
                       stops: const [0.0, 0.45, 1.0],
                       colors: [
-                        Colors.black.withValues(alpha: 0.15),
+                        AppColors.textPrimary.withValues(alpha: 0.15),
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.6),
+                        AppColors.textPrimary.withValues(alpha: 0.6),
                       ],
                     ),
                   ),
@@ -1215,7 +1215,7 @@ class _HomeScreenState extends State<HomeScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
+                      color: AppColors.surface.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.4),
@@ -1238,13 +1238,13 @@ class _HomeScreenState extends State<HomeScreen>
                       banner.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         height: 1.15,
                         shadows: [
-                          Shadow(color: Colors.black54, blurRadius: 8),
+                          Shadow(color: AppColors.textSecondary, blurRadius: 8),
                         ],
                       ),
                     ),
@@ -1346,7 +1346,7 @@ class _HomeScreenState extends State<HomeScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: AppColors.surface.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.4),
@@ -1437,7 +1437,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('أحدث الواصل', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('أحدث الواصل', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               TextButton(
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CatalogScreen())),
                 child: const Text('عرض الكل', style: TextStyle(fontSize: 13)),
@@ -1480,7 +1480,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('منتجات مميزة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('منتجات مميزة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               TextButton(
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CatalogScreen())),
                 child: const Text('عرض الكل', style: TextStyle(fontSize: 13)),
@@ -1523,7 +1523,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('عروض وتخفيضات',
+              Text('عروض وتخفيضات',
                   style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
@@ -1654,10 +1654,10 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: AppColors.primarySurface.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.mic,
                   size: 34,
                   color: AppColors.primary,
@@ -1665,7 +1665,7 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'تحدث الآن...',
               style: TextStyle(
                 fontSize: 17,
@@ -1686,7 +1686,7 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
               child: Text(
                 _recognizedText.isEmpty ? '...' : _recognizedText,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   color: AppColors.textPrimary,
                 ),
@@ -1700,7 +1700,7 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
                     onPressed: _cancel,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
-                      side: const BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.border),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1716,7 +1716,7 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
                         ? null
                         : () => _finish(_recognizedText.trim()),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.primarySurface,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: AppColors.border,
                       padding: const EdgeInsets.symmetric(vertical: 12),

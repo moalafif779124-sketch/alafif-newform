@@ -29,7 +29,7 @@ class BannerItem extends StatelessWidget {
               height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.primarySurface,
             ),
           ),
           // طبقة التدرج فوق الصورة
@@ -41,7 +41,7 @@ class BannerItem extends StatelessWidget {
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
                 colors: [
-                  AppColors.primary.withValues(alpha: 0.7),
+                  AppColors.primarySurface.withValues(alpha: 0.7),
                   Colors.transparent,
                 ],
               ),
@@ -89,7 +89,7 @@ class BannerItem extends StatelessWidget {
                     ),
                     child: Text(
                       banner.buttonText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textOnAccent,
                         fontSize: 13,
                         fontWeight: FontWeight.bold,

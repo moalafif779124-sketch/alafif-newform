@@ -20,7 +20,7 @@ class _PointsScreenState extends State<PointsScreen> {
         appBar: AppBar(
           title: const Text('نقاطي'),
           centerTitle: true,
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: Colors.white,
         ),
         body: Consumer<PointsProvider>(
@@ -70,7 +70,7 @@ class _PointsScreenState extends State<PointsScreen> {
                 const SizedBox(height: 24),
 
                 // =========== تسلسل الأيام (Streak) ===========
-                const Text('تسلسل التحقق اليومي',
+                Text('تسلسل التحقق اليومي',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 12),
                 _buildStreakCalendar(points),
@@ -78,7 +78,7 @@ class _PointsScreenState extends State<PointsScreen> {
                 const SizedBox(height: 24),
 
                 // =========== طريقة حساب النقاط ===========
-                const Text('كيف تربح النقاط؟',
+                Text('كيف تربح النقاط؟',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 12),
                 _buildRewardCard(Icons.login, 'التحقق اليومي', '10 نقاط', 'كل يوم'),
@@ -129,7 +129,7 @@ class _PointsScreenState extends State<PointsScreen> {
         icon: const Icon(Icons.login, color: Colors.white),
         label: const Text('تحقق الآن!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -161,7 +161,7 @@ class _PointsScreenState extends State<PointsScreen> {
                   child: Center(
                     child: checked
                         ? const Icon(Icons.check, color: Colors.white, size: 18)
-                        : const Icon(Icons.circle_outlined,
+                        : Icon(Icons.circle_outlined,
                             color: AppColors.textSecondary, size: 16),
                   ),
                 ),
@@ -194,7 +194,7 @@ class _PointsScreenState extends State<PointsScreen> {
         leading: Container(
           width: 40, height: 40,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
+            color: AppColors.primarySurface.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primary, size: 20),

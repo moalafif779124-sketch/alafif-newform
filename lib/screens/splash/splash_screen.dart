@@ -124,7 +124,7 @@ class _SplashScreenState extends State<SplashScreen>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.primarySurface,
         body: AnimatedBuilder(
           animation: _controller,
           builder: (context, _) {
@@ -197,7 +197,7 @@ class _SplashScreenState extends State<SplashScreen>
                             'العفيف نيوفورم',
                             style: TextStyle(
                               fontSize: 18,
-                              color: AppColors.accentLight.withValues(alpha: 0.8),
+                              color: AppColors.accent.withValues(alpha: 0.8),
                               letterSpacing: 2,
                             ),
                           ),
@@ -228,7 +228,7 @@ class _SplashScreenState extends State<SplashScreen>
                           'جاري التحميل...',
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.accentLight.withValues(alpha: 0.6),
+                            color: AppColors.accent.withValues(alpha: 0.6),
                           ),
                         ),
                       ],

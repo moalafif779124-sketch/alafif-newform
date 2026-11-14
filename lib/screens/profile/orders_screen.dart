@@ -144,7 +144,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       color: AppColors.textSecondary.withValues(alpha: 0.5),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'يرجى تسجيل الدخول لعرض طلباتك',
                       style: TextStyle(
                         fontSize: 16,
@@ -157,7 +157,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         Navigator.of(context).pushNamed('/login');
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: AppColors.primarySurface,
                         foregroundColor: AppColors.textOnPrimary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 32,
@@ -175,7 +175,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               builder: (context, orderProvider, _) {
                 // حالة التحميل
                 if (orderProvider.isLoading) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -223,7 +223,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             icon: const Icon(Icons.refresh),
                             label: const Text('إعادة المحاولة'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: AppColors.primarySurface,
                               foregroundColor: AppColors.textOnPrimary,
                             ),
                           ),
@@ -247,7 +247,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             color: AppColors.textSecondary.withValues(alpha: 0.4),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'لا توجد طلبات بعد',
                             style: TextStyle(
                               fontSize: 18,
@@ -271,7 +271,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             icon: const Icon(Icons.shopping_bag_outlined),
                             label: const Text('تصفح المنتجات'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: AppColors.primarySurface,
                               foregroundColor: AppColors.textOnPrimary,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 32,
@@ -317,7 +317,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shadowColor: AppColors.textPrimary.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -340,7 +340,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     const SizedBox(width: 8),
                     Text(
                       order.orderNumber,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
@@ -383,7 +383,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
 
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Divider(height: 1, color: AppColors.divider),
             ),
@@ -425,7 +425,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             children: [
                               Text(
                                 item.productName,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: AppColors.textPrimary,
@@ -451,14 +451,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 children: [
                                   Text(
                                     'العدد: ${item.quantity}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
                                   Text(
                                     '${AppConstants.currency}${item.total.toStringAsFixed(0)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.primary,
@@ -488,13 +488,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       horizontal: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.05),
+                      color: AppColors.primarySurface.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '+ $remainingCount أخرى',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: AppColors.primary,
@@ -504,7 +504,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
               ),
 
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Divider(height: 1, color: AppColors.divider),
             ),
@@ -523,7 +523,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     const SizedBox(width: 6),
                     Text(
                       _paymentMethodLabel(order.paymentMethod),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
@@ -532,7 +532,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       'المجموع: ',
                       style: TextStyle(
                         fontSize: 13,
@@ -541,7 +541,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                     Text(
                       '${AppConstants.currency}${order.total.toStringAsFixed(0)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -568,7 +568,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     const SizedBox(width: 4),
                     Text(
                       _formatDate(order.createdAt),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
@@ -628,7 +628,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           label: const Text('تتبع الطلب'),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
-            side: const BorderSide(color: AppColors.primary),
+            side: BorderSide(color: AppColors.primary),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -648,7 +648,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           color: AppColors.textSecondary,
         ),
@@ -703,7 +703,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     children: [
                       Text(
                         'تفاصيل الطلب ${order.orderNumber}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
@@ -734,17 +734,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   // تاريخ الطلب
                   Text(
                     'بتاريخ: ${_formatDate(order.createdAt)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Divider(height: 1, color: AppColors.divider),
+                  Divider(height: 1, color: AppColors.divider),
                   const SizedBox(height: 12),
 
                   // عنوان المنتجات
-                  const Text(
+                  Text(
                     'المنتجات',
                     style: TextStyle(
                       fontSize: 16,
@@ -759,7 +759,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     child: ListView.separated(
                       controller: scrollController,
                       itemCount: order.items.length,
-                      separatorBuilder: (_, __) => const Divider(
+                      separatorBuilder: (_, __) => Divider(
                         height: 1,
                         color: AppColors.divider,
                       ),
@@ -809,7 +809,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         if (item.size.isNotEmpty) item.size,
                                         if (item.color.isNotEmpty) item.color,
                                       ].join(' - '),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
                                         color: AppColors.textSecondary,
                                       ),
@@ -822,7 +822,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 children: [
                                   Text(
                                     '${AppConstants.currency}${item.total.toStringAsFixed(0)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.primary,
@@ -830,7 +830,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   ),
                                   Text(
                                     'العدد: ${item.quantity}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary,
                                     ),
@@ -844,7 +844,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                   ),
 
-                  const Divider(height: 1, color: AppColors.divider),
+                  Divider(height: 1, color: AppColors.divider),
                   const SizedBox(height: 12),
 
                   // ملخص الطلب
@@ -868,13 +868,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.05),
+                      color: AppColors.primarySurface.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'الإجمالي',
                           style: TextStyle(
                             fontSize: 16,
@@ -884,7 +884,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                         Text(
                           '${AppConstants.currency}${order.total.toStringAsFixed(0)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -899,7 +899,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'طريقة الدفع',
                         style: TextStyle(
                           fontSize: 13,
@@ -908,7 +908,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ),
                       Text(
                         _paymentMethodLabel(order.paymentMethod),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: AppColors.textPrimary,
@@ -920,7 +920,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'حالة الدفع',
                         style: TextStyle(
                           fontSize: 13,
@@ -942,7 +942,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
                   if (order.notes != null && order.notes!.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'ملاحظات',
                       style: TextStyle(
                         fontSize: 13,
@@ -953,7 +953,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     const SizedBox(height: 4),
                     Text(
                       order.notes!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
@@ -974,7 +974,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: AppColors.textSecondary,
           ),

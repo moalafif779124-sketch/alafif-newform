@@ -84,7 +84,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'رقم الطلب',
                             style: TextStyle(
                               fontSize: 13,
@@ -94,7 +94,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                           const SizedBox(height: 4),
                           Text(
                             order.orderNumber,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: AppColors.textPrimary,
@@ -133,7 +133,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
               const SizedBox(height: 20),
 
               // ===== تفاصيل التوصيل =====
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text(
                   'معلومات التوصيل',
@@ -169,7 +169,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
               const SizedBox(height: 24),
 
               // ===== طريقة الدفع =====
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text(
                   'معلومات الدفع',
@@ -208,7 +208,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
               const SizedBox(height: 24),
 
               // ===== عناصر الطلب =====
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text(
                   'المنتجات',
@@ -250,23 +250,23 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(item.productName,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
                             const SizedBox(height: 4),
                             Text(
                               '${item.size.isNotEmpty ? item.size : ''}${item.size.isNotEmpty && item.color.isNotEmpty ? ' | ' : ''}${item.color.isNotEmpty ? item.color : ''}',
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                             ),
                           ],
                         ),
                       ),
                       Text(
                         'x${item.quantity}',
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         '${AppConstants.currency}${item.total.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
                       ),
                     ],
                   ),

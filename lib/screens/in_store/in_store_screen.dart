@@ -31,7 +31,7 @@ class InStoreScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('الوضع الذكي داخل الفرع 🏬'),
           centerTitle: true,
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: Colors.white,
         ),
         body: Consumer<InStoreProvider>(
@@ -92,24 +92,24 @@ class _BranchSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.storefront, color: AppColors.primary, size: 20),
+          Icon(Icons.storefront, color: AppColors.primary, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: store.branches.isEmpty
-                ? const Text('جارِ تحميل الفروع…',
+                ? Text('جارِ تحميل الفروع…',
                     style: TextStyle(
                         fontSize: 13, color: AppColors.textSecondary))
                 : DropdownButtonHideUnderline(
                     child: DropdownButton<StoreBranch>(
                       value: store.branch,
                       isExpanded: true,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13.5, color: AppColors.textPrimary),
                       items: store.branches
                           .map((b) => DropdownMenuItem(
@@ -149,10 +149,10 @@ class _ScanCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
-          colors: [AppColors.primary, AppColors.primaryLight],
+          colors: [AppColors.primarySurface, AppColors.primaryLight],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -244,7 +244,7 @@ class _ProductResultCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
@@ -268,7 +268,7 @@ class _ProductResultCard extends StatelessWidget {
                         width: 84,
                         height: 84,
                         color: AppColors.accentLight,
-                        child: const Icon(Icons.checkroom,
+                        child: Icon(Icons.checkroom,
                             color: AppColors.textSecondary),
                       ),
               ),
@@ -281,7 +281,7 @@ class _ProductResultCard extends StatelessWidget {
                       product.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
@@ -290,7 +290,7 @@ class _ProductResultCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       '${product.effectivePrice.toStringAsFixed(0)} ريال',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -319,7 +319,7 @@ class _ProductResultCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'التوفّر حسب المقاس',
             style: TextStyle(
               fontSize: 12.5,
@@ -329,7 +329,7 @@ class _ProductResultCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (variants.isEmpty)
-            const Text(
+            Text(
               'لا تتوفر بيانات مخزون مفصّلة لهذا المنتج',
               style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
             )
@@ -382,7 +382,7 @@ class _ProductResultCard extends StatelessWidget {
             ),
           if (product.colorOptions.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'الألوان المتوفرة',
               style: TextStyle(
                 fontSize: 12.5,
@@ -410,7 +410,7 @@ class _ProductResultCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       c['name'] ?? '',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 9.5, color: AppColors.textSecondary),
                     ),
                   ],
@@ -511,10 +511,10 @@ class _StylistVideoCardState extends State<_StylistVideoCard> {
       children: [
         Row(
           children: [
-            const Icon(Icons.play_circle_fill,
+            Icon(Icons.play_circle_fill,
                 color: AppColors.primary, size: 18),
             const SizedBox(width: 6),
-            const Text(
+            Text(
               'معاينة الإطلالة',
               style: TextStyle(
                 fontSize: 13.5,
@@ -525,7 +525,7 @@ class _StylistVideoCardState extends State<_StylistVideoCard> {
             const Spacer(),
             Text(
               _ready ? 'اضغط للتحكم' : 'جارِ التحضير…',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 10.5, color: AppColors.textSecondary),
             ),
           ],
@@ -544,7 +544,7 @@ class _StylistVideoCardState extends State<_StylistVideoCard> {
             child: Container(
               height: 220,
               width: double.infinity,
-              color: Colors.black,
+              color: AppColors.textPrimary,
               child: _ready && _controller != null
                   ? AspectRatio(
                       aspectRatio: _controller!.value.aspectRatio,
@@ -603,14 +603,14 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.checkroom, color: AppColors.primary, size: 20),
               SizedBox(width: 8),
@@ -625,7 +625,7 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'سنُبلغ موظفي الفرع بإحضار القطعة والمقاس إلى غرفة القياس.',
             style: TextStyle(
                 fontSize: 12, height: 1.6, color: AppColors.textSecondary),
@@ -639,7 +639,7 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
             )
           else ...[
             Text(isOneSize ? 'القطعة بمقاس موحّد (بدون مقاسات)' : 'اختر المقاس',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary)),
@@ -681,7 +681,7 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
 
           if (product.colorOptions.length > 1) ...[
             const SizedBox(height: 12),
-            const Text('اختر اللون',
+            Text('اختر اللون',
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -722,7 +722,7 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
                         ),
                         const SizedBox(width: 6),
                         Text(name,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 11.5, color: AppColors.textPrimary)),
                       ],
                     ),
@@ -774,7 +774,7 @@ class _FittingRoomRequestCardState extends State<_FittingRoomRequestCard> {
           ),
           if (sent) ...[
             const SizedBox(height: 8),
-            const Center(
+            Center(
               child: Text(
                 'سيصلك إشعار عند تجهيز القطعة',
                 style: TextStyle(
@@ -849,7 +849,7 @@ class _ErrorCard extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12.5, color: AppColors.textPrimary),
             ),
           ),
@@ -870,7 +870,7 @@ class _EmptyHint extends StatelessWidget {
         color: AppColors.accentLight,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Column(
+      child: Column(
         children: [
           Icon(Icons.qr_code_scanner, size: 44, color: AppColors.textSecondary),
           SizedBox(height: 10),

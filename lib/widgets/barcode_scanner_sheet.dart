@@ -88,7 +88,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
       textDirection: TextDirection.rtl,
       child: Container(
         height: height,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.primaryDark,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -247,7 +247,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
 
   Widget _buildCameraError() {
     return Container(
-      color: Colors.black87,
+      color: AppColors.textPrimary,
       child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

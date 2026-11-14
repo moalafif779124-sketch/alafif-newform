@@ -325,7 +325,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
         appBar: AppBar(
           title: const Text('مصمم الأزياء الذكي ✨'),
           centerTitle: true,
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: Colors.white,
         ),
         body: ListView(
@@ -361,10 +361,10 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
-          colors: [AppColors.primary, AppColors.primaryLight],
+          colors: [AppColors.primarySurface, AppColors.primaryLight],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -409,14 +409,14 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'تفضيلاتك',
             style: TextStyle(
               fontSize: 15,
@@ -453,7 +453,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
           // المقاس
           _label('المقاس'),
           if (sizes.isEmpty)
-            const Text('جارِ تحميل المقاسات…', style: TextStyle(fontSize: 12, color: AppColors.textSecondary))
+            Text('جارِ تحميل المقاسات…', style: TextStyle(fontSize: 12, color: AppColors.textSecondary))
           else
             DropdownButtonFormField<String>(
               value: (_size != null && sizes.contains(_size)) ? _size : sizes.first,
@@ -472,7 +472,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
               _label('الميزانية'),
               Text(
                 '${_budget.toStringAsFixed(0)} ريال',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -498,7 +498,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,
@@ -536,7 +536,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -553,7 +553,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
         color: AppColors.accentLight,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Column(
+      child: Column(
         children: [
           Icon(Icons.checkroom, size: 44, color: AppColors.textSecondary),
           SizedBox(height: 10),
@@ -601,7 +601,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
           ),
@@ -610,12 +610,12 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+                  Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       outfit.outfitTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -627,7 +627,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
               const SizedBox(height: 10),
               Text(
                 outfit.stylistReasoning,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   height: 1.7,
                   color: AppColors.textPrimary,
@@ -638,7 +638,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
         ),
         const SizedBox(height: 16),
 
-        const Text(
+        Text(
           'قطع الإطلالة',
           style: TextStyle(
             fontSize: 15,
@@ -671,7 +671,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
               ),
               Text(
                 '${outfit.totalPrice.toStringAsFixed(0)} ريال',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -712,7 +712,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
@@ -732,7 +732,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
                     width: 68,
                     height: 68,
                     color: AppColors.accentLight,
-                    child: const Icon(Icons.checkroom, color: AppColors.textSecondary),
+                    child: Icon(Icons.checkroom, color: AppColors.textSecondary),
                   ),
           ),
           const SizedBox(width: 12),
@@ -744,7 +744,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
                   name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
@@ -756,13 +756,13 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: AppColors.primarySurface.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         'المقاس ${pick.size}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
@@ -772,7 +772,7 @@ class _AiStylistScreenState extends State<AiStylistScreen> {
                     const SizedBox(width: 8),
                     Text(
                       '${price.toStringAsFixed(0)} ريال',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -803,11 +803,11 @@ class _StylistLoadingSkeleton extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.border),
           ),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -833,7 +833,7 @@ class _StylistLoadingSkeleton extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.border),
             ),

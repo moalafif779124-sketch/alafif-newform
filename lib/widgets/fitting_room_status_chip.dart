@@ -236,7 +236,7 @@ class _StatusStyle {
           label: 'تم التسليم',
         );
       case 'cancelled':
-        return const _StatusStyle(
+        return _StatusStyle(
           color: AppColors.textSecondary,
           background: AppColors.accentLight,
           icon: Icons.cancel_outlined,
@@ -291,7 +291,7 @@ class _StatusCard extends StatelessWidget {
             return Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: style.color.withValues(alpha: 0.45)),
                 boxShadow: [
@@ -334,7 +334,7 @@ class _StatusCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         meta,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           color: AppColors.textPrimary,
                         ),
@@ -343,7 +343,7 @@ class _StatusCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       style.subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         height: 1.5,
                         color: AppColors.textSecondary,
@@ -372,7 +372,7 @@ class _StatusCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Icon(Icons.keyboard_arrow_up,
+                  Icon(Icons.keyboard_arrow_up,
                       size: 18, color: AppColors.textSecondary),
                 ],
               ),
@@ -406,8 +406,8 @@ class _RequestDetailsSheet extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 22),
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         child: Column(
@@ -425,7 +425,7 @@ class _RequestDetailsSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const Row(
+            Row(
               children: [
                 Icon(Icons.checkroom, color: AppColors.primary, size: 20),
                 SizedBox(width: 8),
@@ -450,7 +450,7 @@ class _RequestDetailsSheet extends StatelessWidget {
                       width: 92,
                       child: Text(
                         row.key,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
                           color: AppColors.textSecondary,
                         ),
@@ -459,7 +459,7 @@ class _RequestDetailsSheet extends StatelessWidget {
                     Expanded(
                       child: Text(
                         row.value,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -499,7 +499,7 @@ class _RequestDetailsSheet extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(false),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primarySurface,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

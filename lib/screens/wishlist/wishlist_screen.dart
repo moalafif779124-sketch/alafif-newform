@@ -18,7 +18,7 @@ class WishlistScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('المفضلة'),
           centerTitle: true,
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: Colors.white,
           actions: [
             Consumer<WishlistProvider>(
@@ -54,7 +54,7 @@ class WishlistScreen extends StatelessWidget {
                       color: AppColors.textSecondary.withValues(alpha: 0.4),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'المفضلة فارغة',
                       style: TextStyle(
                         fontSize: 18,

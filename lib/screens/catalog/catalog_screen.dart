@@ -237,7 +237,7 @@ class _CatalogScreenState extends State<CatalogScreen>
               label: const Text('الكل'),
               selected: provider.selectedCategoryId.isEmpty,
               onSelected: (_) => provider.setCategoryFilter(''),
-              selectedColor: AppColors.primary,
+              selectedColor: AppColors.primarySurface,
               checkmarkColor: Colors.white,
               labelStyle: TextStyle(
                 fontFamily: 'NotoKufiArabic',
@@ -252,7 +252,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                         : AppColors.textPrimary,
               ),
               backgroundColor: AppColors.background,
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.border),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
               ),
@@ -272,7 +272,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                     isSelected ? '' : category.id,
                   );
                 },
-                selectedColor: AppColors.primary,
+                selectedColor: AppColors.primarySurface,
                 checkmarkColor: Colors.white,
                 labelStyle: TextStyle(
                   fontFamily: 'NotoKufiArabic',
@@ -282,7 +282,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                   color: isSelected ? Colors.white : AppColors.textPrimary,
                 ),
                 backgroundColor: AppColors.background,
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
@@ -301,7 +301,7 @@ class _CatalogScreenState extends State<CatalogScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          const Text(
+          Text(
             'ترتيب حسب:',
             style: TextStyle(
               fontSize: 14,
@@ -312,7 +312,7 @@ class _CatalogScreenState extends State<CatalogScreen>
           DropdownButton<String>(
             value: provider.sortBy,
             underline: const SizedBox(),
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'NotoKufiArabic',
               fontSize: 14,
               color: AppColors.textPrimary,
@@ -367,7 +367,7 @@ class _CatalogScreenState extends State<CatalogScreen>
             color: AppColors.textSecondary.withValues(alpha: 0.4),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'لا توجد منتجات',
             style: TextStyle(
               fontSize: 20,
@@ -398,7 +398,7 @@ class _CatalogScreenState extends State<CatalogScreen>
       margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
         boxShadow: [
@@ -444,7 +444,7 @@ class _CatalogScreenState extends State<CatalogScreen>
               ),
               const SizedBox(width: 4),
               Text(AppConstants.currency,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 13, color: AppColors.textSecondary)),
             ],
           ),
@@ -485,7 +485,7 @@ class _CatalogScreenState extends State<CatalogScreen>
           // =================== عروض فقط ===================
           Row(
             children: [
-              const Text('العروض والتخفيضات فقط',
+              Text('العروض والتخفيضات فقط',
                   style: TextStyle(
                       fontSize: 13, color: AppColors.textPrimary)),
               const Spacer(),
@@ -523,7 +523,7 @@ class _CatalogScreenState extends State<CatalogScreen>
   Widget _buildFilterSectionLabel(String label) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.bold,
         color: AppColors.textPrimary,
@@ -542,13 +542,13 @@ class _CatalogScreenState extends State<CatalogScreen>
       decoration: InputDecoration(
         hintText: hint,
         hintStyle:
-            const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            TextStyle(fontSize: 13, color: AppColors.textSecondary),
         isDense: true,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -583,7 +583,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                           selected ? FontWeight.bold : FontWeight.normal)),
               selected: selected,
               onSelected: (_) => onToggle(item),
-              selectedColor: AppColors.primary,
+              selectedColor: AppColors.primarySurface,
               checkmarkColor: Colors.white,
               backgroundColor: AppColors.background,
               side: BorderSide(color: AppColors.border.withValues(alpha: 0.4)),
@@ -622,7 +622,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                   color: color,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: selected ? AppColors.primary : Colors.grey.shade300,
+                    color: selected ? AppColors.primary : AppColors.border,
                     width: selected ? 3 : 1.5,
                   ),
                   boxShadow: selected
@@ -705,11 +705,11 @@ class _CatalogScreenState extends State<CatalogScreen>
       padding: const EdgeInsets.only(left: 6),
       child: Chip(
         label: Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 11, color: AppColors.primary)),
         deleteIcon: const Icon(Icons.close, size: 14),
         onDeleted: onDismiss,
-        backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+        backgroundColor: AppColors.primarySurface.withValues(alpha: 0.08),
         side: BorderSide.none,
         visualDensity: VisualDensity.compact,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

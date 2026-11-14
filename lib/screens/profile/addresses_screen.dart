@@ -139,7 +139,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'إضافة عنوان جديد',
                         style: TextStyle(
                           fontSize: 20,
@@ -240,7 +240,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
 
                   // تعيين كافتراضي
                   SwitchListTile(
-                    title: const Text(
+                    title: Text(
                       'تعيين كعنوان افتراضي',
                       style: TextStyle(
                         fontSize: 14,
@@ -265,7 +265,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                           ? null
                           : () => _saveAddress(ctx, setSheetState),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: AppColors.primarySurface,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -433,7 +433,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                       color: AppColors.error,
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'حدث خطأ أثناء تحميل العناوين',
                       style: TextStyle(
                         fontSize: 16,
@@ -478,7 +478,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
               color: AppColors.accent,
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'لا توجد عناوين مسجلة',
               style: TextStyle(
                 fontSize: 20,
@@ -509,7 +509,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.primarySurface,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 28,
@@ -572,7 +572,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                 const SizedBox(width: 8),
                 Text(
                   address.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
@@ -606,7 +606,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
             // الاسم الكامل
             Text(
               address.fullName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -617,7 +617,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
             // رقم الجوال
             Text(
               address.phone,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
               ),
@@ -627,7 +627,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
             // العنوان الكامل
             Text(
               address.fullAddress,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
                 height: 1.4,
@@ -639,7 +639,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.flag_outlined,
                       size: 14,
                       color: AppColors.textSecondary,
@@ -647,7 +647,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                     const SizedBox(width: 4),
                     Text(
                       'معلم: ${address.landmark}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),

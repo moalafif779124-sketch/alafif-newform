@@ -67,7 +67,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
         appBar: AppBar(
           title: const Text('الدفع عبر جيب'),
           centerTitle: true,
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: Colors.white,
         ),
         body: SingleChildScrollView(
@@ -89,7 +89,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'تم تأكيد الطلب!',
                 style: TextStyle(
                   fontSize: 22,
@@ -100,7 +100,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
               const SizedBox(height: 8),
               Text(
                 'رقم الطلب: #${widget.orderId}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   color: AppColors.textSecondary,
                 ),
@@ -112,7 +112,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
+                  color: AppColors.primarySurface.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: AppColors.primary.withValues(alpha: 0.2),
@@ -120,7 +120,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'المبلغ المطلوب',
                       style: TextStyle(
                         fontSize: 14,
@@ -130,7 +130,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                     const SizedBox(height: 4),
                     Text(
                       '${widget.amount.toInt()} ﷼',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -154,7 +154,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.pin, color: Colors.amber, size: 20),
@@ -177,7 +177,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: Colors.amber.withValues(alpha: 0.5),
@@ -188,7 +188,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                           children: [
                             Text(
                               widget.posNumber,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 4,
@@ -196,7 +196,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Icon(
+                            Icon(
                               Icons.copy_rounded,
                               size: 20,
                               color: AppColors.textSecondary,
@@ -206,7 +206,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'اضغط للنسخ',
                       style: TextStyle(
                         fontSize: 12,
@@ -223,7 +223,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
                   boxShadow: [
@@ -236,7 +236,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'امسح رمز QR للدفع',
                       style: TextStyle(
                         fontSize: 16,
@@ -245,7 +245,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'من داخل تطبيق جيب — اضغط على أيقونة المسح',
                       style: TextStyle(
                         fontSize: 12,
@@ -258,12 +258,12 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                       data: _qrContent,
                       version: QrVersions.auto,
                       size: 200,
-                      backgroundColor: Colors.white,
-                      eyeStyle: const QrEyeStyle(
+                      backgroundColor: AppColors.surface,
+                      eyeStyle: QrEyeStyle(
                         eyeShape: QrEyeShape.square,
                         color: AppColors.textPrimary,
                       ),
-                      dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleStyle: QrDataModuleStyle(
                         dataModuleShape: QrDataModuleShape.square,
                         color: AppColors.textPrimary,
                       ),
@@ -271,7 +271,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _qrContent,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         color: AppColors.textSecondary,
                       ),
@@ -314,7 +314,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.primarySurface,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -334,7 +334,7 @@ class _JeebPaymentScreenState extends State<JeebPaymentScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -434,7 +434,7 @@ class _InstructionRow extends StatelessWidget {
           width: 24,
           height: 24,
           decoration: const BoxDecoration(
-            color: AppColors.primary,
+            color: AppColors.primarySurface,
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -454,7 +454,7 @@ class _InstructionRow extends StatelessWidget {
             padding: const EdgeInsets.only(top: 3),
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 color: AppColors.textPrimary,
               ),

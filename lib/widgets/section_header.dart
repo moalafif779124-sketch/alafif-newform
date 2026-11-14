@@ -25,7 +25,7 @@ class SectionHeader extends StatelessWidget {
             width: 4,
             height: 24,
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.primarySurface,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -33,7 +33,7 @@ class SectionHeader extends StatelessWidget {
           // العنوان
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
@@ -46,7 +46,7 @@ class SectionHeader extends StatelessWidget {
               onPressed: onActionTap,
               child: Text(
                 actionText!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   color: AppColors.primary,
                   fontWeight: FontWeight.w600,

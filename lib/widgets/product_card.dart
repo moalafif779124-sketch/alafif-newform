@@ -29,7 +29,7 @@ class ProductCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -157,7 +157,7 @@ class ProductCard extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: AppColors.surface.withValues(alpha: 0.9),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -183,7 +183,7 @@ class ProductCard extends StatelessWidget {
                     // الاسم
                     Text(
                       product.name,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -204,10 +204,10 @@ class ProductCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         if (product.rating > 0)
                           Text('${product.rating.toStringAsFixed(1)}',
-                              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                              style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                         if (product.reviewCount > 0)
                           Text(' (${product.reviewCount})',
-                              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                              style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                         const Spacer(),
                         // شارة الأكثر مبيعاً
                         if (product.reviewCount > 20)
@@ -238,7 +238,7 @@ class ProductCard extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: color,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.grey.shade300, width: 1),
+                                border: Border.all(color: AppColors.border, width: 1),
                               ),
                             );
                           }).toList(),
@@ -253,14 +253,14 @@ class ProductCard extends StatelessWidget {
                             children: [
                               Text(
                                 '${product.price.toStringAsFixed(0)} ${AppConstants.currency}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary,
                                 ),
                               ),
                               if (product.hasOldPrice)
                                 Text(
                                   '${product.oldPrice!.toStringAsFixed(0)} ${AppConstants.currency}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 10,
                                     decoration: TextDecoration.lineThrough,
                                     color: AppColors.textSecondary,

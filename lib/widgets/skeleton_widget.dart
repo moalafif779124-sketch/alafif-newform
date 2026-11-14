@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/colors.dart';
 
 /// أداة عرض skeleton عند تحميل البيانات
 class SkeletonWidget extends StatefulWidget {
@@ -47,7 +48,7 @@ class _SkeletonWidgetState extends State<SkeletonWidget>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: Colors.grey.withValues(alpha: _animation.value),
+            color: AppColors.textSecondary.withValues(alpha: _animation.value),
             borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
         );
@@ -66,7 +67,7 @@ class ProductCardSkeleton extends StatelessWidget {
       width: 160,
       margin: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

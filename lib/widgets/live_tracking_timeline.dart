@@ -76,7 +76,7 @@ class _LiveTrackingTimelineState extends State<LiveTrackingTimeline>
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 18, 12, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.divider),
         boxShadow: [

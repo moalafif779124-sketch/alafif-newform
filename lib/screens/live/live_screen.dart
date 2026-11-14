@@ -22,7 +22,7 @@ class _LiveScreenState extends State<LiveScreen> with AutomaticKeepAliveClientMi
         appBar: AppBar(
           title: const Text('المجتمع'),
           centerTitle: true,
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: Colors.white,
         ),
         body: Center(
@@ -35,7 +35,7 @@ class _LiveScreenState extends State<LiveScreen> with AutomaticKeepAliveClientMi
                 color: AppColors.primary.withValues(alpha: 0.3),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'قريباً — البث المباشر والمجتمع',
                 style: TextStyle(
                   fontSize: 18,

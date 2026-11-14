@@ -168,7 +168,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
               // اسم المنتج
               Text(
                 widget.productName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
@@ -180,7 +180,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
               const SizedBox(height: 32),
 
               // التقييم بالنجوم
-              const Text(
+              Text(
                 'قيم هذا المنتج',
                 style: TextStyle(
                   fontSize: 16,
@@ -209,7 +209,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
               const SizedBox(height: 8),
               Text(
                 _ratingText,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w600,
@@ -237,7 +237,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
               const SizedBox(height: 32),
 
               // ===== ملاءمة المقاس (True to Size) =====
-              const Text(
+              Text(
                 'ما مدى ملاءمة المقاس؟',
                 style: TextStyle(
                   fontSize: 14,
@@ -253,7 +253,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                     label: Text(option, style: const TextStyle(fontSize: 12)),
                     selected: selected,
                     onSelected: (_) => setState(() => _fitFeedback = option),
-                    selectedColor: AppColors.primary,
+                    selectedColor: AppColors.primarySurface,
                     labelStyle: TextStyle(
                       color: selected ? Colors.white : AppColors.textPrimary,
                       fontSize: 12,
@@ -276,7 +276,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: const Column(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.add_photo_alternate_outlined,
@@ -310,7 +310,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: AppColors.border),
                             ),
-                            child: const Icon(Icons.add_a_photo_outlined,
+                            child: Icon(Icons.add_a_photo_outlined,
                                 color: AppColors.textSecondary),
                           ),
                         );
@@ -331,7 +331,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                                 height: 100,
                                 color:
                                     AppColors.border.withValues(alpha: 0.3),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.broken_image_outlined,
                                   color: AppColors.textSecondary,
                                 ),
@@ -345,8 +345,8 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                               onTap: () => _removeImage(index),
                               child: Container(
                                 padding: const EdgeInsets.all(3),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
+                                decoration: BoxDecoration(
+                                  color: AppColors.textSecondary,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.close,
@@ -386,7 +386,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.primarySurface,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

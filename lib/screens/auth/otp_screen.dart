@@ -118,10 +118,10 @@ class _OtpScreenState extends State<OtpScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 40),
-                const Icon(
+                Icon(
                   Icons.lock_outline,
                   size: 64,
-                  color: AppColors.accentLight,
+                  color: AppColors.accent,
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -239,7 +239,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
+                      borderSide: BorderSide(
                         color: AppColors.accentLight,
                         width: 2,
                       ),
@@ -306,14 +306,14 @@ class _OtpScreenState extends State<OtpScreen> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
+                              borderSide: BorderSide(
                                 color: AppColors.accentLight,
                                 width: 2,
                               ),
                             ),
-                            prefixIcon: const Icon(
+                            prefixIcon: Icon(
                               Icons.person,
-                              color: AppColors.accentLight,
+                              color: AppColors.accent,
                             ),
                           ),
                           textInputAction: TextInputAction.done,
@@ -378,9 +378,9 @@ class _OtpScreenState extends State<OtpScreen> {
                           _showOtpSnackbar(auth.otpCode!);
                         }
                       },
-                      child: const Text(
+                      child: Text(
                         'إعادة إرسال الرمز',
-                        style: TextStyle(color: AppColors.accentLight),
+                        style: TextStyle(color: AppColors.accent),
                       ),
                     );
                   },

@@ -169,7 +169,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [AppColors.primary, Color(0xFF1F5AA8)],
+                          colors: [AppColors.primarySurface, Color(0xFF1F5AA8)],
                           begin: Alignment.topRight,
                           end: Alignment.bottomLeft,
                         ),
@@ -203,12 +203,12 @@ class _ReferralScreenState extends State<ReferralScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 20, vertical: 12),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: AppColors.surface,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               _referralCode.isEmpty ? 'جاري الإنشاء...' : _referralCode,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.5,
@@ -240,7 +240,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                                   icon: const Icon(Icons.share, size: 18),
                                   label: const Text('مشاركة'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
+                                    backgroundColor: AppColors.surface,
                                     foregroundColor: AppColors.primary,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
@@ -269,7 +269,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                             const SizedBox(width: 10),
                             Text(
                               'رصيدك: ${points.points} نقطة',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.textPrimary,
@@ -287,14 +287,14 @@ class _ReferralScreenState extends State<ReferralScreen> {
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: AppColors.border),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'هل لديك كود دعوة من صديق؟',
                               style: TextStyle(
                                 fontSize: 15,
@@ -303,7 +303,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'أدخل الكود واحصل على 50 نقطة فوراً',
                               style: TextStyle(
                                 fontSize: 12,
@@ -316,7 +316,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               textDirection: TextDirection.ltr,
                               textAlign: TextAlign.center,
                               textCapitalization: TextCapitalization.characters,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 2,
@@ -325,7 +325,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               decoration: InputDecoration(
                                 hintText: 'أدخل كود دعوة صديقك',
                                 hintTextDirection: TextDirection.rtl,
-                                prefixIcon: const Icon(Icons.redeem,
+                                prefixIcon: Icon(Icons.redeem,
                                     color: AppColors.textSecondary),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -340,7 +340,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               child: ElevatedButton(
                                 onPressed: _isActivating ? null : _activateCode,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
+                                  backgroundColor: AppColors.primarySurface,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -382,7 +382,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                             Expanded(
                               child: Text(
                                 'تم تفعيل كود الدعوة: $_referredBy ✓',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textPrimary,
                                 ),
@@ -396,7 +396,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                     const SizedBox(height: 20),
 
                     // ===== كيف تعمل؟ =====
-                    const Text(
+                    Text(
                       'كيف تعمل؟',
                       style: TextStyle(
                         fontSize: 15,
@@ -427,7 +427,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
           width: 24,
           height: 24,
           decoration: const BoxDecoration(
-            color: AppColors.primary,
+            color: AppColors.primarySurface,
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -445,7 +445,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: AppColors.textSecondary,
               height: 1.4,

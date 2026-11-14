@@ -367,7 +367,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 size: 72,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'تم تأكيد الطلب بنجاح!',
                 style: TextStyle(
                   fontSize: 20,
@@ -378,7 +378,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(height: 8),
               Text(
                 'رقم الطلب: $orderId',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   color: AppColors.textSecondary,
                 ),
@@ -386,7 +386,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(height: 4),
               Text(
                 'الإجمالي: ${AppConstants.currency} ${_formatPrice(total)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
@@ -398,7 +398,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ? 'يرجى إرسال إشعار التحويل عبر الواتساب لتأكيد طلبك'
                     : 'سيتم التواصل معك لتأكيد الطلب وتفاصيل التوصيل',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
@@ -452,7 +452,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primarySurface,
                   foregroundColor: AppColors.textOnPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -624,7 +624,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             ),
                             const SizedBox(height: 4),
                             SwitchListTile(
-                              title: const Text(
+                              title: Text(
                                 'تعيين كعنوان افتراضي',
                                 style: TextStyle(
                                   fontSize: 14,
@@ -662,7 +662,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             return RadioListTile<String>(
                               title: Text(
                                 method['name'] as String,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textPrimary,
@@ -670,7 +670,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ),
                               subtitle: Text(
                                 method['description'] as String,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textSecondary,
                                 ),
@@ -775,7 +775,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
-                                        const Text(
+                                        Text(
                                           'الإجمالي',
                                           style: TextStyle(
                                             fontSize: 18,
@@ -785,7 +785,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         ),
                                         Text(
                                           '${AppConstants.currency} ${_formatPrice(total)}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.primary,
@@ -848,7 +848,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             // =========== زر تأكيد الطلب السفلي الثابت ===========
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -866,7 +866,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: ElevatedButton(
                     onPressed: _isSubmitting ? null : _submitOrder,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.primarySurface,
                       foregroundColor: AppColors.textOnPrimary,
                       disabledBackgroundColor:
                           AppColors.primary.withValues(alpha: 0.6),
@@ -939,7 +939,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       isKuraimi
                           ? 'كريمي إكسبرس — بيانات التحويل'
                           : 'محفظة جيب — بيانات التحويل',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
@@ -964,14 +964,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         children: [
                           Text(
                             accountLabel,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 11,
                                 color: AppColors.textSecondary),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             accountValue,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.2,
@@ -982,7 +982,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       IconButton(
                         onPressed: () => _copyToClipboard(accountValue),
-                        icon: const Icon(Icons.copy,
+                        icon: Icon(Icons.copy,
                             size: 18, color: AppColors.primary),
                         tooltip: 'نسخ',
                       ),
@@ -994,7 +994,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   isKuraimi
                       ? 'حوّل المبلغ إلى الرقم أعلاه ثم أدخل رقم الحوالة وأرفق صورة الإيصال.'
                       : 'حوّل المبلغ إلى معرف جيب أعلاه ثم أدخل رقم العملية وأرفق صورة الإيصال.',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 11, color: AppColors.textSecondary),
                 ),
               ],
@@ -1084,8 +1084,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                           () => _receiptBase64 = ''),
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.black54,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.textSecondary,
                                           shape: BoxShape.circle,
                                         ),
                                         child: const Icon(Icons.close,
@@ -1152,7 +1152,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.05),
+        color: AppColors.primarySurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: _redeemPoints
@@ -1172,7 +1172,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 size: 20,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'استخدام النقاط للخصم',
                   style: TextStyle(
@@ -1199,7 +1199,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               Text(
                 'رصيدك: ${points.points} نقطة',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: AppColors.textSecondary,
                 ),
@@ -1220,14 +1220,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               Text(
                 'قيمة رصيدك: ${AppConstants.currency} ${_formatPrice(pointsValue)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: AppColors.textSecondary,
                 ),
               ),
               Text(
                 'تحتاج: $neededPoints نقطة',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: AppColors.textSecondary,
                 ),
@@ -1259,7 +1259,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const SizedBox(width: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
@@ -1276,14 +1276,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             color: AppColors.textSecondary,
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,

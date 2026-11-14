@@ -135,7 +135,7 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ===== العنوان =====
-          const Row(
+          Row(
             children: [
               Text(
                 '✨ صمم إطلالتك الكاملة',
@@ -206,7 +206,7 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: item.selected
@@ -246,7 +246,7 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
                   item.product.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -255,7 +255,7 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
                 const SizedBox(height: 2),
                 Text(
                   '${item.product.price.toStringAsFixed(0)} ${AppConstants.currency}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
@@ -276,7 +276,7 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
                         value: sizeValue,
                         isDense: true,
                         iconSize: 18,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           color: AppColors.textPrimary,
                         ),
@@ -312,7 +312,7 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
           color: AppColors.accentLight.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Text(
+        child: Text(
           'اختر منتجاً واحداً على الأقل لتفعيل خصم الطقم',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
@@ -327,7 +327,7 @@ class _OutfitBundleSectionState extends State<OutfitBundleSection> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.amazonNavy, AppColors.primary],
+          colors: [AppColors.amazonNavy, AppColors.primarySurface],
         ),
         borderRadius: BorderRadius.circular(12),
       ),

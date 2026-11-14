@@ -172,7 +172,7 @@ class _VirtualTryOnScreenState extends State<VirtualTryOnScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: AppColors.surface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
@@ -292,7 +292,7 @@ class _VirtualTryOnScreenState extends State<VirtualTryOnScreen> {
                   icon: const Icon(Icons.download_rounded),
                   label: const Text('حفظ الصورة'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary, foregroundColor: Colors.white,
+                    backgroundColor: AppColors.primarySurface, foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),

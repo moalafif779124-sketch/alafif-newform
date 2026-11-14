@@ -198,14 +198,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                 color: AppColors.accentLight,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.person_outline,
                 size: 50,
                 color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'تسجيل الدخول',
               style: TextStyle(
                 fontSize: 20,
@@ -214,7 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'قم بتسجيل الدخول للوصول إلى حسابك',
               style: TextStyle(
                 fontSize: 14,
@@ -234,7 +234,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primarySurface,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -277,10 +277,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 CircleAvatar(
                   radius: 45,
-                  backgroundColor: Colors.white,
+                  backgroundColor: AppColors.surface,
                   child: Text(
                     initials,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
@@ -429,10 +429,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: AppColors.primarySurface,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Text(
                             'AN',
                             style: TextStyle(
@@ -477,7 +477,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
+                        color: AppColors.primarySurface.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
@@ -530,7 +530,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                trailing: const Icon(
+                trailing: Icon(
                   Icons.chevron_left,
                   color: AppColors.textSecondary,
                 ),

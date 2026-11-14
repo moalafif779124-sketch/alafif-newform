@@ -104,7 +104,7 @@ class _CartScreenState extends State<CartScreen>
               color: AppColors.accent,
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'سلتك فارغة',
               style: TextStyle(
                 fontSize: 22,
@@ -142,7 +142,7 @@ class _CartScreenState extends State<CartScreen>
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.primarySurface,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 28,
@@ -218,7 +218,7 @@ class _CartScreenState extends State<CartScreen>
                 children: [
                   Text(
                     item.product.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
@@ -232,7 +232,7 @@ class _CartScreenState extends State<CartScreen>
                       '${item.size.isNotEmpty ? 'مقاس: ${item.size}' : ''}'
                       '${item.size.isNotEmpty && item.color.isNotEmpty ? ' | ' : ''}'
                       '${item.color.isNotEmpty ? 'لون: ${item.color}' : ''}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
@@ -240,7 +240,7 @@ class _CartScreenState extends State<CartScreen>
                   const SizedBox(height: 8),
                   Text(
                     '${item.product.price.toStringAsFixed(0)} ${AppConstants.currency}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
@@ -264,7 +264,7 @@ class _CartScreenState extends State<CartScreen>
                 ),
                 Text(
                   '${item.quantity}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
@@ -300,7 +300,7 @@ class _CartScreenState extends State<CartScreen>
   Widget _buildTotalSection(CartProvider cart) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -344,7 +344,7 @@ class _CartScreenState extends State<CartScreen>
                 valueColor: AppColors.success,
               ),
             ],
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Divider(color: AppColors.border, height: 1),
             ),
@@ -370,7 +370,7 @@ class _CartScreenState extends State<CartScreen>
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primarySurface,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -461,7 +461,7 @@ class _CartScreenState extends State<CartScreen>
               Expanded(
                 child: Text(
                   hint,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,

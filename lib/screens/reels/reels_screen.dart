@@ -41,9 +41,9 @@ class _ReelsScreenState extends State<ReelsScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.textPrimary,
         body: _loading
-            ? const Center(
+            ? Center(
                 child: CircularProgressIndicator(color: AppColors.primary))
             : _products.isEmpty
                 ? _buildEmptyState()
@@ -77,12 +77,12 @@ class _ReelsScreenState extends State<ReelsScreen> {
             Icon(Icons.video_library_outlined,
                 size: 64, color: AppColors.textSecondary.withValues(alpha: 0.4)),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'لا توجد فيديوهات بعد',
               style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'عند إضافة المنتجات مع فيديو ستظهر هنا',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
@@ -184,7 +184,7 @@ class _ReelPageState extends State<_ReelPage> {
         // ===== الفيديو (تغطية كاملة) =====
         if (_failed)
           Container(
-            color: Colors.black,
+            color: AppColors.textPrimary,
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -214,8 +214,8 @@ class _ReelPageState extends State<_ReelPage> {
           )
         else if (!_ready)
           Container(
-            color: Colors.black,
-            child: const Center(
+            color: AppColors.textPrimary,
+            child: Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             ),
           )
@@ -223,7 +223,7 @@ class _ReelPageState extends State<_ReelPage> {
           GestureDetector(
             onTap: _toggleMute,
             child: Container(
-              color: Colors.black,
+              color: AppColors.textPrimary,
               child: Center(
                 child: _controller!.value.size.width > 0
                     ? FittedBox(
@@ -273,11 +273,11 @@ class _ReelPageState extends State<_ReelPage> {
               16,
               24 + MediaQuery.of(context).padding.bottom,
             ),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black87],
+                colors: [Colors.transparent, AppColors.textPrimary],
               ),
             ),
             child: Column(
@@ -348,7 +348,7 @@ class _ReelPageState extends State<_ReelPage> {
                           fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.primarySurface,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

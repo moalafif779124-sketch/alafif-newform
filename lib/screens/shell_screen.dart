@@ -91,7 +91,7 @@ class _MainShellState extends State<MainShell> {
 
             return Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -110,7 +110,7 @@ class _MainShellState extends State<MainShell> {
                 unselectedItemColor: AppColors.textSecondary,
                 type: BottomNavigationBarType.fixed,
                 elevation: 0,
-                backgroundColor: Colors.white,
+                backgroundColor: AppColors.surface,
                 selectedLabelStyle: const TextStyle(
                   fontFamily: 'NotoKufiArabic',
                   fontSize: 11,

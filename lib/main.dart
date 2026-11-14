@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
+import 'config/colors.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
@@ -88,6 +89,14 @@ class ALAFIFApp extends StatelessWidget {
                 }
               }
               return supportedLocales.first;
+            },
+
+            // =========== مزامنة لوحة الألوان مع الثيم الحالي ===========
+            // يضبط وضع العرض قبل بناء شجرة الواجهات، فتُقرأ ألوان AppColors
+            // (النصوص/الخلفيات/الحدود) الصحيحة في كل صفحة بلا أي شرط محلي.
+            builder: (context, child) {
+              AppColors.brightness = Theme.of(context).brightness;
+              return child ?? const SizedBox.shrink();
             },
 
             // =========== البداية ===========

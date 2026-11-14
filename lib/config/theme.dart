@@ -11,11 +11,11 @@ class AppTheme {
 
       // =========== الألوان ===========
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
-        primary: AppColors.primary,
-        secondary: AppColors.accent,
-        surface: AppColors.surface,
-        error: AppColors.error,
+        seedColor: LightPalette.primary,
+        primary: LightPalette.primary,
+        secondary: LightPalette.accent,
+        surface: LightPalette.surface,
+        error: LightPalette.error,
         brightness: Brightness.light,
       ),
 
@@ -27,26 +27,26 @@ class AppTheme {
 
       // =========== شريط التطبيق ===========
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.amazonNavy,
-        foregroundColor: AppColors.textOnPrimary,
+        backgroundColor: LightPalette.amazonNavy,
+        foregroundColor: LightPalette.textOnPrimary,
         centerTitle: true,
         elevation: 0,
         titleTextStyle: TextStyle(
           fontFamily: 'NotoKufiArabic',
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: AppColors.textOnPrimary,
+          color: LightPalette.textOnPrimary,
         ),
         iconTheme: IconThemeData(
-          color: AppColors.textOnPrimary,
+          color: LightPalette.textOnPrimary,
         ),
       ),
 
       // =========== الأزرار ===========
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.amazonNavy,
-          foregroundColor: AppColors.textOnPrimary,
+          backgroundColor: LightPalette.amazonNavy,
+          foregroundColor: LightPalette.textOnPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -62,8 +62,8 @@ class AppTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary, width: 1.5),
+          foregroundColor: LightPalette.primary,
+          side: const BorderSide(color: LightPalette.primary, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -78,7 +78,7 @@ class AppTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          foregroundColor: LightPalette.primary,
           textStyle: const TextStyle(
             fontFamily: 'NotoKufiArabic',
             fontSize: 14,
@@ -90,50 +90,50 @@ class AppTheme {
       // =========== حقول الإدخال ===========
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.background,
+        fillColor: LightPalette.background,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: LightPalette.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: LightPalette.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: const BorderSide(color: LightPalette.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error),
+          borderSide: const BorderSide(color: LightPalette.error),
         ),
         labelStyle: const TextStyle(
           fontFamily: 'NotoKufiArabic',
-          color: AppColors.textSecondary,
+          color: LightPalette.textSecondary,
         ),
         hintStyle: const TextStyle(
           fontFamily: 'NotoKufiArabic',
-          color: AppColors.textSecondary,
+          color: LightPalette.textSecondary,
         ),
       ),
 
       // =========== البطاقات ===========
       cardTheme: CardThemeData(
-        color: AppColors.cardBackground,
+        color: LightPalette.cardBackground,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border, width: 0.5),
+          side: const BorderSide(color: LightPalette.border, width: 0.5),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
 
       // =========== التبويبات ===========
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
+        backgroundColor: LightPalette.surface,
+        selectedItemColor: LightPalette.primary,
+        unselectedItemColor: LightPalette.textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
         selectedLabelStyle: TextStyle(
@@ -149,9 +149,9 @@ class AppTheme {
 
       // =========== علامات التبويب ===========
       tabBarTheme: const TabBarThemeData(
-        labelColor: AppColors.primary,
-        unselectedLabelColor: AppColors.textSecondary,
-        indicatorColor: AppColors.primary,
+        labelColor: LightPalette.primary,
+        unselectedLabelColor: LightPalette.textSecondary,
+        indicatorColor: LightPalette.primary,
         labelStyle: TextStyle(
           fontFamily: 'NotoKufiArabic',
           fontSize: 14,
@@ -165,39 +165,39 @@ class AppTheme {
 
       // =========== الشرائح ===========
       sliderTheme: const SliderThemeData(
-        activeTrackColor: AppColors.primary,
-        thumbColor: AppColors.primary,
-        inactiveTrackColor: AppColors.accentLight,
+        activeTrackColor: LightPalette.primary,
+        thumbColor: LightPalette.primary,
+        inactiveTrackColor: LightPalette.accentLight,
         overlayColor: Color(0x290D1B3E),
       ),
 
       // =========== عام ===========
-      scaffoldBackgroundColor: AppColors.background,
-      dividerColor: AppColors.divider,
+      scaffoldBackgroundColor: LightPalette.background,
+      dividerColor: LightPalette.divider,
       dividerTheme: const DividerThemeData(
-        color: AppColors.divider,
+        color: LightPalette.divider,
         thickness: 1,
         space: 1,
       ),
 
       // =========== الشيب ===========
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.background,
-        selectedColor: AppColors.primary,
+        backgroundColor: LightPalette.background,
+        selectedColor: LightPalette.primary,
         labelStyle: const TextStyle(
           fontFamily: 'NotoKufiArabic',
           fontSize: 13,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: AppColors.border),
+          side: const BorderSide(color: LightPalette.border),
         ),
       ),
 
       // =========== التمرير ===========
       scrollbarTheme: ScrollbarThemeData(
-        thumbColor: WidgetStateProperty.all(AppColors.accent),
-        trackColor: WidgetStateProperty.all(AppColors.accentLight),
+        thumbColor: WidgetStateProperty.all(LightPalette.accent),
+        trackColor: WidgetStateProperty.all(LightPalette.accentLight),
       ),
 
       // =========== لسان الحالة (SnackBar) ===========
@@ -233,7 +233,7 @@ class AppTheme {
 
       // =========== شريط التطبيق ===========
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.amazonDark,
+        backgroundColor: DarkPalette.amazonDark,
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
