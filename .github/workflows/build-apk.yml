@@ -72,11 +72,18 @@ jobs:
           compression-level: 9
 
       - name: Upload APK to Release
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload jeeb-v1 build/app/outputs/flutter-apk/app-arm64-v8a-release.apk --clobber
+          set -euo pipefail
+          # flutter build apk --target-platform android-arm64 (no --split-per-abi) names the file app-release.apk
+          APK=$(ls build/app/outputs/flutter-apk/*.apk | head -1)
+          ls -lh build/app/outputs/flutter-apk/
+          echo "Uploading $APK as app-arm64-v8a-release.apk"
+          cp "$APK" /tmp/app-arm64-v8a-release.apk
+          gh release upload jeeb-v1 /tmp/app-arm64-v8a-release.apk --clobber
+          echo "--- release assets after upload ---"
+          gh release view jeeb-v1 --json assets --jq '.assets[] | "\(.name)  \(.updatedAt)  \(.size)"'
 
       - name: Show outputs
         run: |
