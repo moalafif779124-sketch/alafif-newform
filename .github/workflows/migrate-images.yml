@@ -1,11 +1,19 @@
 name: Migrate product images
 
-# One-off maintenance job: moves base64 product photos out of Firestore
-# documents into product_images/{id} (full, compressed) + product.thumb.
-# Runs with the project owner's token, so it bypasses security rules.
+# One-off maintenance job. Runs with the project owner's token, so it
+# bypasses security rules.
+#   products -> move base64 product photos out of Firestore docs into
+#               product_images/{id} (compressed) + product.thumb
+#   banners  -> re-encode the home-screen banner photos in place (imageUrl)
+#   all      -> both
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: "What to compress"
+        type: choice
+        options: [products, banners, all]
+        default: products
       dry_run:
         description: "Only report what would change (no writes)"
         type: boolean
@@ -44,10 +52,26 @@ jobs:
         if: ${{ inputs.dry_run }}
         env:
           GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.token }}
-        run: python3 tools/compress_product_images.py --dry-run
+          TARGET: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            banners) python3 tools/compress_product_images.py --banners --dry-run ;;
+            all)     python3 tools/compress_product_images.py --dry-run
+                     python3 tools/compress_product_images.py --banners --dry-run ;;
+            *)       python3 tools/compress_product_images.py --dry-run ;;
+          esac
 
       - name: Migrate
         if: ${{ !inputs.dry_run }}
         env:
           GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.token }}
-        run: python3 tools/compress_product_images.py
+          TARGET: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            banners) python3 tools/compress_product_images.py --banners ;;
+            all)     python3 tools/compress_product_images.py
+                     python3 tools/compress_product_images.py --banners ;;
+            *)       python3 tools/compress_product_images.py ;;
+          esac

@@ -11,10 +11,16 @@ WHAT THIS DOES (per product that still has base64 images):
   * clears `images` in the product doc so the catalog stays text-sized
   * the PDP fetches product_images/{id} on demand
 
+BANNERS MODE (`--banners`): the home-screen banners still carried their photo
+raw in `imageUrl` — 6 docs = 897 KB, one banner 219 KB — and every launch reads
+them. This re-encodes each banner (max 1280 px, adaptive quality until it fits
+under TARGET_KB) and patches only that one field.
+
 AUTH: needs a Google access token with project-owner rights. In CI we exchange
 the FIREBASE_TOKEN refresh token for one (see the workflow). Usage:
 
     GOOGLE_ACCESS_TOKEN=ya29... python3 tools/compress_product_images.py [--dry-run]
+    GOOGLE_ACCESS_TOKEN=ya29... python3 tools/compress_product_images.py --banners [--dry-run]
 """
 import base64
 import io
@@ -40,7 +46,15 @@ FULL_QUALITY = 62
 THUMB_MAX = 240      # px
 THUMB_QUALITY = 70
 
+# The hero is 200 dp tall and full width (AppImage decodes base64 at full
+# resolution), so the source must stay ~1080 px wide — the saving has to come
+# from quality, not from shrinking below what the phone actually displays.
+BANNER_MAX = 1080     # px
+BANNER_QUALITIES = (66, 58, 50, 44)
+BANNER_TARGET_KB = 95
+
 DRY = "--dry-run" in sys.argv
+BANNERS = "--banners" in sys.argv
 TOKEN = os.environ.get("GOOGLE_ACCESS_TOKEN", "").strip()
 if not TOKEN:
     sys.exit("GOOGLE_ACCESS_TOKEN is required")
@@ -115,7 +129,96 @@ def encode(img, max_px, quality):
     return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode()}"
 
 
+def list_collection(coll, page_size=300):
+    """Same pagination contract as list_products, for any collection."""
+    docs, token, pages = [], None, 0
+    while True:
+        url = f"{BASE}/{coll}?pageSize={page_size}" + (f"&pageToken={token}" if token else "")
+        s, d = api(url)
+        if s != 200:
+            sys.exit(f"list {coll} failed: {s} {d}")
+        docs += d.get("documents", [])
+        token = d.get("nextPageToken")
+        pages += 1
+        if not token:
+            return docs
+        if pages > 30:
+            sys.exit(f"pagination of {coll} did not finish after 30 pages")
+
+
+def encode_bounded(img, max_px, qualities, target_kb):
+    """Re-encode at max_px, walking the quality ladder until the payload fits.
+    A banner is paid for on every app launch, so a fixed quality that still
+    lands at 200 KB is a failure, not a compromise."""
+    w, h = img.size
+    if max(w, h) > max_px:
+        scale = max_px / max(w, h)
+        img = img.resize((max(1, int(w * scale)), max(1, int(h * scale))), RESAMPLE)
+    best = ""
+    for q in qualities:
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=q, optimize=True, progressive=True)
+        raw = buf.getvalue()
+        cand = f"data:image/jpeg;base64,{base64.b64encode(raw).decode()}"
+        best = cand
+        if len(cand) <= target_kb * 1024:
+            break
+    return best
+
+
+def migrate_banners():
+    banners = list_collection("banners")
+    print(f"banners: {len(banners)} docs; dry-run={DRY}")
+    before = sum(len(json.dumps(b)) for b in banners)
+    touched = failed = 0
+    after = 0
+    for b in banners:
+        bid = b["name"].split("/")[-1]
+        f = b.get("fields", {})
+        uri = f.get("imageUrl", {}).get("stringValue", "")
+        title = (f.get("title", {}).get("stringValue") or "?")[:24]
+        size = len(json.dumps(b))
+        if not uri.startswith("data:image"):
+            print(f"  {bid[:10]}… {title:26s} not base64 ({uri[:24]}…) — skipped")
+            after += size
+            continue
+        try:
+            img = data_uri_to_jpeg(uri)
+            if img is None:
+                after += size
+                failed += 1
+                continue
+            dims = f"{img.width}x{img.height}"
+            new_uri = encode_bounded(img, BANNER_MAX, BANNER_QUALITIES, BANNER_TARGET_KB)
+            print(f"  {bid[:10]}… {title:26s} {dims:>10s} {len(uri)//1024:4d} KB -> {len(new_uri)//1024:3d} KB")
+            if DRY:
+                touched += 1
+                after += size - len(uri) + len(new_uri)
+                continue
+            s, d = api(f"{BASE}/banners/{bid}?updateMask.fieldPaths=imageUrl",
+                       {"fields": {"imageUrl": {"stringValue": new_uri}}}, method="PATCH")
+            if s != 200:
+                print(f"  !! banner patch failed {bid}: {s} {d}")
+                failed += 1
+                after += size
+                continue
+            touched += 1
+            after += size - len(uri) + len(new_uri)
+        except Exception as e:  # noqa: BLE001
+            print(f"  !! {bid} error: {e}")
+            failed += 1
+            after += size
+
+    print(f"\nbanners migrated: {touched}, failed: {failed}")
+    print(f"banner payload: {before/1024:.0f} KB -> ~{after/1024:.0f} KB (every launch reads these)")
+    if failed:
+        sys.exit(2)
+
+
 def main():
+    if BANNERS:
+        migrate_banners()
+        return
     products = list_products()
     active = [p for p in products if p.get("fields", {}).get("isActive", {}).get("booleanValue")]
     print(f"products: {len(products)} total, {len(active)} active; dry-run={DRY}")
