@@ -51,14 +51,16 @@ class _HomeScreenState extends State<HomeScreen>
     // متغير للتأكد من أننا نحمّل الصور المسبقة مرة واحدة فقط
     bool _precached = false;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       // ===== تحميل متدرّج بعد عرض أول إطار =====
-      // 1) استرجاع الكاش المحلي فوراً + مزامنة الفئات/البانرات في الخلفية
       final pp = context.read<ProductProvider>();
-      pp.initialize();
+      // 1) انتظر التهيئة: Firebase جاهز + الكاش + الفئات/البانرات الحقيقية
+      //    (بدون الانتظار كان بدء البث يسبق تهيئة Firebase فيفشل التحديث الفوري)
+      await pp.initialize();
+      if (!mounted) return;
       // 2) المزامنة الفورية — أي تغيير من تطبيق الإدارة ينعكس فوراً
       pp.startRealtimeSync();
-      // 3) تحميل المنتجات — عيّنات فورية ثم تحديث من Firestore في الخلفية
+      // 3) تحميل المنتجات — صفحة أولى كعرض سريع ثم يستبدلها البث بالقائمة الكاملة
       pp.loadInitialProducts();
       // 4) تهيئة النقاط عند عرض الرئيسية
       final auth = context.read<AuthProvider>();

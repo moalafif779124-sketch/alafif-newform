@@ -157,6 +157,8 @@ class ProductProvider with ChangeNotifier {
         categoriesData.map((data) => Category.fromMap(data)).toList();
     _sortCategoriesByAdminOrder(_categories);
     _categoriesLoaded = true;
+    debugPrint('📚 categories from Firestore: ${_categories.length} '
+        '(order: ${_categories.map((c) => '${c.name}=${c.order}').join(', ')})');
   }
 
   /// ترتيب الفئات حسب حقل `order` الذي يضبطه الأدمن (الأصغر أولاً).
@@ -195,6 +197,15 @@ class ProductProvider with ChangeNotifier {
   /// بدء الاستماع الفوري لتغييرات Firestore
   void startRealtimeSync() {
     if (_realtimeStarted) return;
+    // لا تبدأ البث قبل تهيئة Firebase — وإلا يفشل الاستماع بصمت عند الإقلاع
+    if (!_firebaseService.isInitialized) {
+      _firebaseService.initialize().then((_) {
+        if (!_realtimeStarted) startRealtimeSync();
+      }).catchError((e) {
+        debugPrint('⚠️ realtime sync deferred init failed: $e');
+      });
+      return;
+    }
     _realtimeStarted = true;
 
     // بث البانرات — أي تغيير من لوحة التحكم يظهر فوراً
@@ -210,6 +221,7 @@ class ProductProvider with ChangeNotifier {
       // البث الفوري يسرد كل المنتجات النشطة — يصبح المصدر الوحيد للحقيقة
       _streamDelivered = true;
       _isLoading = false;
+      debugPrint('📡 realtime products: ${data.length}');
       _products = data.map((m) => Product.fromMap(m)).toList();
       _recomputeCollections();
       // القائمة الكاملة وصلت — لا حاجة للتحميل التصفحي بعد الآن
@@ -258,6 +270,8 @@ class ProductProvider with ChangeNotifier {
       _hasMore = result['hasMore'] as bool;
 
       _isLoading = false;
+      debugPrint('📦 products page1: ${productsData.length} '
+          'hasMore=${result['hasMore']} streamDelivered=$_streamDelivered');
       // إن كان البث الفوري قد أوصل القائمة الكاملة فلا نستبدلها بصفحة أولى
       if (_streamDelivered) return;
       _products = productsData.map((data) => Product.fromMap(data)).toList();
