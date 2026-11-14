@@ -310,10 +310,17 @@ class ProductProvider with ChangeNotifier {
       _lastDocument = result['lastDocument'] as DocumentSnapshot?;
       _hasMore = result['hasMore'] as bool;
 
+      // سباق: قد يصل البث الفوري أثناء انتظار هذه الدفعة — لا تضف شيئاً حينها
+      if (_streamDelivered) {
+        _isLoadingMore = false;
+        return;
+      }
+
       final newProducts =
           productsData.map((data) => Product.fromMap(data)).toList();
-      // حماية: لا تخلط أبداً بيانات وهمية (sample_) مع منتجات المتجر الحقيقية
-      _products.removeWhere((p) => p.id.startsWith('sample_'));
+      // لا تكرّر منتجاً موجوداً (نفس المعرّف) — يمنع تضخّم أعداد الأقسام
+      final existingIds = _products.map((p) => p.id).toSet();
+      newProducts.removeWhere((p) => existingIds.contains(p.id));
       _products.addAll(newProducts);
       _recomputeCollections();
     } catch (e) {
