@@ -117,8 +117,28 @@ class OrderProvider with ChangeNotifier {
         createdAt: DateTime.now(),
       );
 
-      // حفظ الطلب في Firebase
-      final orderId = await _firebaseService.createOrder(orderData.toMap());
+      // حفظ الطلب + خصم المخزون في معاملة واحدة (ذرّي).
+      // إن نقص أي صنف: لا طلب ولا خصم، وتظهر رسالة عربية واضحة للعميل.
+      final String orderId;
+      try {
+        orderId = await _firebaseService.createOrderWithStock(
+          orderData: orderData.toMap(),
+          stockItems: cartItems
+              .map((item) => <String, dynamic>{
+                    'productId': item.product.id,
+                    'name': item.product.name,
+                    'size': item.size,
+                    'quantity': item.quantity,
+                  })
+              .toList(),
+        );
+      } on StockUnavailableException catch (e) {
+        debugPrint('⛔ stock unavailable: ${e.message}');
+        _error = e.message;
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
 
       // معالجة الدفع
       final paymentResult = await _paymentService.processPayment(

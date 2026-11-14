@@ -11,10 +11,30 @@ service cloud.firestore {
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
+    // Stock-only decrement guard for customer order placement.
+    function stockDecrementOnly() {
+      let next = request.resource.data;
+      let prev = resource.data;
+      let variantsOk = !('stockVariants' in prev)
+        ? next.stockVariants.size() == 0
+        : next.stockVariants.keys().hasOnly(prev.stockVariants.keys());
+      return next.diff(prev).affectedKeys()
+               .hasOnly(['stockQuantity', 'stockVariants', 'stockUpdatedAt'])
+        && next.stockQuantity is int
+        && next.stockQuantity >= 0
+        && next.stockQuantity <= prev.stockQuantity
+        && variantsOk;
+    }
 
     match /products/{docId} {
       allow read: if true;
       allow write: if isAdmin();
+
+      // Signed-in customers may ONLY decrement tracked stock while placing an
+      // order (atomic Firestore transaction in the app). They can never raise a
+      // value, go negative, touch other fields, or add/remove variant sizes.
+      // Admin keeps unrestricted write above.
+      allow update: if isSignedIn() && stockDecrementOnly();
     }
     match /banners/{docId} {
       allow read: if true;

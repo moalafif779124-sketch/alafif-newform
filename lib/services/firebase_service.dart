@@ -12,6 +12,16 @@ import '../config/constants.dart';
 import '../models/product.dart';
 
 /// خدمة Firebase المركزية
+/// يُرمى عندما لا تكفي الكمية في المخزون — الطلب لا يُنشأ إطلاقاً.
+class StockUnavailableException implements Exception {
+  final String message;
+  final String? productName;
+  final String? size;
+  StockUnavailableException(this.message, {this.productName, this.size});
+  @override
+  String toString() => message;
+}
+
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
@@ -353,6 +363,130 @@ class FirebaseService {
   Future<String> createOrder(Map<String, dynamic> orderData) async {
     final docRef = await firestore.collection('orders').add(orderData);
     return docRef.id;
+  }
+
+  /// إنشاء الطلب + خصم المخزون في معاملة واحدة (ذرّي) — C-tier.
+  ///
+  /// إن نقص أي صنف تُلغى المعاملة بالكامل: لا يُنشأ طلب ولا يُخصَّم مخزون،
+  /// ويُرمى [StockUnavailableException] برسالة عربية جاهزة للعرض للعميل.
+  ///
+  /// قواعد المخزون (مطابقة لما تعرضه شاشة المنتج):
+  /// * المنتج له `stockVariants` غير فارغة → الحجز من مخزون المقاس نفسه.
+  /// * لا مقاسات و`stockQuantity > 0` → الحجز من الكمية الكلية.
+  /// * الاثنان صفر/فارغ → مخزون غير مُتتبَّع: لا حجب ولا خصم.
+  Future<String> createOrderWithStock({
+    required Map<String, dynamic> orderData,
+    required List<Map<String, dynamic>> stockItems,
+  }) async {
+    final orderRef = firestore.collection('orders').doc();
+
+    await firestore.runTransaction((tx) async {
+      // 1) كل القراءات أولاً (شرط Firestore للمعاملات)
+      final snapshots = <String, DocumentSnapshot>{};
+      for (final item in stockItems) {
+        final pid = (item['productId'] ?? '').toString();
+        if (pid.isEmpty || snapshots.containsKey(pid)) continue;
+        snapshots[pid] =
+            await tx.get(firestore.collection('products').doc(pid));
+      }
+
+      // 2) تجميع الكميات المطلوبة لكل منتج / مقاس
+      final productQty = <String, int>{};
+      final variantQty = <String, Map<String, int>>{};
+      final productNames = <String, String>{};
+      for (final item in stockItems) {
+        final pid = (item['productId'] ?? '').toString();
+        final qty = (item['quantity'] as num?)?.toInt() ?? 0;
+        final size = (item['size'] ?? '').toString().trim();
+        if (pid.isEmpty || qty <= 0) continue;
+        productQty[pid] = (productQty[pid] ?? 0) + qty;
+        if (size.isNotEmpty) {
+          variantQty.putIfAbsent(pid, () => <String, int>{});
+          variantQty[pid]![size] = (variantQty[pid]![size] ?? 0) + qty;
+        }
+        final nm = (item['name'] ?? '').toString();
+        if (nm.isNotEmpty) productNames[pid] = nm;
+      }
+
+      // 3) تحقّق + حساب القيم الجديدة (لا كتابة قبل التحقق من الجميع)
+      final updates = <DocumentReference, Map<String, dynamic>>{};
+      for (final entry in productQty.entries) {
+        final pid = entry.key;
+        final totalQty = entry.value;
+        final snap = snapshots[pid];
+        if (snap == null || !snap.exists) {
+          throw StockUnavailableException(
+              'أحد المنتجات في سلتك لم يعد متوفراً — أعد تحميل السلة');
+        }
+        final data = (snap.data() as Map<String, dynamic>?) ?? {};
+        final name = productNames[pid] ?? (data['name'] ?? 'منتج').toString();
+
+        final variants = <String, int>{};
+        final rawVariants = data['stockVariants'];
+        if (rawVariants is Map) {
+          rawVariants.forEach((k, v) {
+            if (v is num) variants[k.toString()] = v.toInt();
+          });
+        }
+        var stockQty = 0;
+        final rawSq = data['stockQuantity'];
+        if (rawSq is num) {
+          stockQty = rawSq.toInt();
+        } else if (rawSq != null) {
+          stockQty = int.tryParse(rawSq.toString()) ?? 0;
+        }
+
+        // مخزون غير مُتتبَّع → لا حجب ولا خصم
+        if (variants.isEmpty && stockQty <= 0) continue;
+
+        final newVariants = Map<String, int>.from(variants);
+        final requested = variantQty[pid] ?? const <String, int>{};
+
+        if (variants.isNotEmpty) {
+          if (requested.isEmpty) {
+            throw StockUnavailableException(
+                'المنتج «$name» يُباع حسب المقاس — أعد إضافته واختر المقاس',
+                productName: name);
+          }
+          for (final v in requested.entries) {
+            final have = variants[v.key] ?? 0;
+            if (have < v.value) {
+              throw StockUnavailableException(
+                  'الكمية المطلوبة من «$name» (مقاس ${v.key}) غير متوفرة — '
+                  'المتاح $have',
+                  productName: name,
+                  size: v.key);
+            }
+            newVariants[v.key] = have - v.value;
+          }
+          if (stockQty > 0) {
+            stockQty -= totalQty;
+            if (stockQty < 0) stockQty = 0;
+          }
+        } else {
+          if (stockQty < totalQty) {
+            throw StockUnavailableException(
+                'الكمية المطلوبة من «$name» غير متوفرة — المتاح $stockQty',
+                productName: name);
+          }
+          stockQty -= totalQty;
+        }
+
+        updates[firestore.collection('products').doc(pid)] = {
+          'stockQuantity': stockQty,
+          'stockVariants': newVariants,
+          'stockUpdatedAt': FieldValue.serverTimestamp(),
+        };
+      }
+
+      // 4) الكتابة: الطلب ثم خصم المخزون — داخل نفس المعاملة
+      tx.set(orderRef, orderData);
+      for (final u in updates.entries) {
+        tx.update(u.key, u.value);
+      }
+    });
+
+    return orderRef.id;
   }
 
   Stream<List<Map<String, dynamic>>> getUserOrdersStream(String userId) {
