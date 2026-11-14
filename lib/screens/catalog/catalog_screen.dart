@@ -307,6 +307,8 @@ class _CatalogScreenState extends State<CatalogScreen>
   List<Widget> _buildProductsSlivers(ProductProvider provider) {
     final products = provider.filteredProducts;
     final groups = _groupByCategory(provider, products);
+    debugPrint('🗂 groups (${products.length} products): '
+        '${groups.map((g) => '${g.name}=${g.products.length}').join(', ')}');
 
     // فئة واحدة محددة أو مجموعة واحدة فقط → شبكة مسطّحة كالسابق
     if (provider.selectedCategoryId.isNotEmpty || groups.length <= 1) {
