@@ -60,17 +60,41 @@ def api(url, payload=None, method=None):
 
 
 def list_products():
+    """Walks every page. pageSize is capped by the API, and a single pass used to
+    stop early (silently missing ~20 products), so keep going until the token is
+    gone and assert the total against the count aggregation."""
     docs, token, pages = [], None, 0
     while True:
-        url = f"{BASE}/products?pageSize=100" + (f"&pageToken={token}" if token else "")
+        url = f"{BASE}/products?pageSize=300" + (f"&pageToken={token}" if token else "")
         s, d = api(url)
         if s != 200:
             sys.exit(f"list products failed: {s} {d}")
-        docs += d.get("documents", [])
+        page_docs = d.get("documents", [])
+        docs += page_docs
         token = d.get("nextPageToken")
         pages += 1
-        if not token or pages > 10:
-            return docs
+        print(f"  page {pages}: +{len(page_docs)} docs (total {len(docs)})")
+        if not token:
+            break
+        if pages > 30:
+            sys.exit("pagination did not finish after 30 pages")
+
+    s, agg = api(f"{BASE}:runAggregationQuery", {
+        "structuredAggregationQuery": {
+            "structuredQuery": {"from": [{"collectionId": "products"}], "limit": 1},
+            "aggregations": [{"alias": "n", "count": {}}],
+        }
+    })
+    total = None
+    if s == 200:
+        try:
+            total = int(agg["result"][0]["aggregateFields"]["n"]["integerValue"])
+        except Exception:  # noqa: BLE001
+            total = None
+    print(f"collected {len(docs)} docs" + (f" of {total} in the collection" if total else ""))
+    if total is not None and len(docs) < total:
+        sys.exit(f"INCOMPLETE LIST: {len(docs)} of {total} — refusing to report a migration")
+    return docs
 
 
 def data_uri_to_jpeg(uri):
