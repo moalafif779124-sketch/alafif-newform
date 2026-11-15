@@ -26,6 +26,13 @@ service cloud.firestore {
         && variantsOk;
     }
 
+    // product photo galleries — public read (they are shop photos), admin write.
+    // Without this block the PDP falls back to the 240px thumbnail only.
+    match /product_images/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /products/{docId} {
       allow read: if true;
       allow write: if isAdmin();
