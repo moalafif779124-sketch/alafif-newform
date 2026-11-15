@@ -209,6 +209,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ? _pointsForDiscount(pointsDiscount)
           : 0;
 
+      // ===== إعادة التحقق من كود الخصم على المجموع الحالي =====
+      // العميل قد يعدّل السلة بعد تطبيق الكود: الخصم يتغيّر (أو يسقط شرط
+      // الحد الأدنى)، وقاعدة `orders` ترفض أي خصم يتجاوز ٥٠٪ من المجموع —
+      // فالتحقق هنا يمنع فشل الطلب بعد أن يضغط «تأكيد».
+      if (_coupon.ok) {
+        final fresh =
+            await _couponService.validate(_coupon.code, cartProvider.subtotal);
+        if (!mounted) return;
+        setState(() => _coupon = fresh);
+        if (!fresh.ok) {
+          _showSnackBar(fresh.message);
+          setState(() => _isSubmitting = false);
+          return;
+        }
+      }
+
       final shippingAddress = {
         'fullName': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
