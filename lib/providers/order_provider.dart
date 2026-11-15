@@ -52,6 +52,10 @@ class OrderProvider with ChangeNotifier {
     // يُمرَّران كي يطابق الإجمالي المحفوظ ما رآه العميل تماماً.
     double? shippingCost,
     double pointsDiscount = 0,
+    // كود خصم مُتحقَّق منه في شاشة الدفع (CouponService.validate).
+    // يُمرَّر كي يطابق الإجمالي المحفوظ ما رآه العميل، ويُسجَّل الكود في الطلب.
+    double couponDiscount = 0,
+    String? couponCode,
   }) async {
     _isLoading = true;
     _error = null;
@@ -74,7 +78,12 @@ class OrderProvider with ChangeNotifier {
       final shipping = shippingCost ??
           DeliveryConfig.getShippingCost(DeliveryConfig.defaultCityId,
               subtotal: subtotal);
-      final total = subtotal + tax + shipping - bundleDiscount - pointsDiscount;
+      final total = subtotal +
+          tax +
+          shipping -
+          bundleDiscount -
+          pointsDiscount -
+          couponDiscount;
 
       // إنشاء رقم طلب
       final orderNumber = 'ANF-${DateTime.now().millisecondsSinceEpoch}';
@@ -102,7 +111,7 @@ class OrderProvider with ChangeNotifier {
         subtotal: subtotal,
         shippingCost: shipping,
         tax: tax,
-        discount: bundleDiscount + pointsDiscount,
+        discount: bundleDiscount + pointsDiscount + couponDiscount,
         bundle: bundle.hasBundle ? bundle.toMap() : null,
         total: total,
         paymentMethod: paymentMethod,
@@ -119,10 +128,16 @@ class OrderProvider with ChangeNotifier {
 
       // حفظ الطلب + خصم المخزون في معاملة واحدة (ذرّي).
       // إن نقص أي صنف: لا طلب ولا خصم، وتظهر رسالة عربية واضحة للعميل.
+      final orderMap = orderData.toMap();
+      if (couponCode != null && couponCode.isNotEmpty) {
+        orderMap['couponCode'] = couponCode;
+        orderMap['couponDiscount'] = couponDiscount;
+      }
+
       final String orderId;
       try {
         orderId = await _firebaseService.createOrderWithStock(
-          orderData: orderData.toMap(),
+          orderData: orderMap,
           stockItems: cartItems
               .map((item) => <String, dynamic>{
                     'productId': item.product.id,

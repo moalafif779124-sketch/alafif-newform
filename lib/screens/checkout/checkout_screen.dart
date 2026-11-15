@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/points_provider.dart';
+import '../../services/coupon_service.dart';
 import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
 import '../shell_screen.dart';
@@ -49,6 +50,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _redeemPoints = false;
   double _pointsDiscount = 0;
 
+  // =========== كود الخصم ===========
+  final TextEditingController _couponController = TextEditingController();
+  final CouponService _couponService = CouponService();
+  CouponResult _coupon = CouponResult.idle;
+  bool _couponBusy = false;
+
   // =========== إثبات التحويل (كريمي/جيب) ===========
   final TextEditingController _transferRefController = TextEditingController();
   String _receiptBase64 = '';
@@ -82,6 +89,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _landmarkController.dispose();
     _cityController.dispose();
     _notesController.dispose();
+    _couponController.dispose();
     _transferRefController.dispose();
     super.dispose();
   }
@@ -264,6 +272,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         // مرّر القيم الفعلية كي يطابق إجمالي الطلب المحفوظ ما رآه العميل
         shippingCost: shippingCost,
         pointsDiscount: pointsDiscount,
+        couponDiscount: _coupon.ok ? _coupon.discount : 0,
+        couponCode: _coupon.ok ? _coupon.code : null,
       );
 
       setState(() => _isSubmitting = false);
@@ -300,6 +310,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           }
         }
 
+        // ===== تسجيل استخدام كود الخصم (عدّاد maxUses) =====
+        if (_coupon.ok) {
+          await _couponService.markUsed(_coupon.code);
+        }
+
         // ===== خصم النقاط المستردة وتسجيل المعاملة =====
         if (pointsToDeduct > 0) {
           await pointsProvider.deductPoints(
@@ -317,7 +332,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             cartProvider.tax +
             shippingCost -
             pointsDiscount -
-            cartProvider.discountAmount;
+            cartProvider.discountAmount -
+            (_coupon.ok ? _coupon.discount : 0);
 
         // تفريغ السلة
         cartProvider.clearCart();
@@ -701,6 +717,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                     const SizedBox(height: 16),
 
+                    // =========== كود الخصم ===========
+                    _buildSectionHeader('كود الخصم', Icons.local_offer_outlined),
+                    _buildCouponCard(),
+
+                    const SizedBox(height: 16),
+
                     // =========== ٣. ملخص الطلب ===========
                     _buildSectionHeader('ملخص الطلب', Icons.receipt_long),
                     Consumer2<CartProvider, PointsProvider>(
@@ -716,11 +738,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         final pointsDiscount = _redeemPoints
                             ? _calculatePointsDiscount(points.points, subtotal)
                             : 0.0;
+                        final couponDiscount =
+                            _coupon.ok ? _coupon.discount : 0.0;
                         final total = subtotal +
                             shipping +
                             tax -
                             pointsDiscount -
-                            bundleDiscount;
+                            bundleDiscount -
+                            couponDiscount;
 
                         return Column(
                           children: [
@@ -758,6 +783,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                           ? '-${AppConstants.currency} ${_formatPrice(pointsDiscount)}'
                                           : '${AppConstants.currency} 0',
                                     ),
+                                    // ===== كود الخصم =====
+                                    if (couponDiscount > 0) ...[
+                                      const SizedBox(height: 12),
+                                      _buildSummaryRow(
+                                        'كود الخصم (${_coupon.code})',
+                                        '-${AppConstants.currency} ${_formatPrice(couponDiscount)}',
+                                      ),
+                                    ],
                                     const SizedBox(height: 12),
                                     _buildSummaryRow(
                                       'التوصيل',
@@ -904,6 +937,123 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // ======================== Widget Helpers ========================
 
   /// قسم تفاصيل الحساب وإثبات التحويل (كريمي/جيب)
+  // ===================== كود الخصم =====================
+
+  Future<void> _applyCoupon() async {
+    final subtotal = context.read<CartProvider>().subtotal;
+    setState(() => _couponBusy = true);
+    final result = await _couponService.validate(_couponController.text, subtotal);
+    if (!mounted) return;
+    setState(() {
+      _couponBusy = false;
+      _coupon = result;
+    });
+    if (!result.ok) {
+      _showSnackBar(result.message);
+    }
+  }
+
+  void _removeCoupon() {
+    setState(() {
+      _coupon = CouponResult.idle;
+      _couponController.clear();
+    });
+  }
+
+  Widget _buildCouponCard() {
+    final applied = _coupon.ok;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!applied)
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _couponController,
+                      textCapitalization: TextCapitalization.characters,
+                      enabled: !_couponBusy,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _applyCoupon(),
+                      decoration: const InputDecoration(
+                        labelText: 'كود الخصم',
+                        hintText: 'مثال: ALAFIF10',
+                        prefixIcon: Icon(Icons.local_offer_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _couponBusy ? null : _applyCoupon,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primarySurface,
+                        foregroundColor: AppColors.textOnPrimary,
+                      ),
+                      child: _couponBusy
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text('تطبيق'),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.success),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'تم تطبيق الكود ${_coupon.code}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'وفّرت ${_coupon.discount.toStringAsFixed(0)} ${AppConstants.currency}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _removeCoupon,
+                    child: const Text('إزالة'),
+                  ),
+                ],
+              ),
+            if (!applied && _coupon.message.isNotEmpty && !_coupon.ok)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _coupon.message,
+                  style: TextStyle(fontSize: 12, color: AppColors.error),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTransferProofSection() {
     final isKuraimi = _selectedPaymentMethod == 'kuraimi';
     final accountLabel = isKuraimi ? 'رقم نقطة البيع (كريمي)' : 'معرف محفظة جيب';

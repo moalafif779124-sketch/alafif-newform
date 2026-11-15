@@ -26,6 +26,22 @@ service cloud.firestore {
         && variantsOk;
     }
 
+    // أكواد الخصم: العميل المسجَّل يقرأ كوداً يعرفه بالاسم (get) فقط —
+    // لا يمكنه سرد الأكواد (list) حتى لا تُسرَّب أكواد الخصم للجميع.
+    // الزيادة الوحيدة المسموحة للعميل: usedCount +1 عند إتمام طلب ناجح.
+    match /coupons/{code} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['usedCount'])
+            && request.resource.data.usedCount == resource.data.usedCount + 1
+            && (resource.data.get('maxUses', 0) == 0
+                || resource.data.usedCount < resource.data.get('maxUses', 0)));
+    }
+
     // product photo galleries — public read (they are shop photos), admin write.
     // Without this block the PDP falls back to the 240px thumbnail only.
     match /product_images/{docId} {

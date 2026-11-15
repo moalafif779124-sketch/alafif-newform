@@ -19,6 +19,7 @@ dependencies:
   cloud_firestore: ^5.6.0
   firebase_storage: ^12.4.0
   firebase_messaging: ^15.2.0
+  firebase_crashlytics: ^4.3.5   # تقارير الانهيار — لم تكن موجودة إطلاقاً
 
   # Notifications
   flutter_local_notifications: ^18.0.0

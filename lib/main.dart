@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 import 'config/colors.dart';
@@ -32,6 +35,23 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ===== تقارير الانهيار =====
+  // Firebase لا يكون مهيّأً بعد في هذه اللحظة (يُهيَّأ في شاشة البداية)، لذلك
+  // نتحقق من Firebase.apps كي لا ينهار المعالج نفسه قبل التهيئة.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    if (Firebase.apps.isNotEmpty) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+    }
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    if (Firebase.apps.isNotEmpty) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    }
+    debugPrint('⛔ Uncaught: $error');
+    return true;
+  };
   // تسجيل معالج الخلفية قبل أي تهيئة أخرى
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // تهيئة الكاش المحلي قبل الإقلاع — يضمن عرض فوري
