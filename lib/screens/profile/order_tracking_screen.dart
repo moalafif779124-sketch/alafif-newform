@@ -200,6 +200,24 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                             ? AppColors.success
                             : Colors.orange,
                       ),
+                      // ===== إثبات التحويل المُرسل (كريمي/جيب) =====
+                      if (order.transactionRef != null) ...[
+                        const Divider(height: 16),
+                        _buildInfoRow(
+                          Icons.confirmation_number_outlined,
+                          'رقم الحوالة: ${order.transactionRef}',
+                        ),
+                        const Divider(height: 16),
+                        _buildInfoRow(
+                          Icons.verified_user_outlined,
+                          order.paymentStatus == 'paid'
+                              ? 'تم التحقق من التحويل من قبل المتجر'
+                              : 'أُرسل إثبات التحويل — بانتظار مراجعة المتجر',
+                          valueColor: order.paymentStatus == 'paid'
+                              ? AppColors.success
+                              : Colors.orange,
+                        ),
+                      ],
                     ],
                   ),
                 ),

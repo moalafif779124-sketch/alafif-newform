@@ -38,7 +38,8 @@ class CouponService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  Future<CouponResult> validate(String rawCode, double subtotal) async {
+  Future<CouponResult> validate(String rawCode, double subtotal,
+      {double otherDiscount = 0}) async {
     final code = rawCode.trim().toUpperCase().replaceAll(' ', '');
     if (code.isEmpty) {
       return const CouponResult(
@@ -92,7 +93,16 @@ class CouponService {
       var discount = type == 'fixed' ? value : subtotal * value / 100;
 
       // سقف ٥٠٪ من المجموع الفرعي — نفس حد قاعدة `orders` على الخادم.
-      final cap = subtotal * maxDiscountRatio;
+      // يُحسب على (الطقم + النقاط + الكود) مجتمعة: قاعدة الطلب ترفض أي خصم
+      // إجمالي يتجاوز ٥٠٪، فلو أخذ الكود ٥٠٪ مع خصم طقم ١٠٪ لفشل الطلب.
+      final cap = subtotal * maxDiscountRatio - otherDiscount;
+      if (cap <= 0) {
+        return CouponResult(
+            ok: false,
+            code: code,
+            discount: 0,
+            message: 'الخصومات المطبقة وصلت الحد المسموح — الكود غير قابل للاستخدام');
+      }
       if (discount > cap) discount = cap;
       discount = discount.roundToDouble();
       if (discount <= 0) {

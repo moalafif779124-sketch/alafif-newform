@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import '../../config/colors.dart';
+import '../../config/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -539,14 +541,77 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
 
+          const SizedBox(height: 16),
+
+          // رقم الإصدار — ضغط مطوّل يرسل تقرير انهيار تجريبي إلى Crashlytics
+          // (تشخيص: يتأكد أن التقارير تصل لوحة Firebase فعلاً).
+          Center(
+            child: GestureDetector(
+              onLongPress: _confirmTestCrash,
+              child: Text(
+                'الإصدار ${AppConstants.appVersion}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  // =================== عنصر القائمة ===================
+  /// تقرير انهيار تجريبي — يتأكد من وصول التقارير إلى لوحة Firebase.
+  Future<void> _confirmTestCrash() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تقرير انهيار تجريبي'),
+        content: const Text(
+          'سيُسجَّل خطأ مقصود ويُرسَل إلى Crashlytics خلال دقيقة.\n'
+          'التطبيق لن يتوقف. متابعة؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('إرسال'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await FirebaseCrashlytics.instance.setCustomKey(
+          'trigger', 'profile_test_crash_${DateTime.now().millisecondsSinceEpoch}');
+      await FirebaseCrashlytics.instance.recordError(
+        StateError('CRASHLYTICS TEST REPORT (deliberate, verifies delivery)'),
+        StackTrace.current,
+        reason: 'diagnostic test from profile screen',
+        fatal: true,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('أُرسل التقرير التجريبي — يظهر في Firebase خلال دقائق'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذّر الإرسال: $e')),
+      );
+    }
+  }
 
+  // =================== عنصر القائمة ===================
   Widget _buildMenuItem({
     required IconData icon,
     required String title,

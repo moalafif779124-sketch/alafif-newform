@@ -18,6 +18,8 @@ class Order {
   final String paymentMethod;
   final String paymentStatus;
   final String? paymentReference;
+  /// رقم الحوالة/السند الذي أدخله العميل عند التحويل (كريمي/جيب).
+  final String? transactionRef;
   final AddressInfo shippingAddress;
   final String? notes;
   final DateTime createdAt;
@@ -39,6 +41,7 @@ class Order {
     required this.paymentMethod,
     required this.paymentStatus,
     this.paymentReference,
+    this.transactionRef,
     required this.shippingAddress,
     this.notes,
     required this.createdAt,
@@ -73,7 +76,10 @@ class Order {
     }
     switch (paymentStatus) {
       case 'pending':
-        return 'في انتظار الدفع';
+        // تحويل (كريمي/جيب): العميل حوّل وأرفق السند — الدور الآن على المتجر.
+        return (paymentMethod == 'kuraimi' || paymentMethod == 'jeeb')
+            ? 'بانتظار التحقق من التحويل'
+            : 'في انتظار الدفع';
       case 'paid':
         return 'تم الدفع';
       case 'failed':
@@ -106,6 +112,9 @@ class Order {
       paymentMethod: map['paymentMethod'] ?? '',
       paymentStatus: map['paymentStatus'] ?? 'pending',
       paymentReference: map['paymentReference'],
+      transactionRef: (map['transactionRef'] as String?)?.trim().isEmpty ?? true
+          ? null
+          : (map['transactionRef'] as String).trim(),
       shippingAddress: AddressInfo.fromMap(map['shippingAddress'] ?? {}),
       notes: map['notes'],
       createdAt: map['createdAt'] != null
@@ -136,6 +145,7 @@ class Order {
       'paymentMethod': paymentMethod,
       'paymentStatus': paymentStatus,
       'paymentReference': paymentReference,
+      'transactionRef': transactionRef,
       'shippingAddress': shippingAddress.toMap(),
       'notes': notes,
       'createdAt': createdAt.millisecondsSinceEpoch,

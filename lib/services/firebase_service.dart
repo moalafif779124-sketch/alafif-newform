@@ -6,6 +6,7 @@ import 'stock_calculator.dart';
 export 'stock_calculator.dart' show StockUnavailableException, computeStockUpdate;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
@@ -54,6 +55,15 @@ class FirebaseService {
     _storage = FirebaseStorage.instance;
     _auth = FirebaseAuth.instance;
     _initialized = true;
+
+    // ===== تقارير الانهيار =====
+    // التجميع مفعّل افتراضياً، لكن نثبّته صراحةً كي لا يُعطَّل بتفضيل محفوظ
+    // على الجهاز. هذه أول نقطة يكون فيها Firebase جاهزاً.
+    try {
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    } catch (e) {
+      debugPrint('⚠️ Crashlytics enable: $e');
+    }
 
     // إعدادات Firestore
     FirebaseFirestore.instance.settings = const Settings(

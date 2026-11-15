@@ -214,8 +214,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       // الحد الأدنى)، وقاعدة `orders` ترفض أي خصم يتجاوز ٥٠٪ من المجموع —
       // فالتحقق هنا يمنع فشل الطلب بعد أن يضغط «تأكيد».
       if (_coupon.ok) {
-        final fresh =
-            await _couponService.validate(_coupon.code, cartProvider.subtotal);
+        final otherDiscount = cartProvider.discountAmount + pointsDiscount;
+        final fresh = await _couponService.validate(
+            _coupon.code, cartProvider.subtotal,
+            otherDiscount: otherDiscount);
         if (!mounted) return;
         setState(() => _coupon = fresh);
         if (!fresh.ok) {
@@ -956,9 +958,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // ===================== كود الخصم =====================
 
   Future<void> _applyCoupon() async {
-    final subtotal = context.read<CartProvider>().subtotal;
+    final cart = context.read<CartProvider>();
+    final points = context.read<PointsProvider>();
+    // الخصومات الأخرى (الطقم + النقاط) تُحسب داخل سقف ٥٠٪ حتى لا ترفض قاعدة
+    // `orders` الطلب بعد الدفع.
+    final otherDiscount = cart.discountAmount +
+        (_redeemPoints
+            ? _calculatePointsDiscount(points.points, cart.subtotal)
+            : 0.0);
     setState(() => _couponBusy = true);
-    final result = await _couponService.validate(_couponController.text, subtotal);
+    final result = await _couponService.validate(_couponController.text,
+        cart.subtotal, otherDiscount: otherDiscount);
     if (!mounted) return;
     setState(() {
       _couponBusy = false;
