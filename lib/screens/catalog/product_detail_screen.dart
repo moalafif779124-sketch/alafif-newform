@@ -243,8 +243,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     context.read<CartProvider>().addItem(cartItem);
 
     if (goToCheckout) {
-      // Buy Now: go directly to checkout
-      await checkout.loadLibrary();
+      // شراء الآن: الانتقال مباشرة إلى الدفع.
+      // loadLibrary() قد يفشل في التثبيت المباشر (خارج Play) — لا يحجب الدفع.
+      try {
+        await checkout.loadLibrary();
+      } catch (e) {
+        debugPrint('⚠️ checkout deferred load failed: $e');
+      }
       if (!context.mounted) return;
       Navigator.push(
         context,

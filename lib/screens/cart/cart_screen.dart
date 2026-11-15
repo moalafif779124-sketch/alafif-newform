@@ -359,8 +359,14 @@ class _CartScreenState extends State<CartScreen>
               height: 50,
               child: ElevatedButton(
                 onPressed: () async {
-                  // التنقل إلى شاشة الدفع
-                  await checkout.loadLibrary();
+                  // التنقل إلى شاشة الدفع.
+                  // loadLibrary() لتحميل المكتبة المؤجّلة — إن فشل (تثبيت خارج
+                  // متجر Play) لا نمنع فتح الدفع؛ نكمل بالمسار الثابت.
+                  try {
+                    await checkout.loadLibrary();
+                  } catch (e) {
+                    debugPrint('⚠️ checkout deferred load failed: $e');
+                  }
                   if (!context.mounted) return;
                   Navigator.push(
                     context,
@@ -387,6 +393,9 @@ class _CartScreenState extends State<CartScreen>
                 ),
               ),
             ),
+            // مساحة لشريط التنقل السفلي — بدونه كان زر «متابعة الدفع»
+            // يجلس تحت الشريط مباشرة فتبتلع النقرات ولا يُفتح الدفع.
+            const SizedBox(height: 100),
           ],
         ),
       ),
