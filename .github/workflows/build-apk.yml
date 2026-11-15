@@ -56,6 +56,17 @@ jobs:
           path: build/app/outputs/bundle/release/*.aab
           compression-level: 9
 
+      - name: Upload Dart symbols to Crashlytics
+        # The release build is obfuscated (--obfuscate), so without this upload the
+        # console shows unreadable stack traces. Not continue-on-error: a silent
+        # failure here is exactly how crash reports looked "fine" while being useless.
+        run: |
+          APP_ID=$(python3 -c "import json;d=json.load(open('android/app/google-services.json'));print(d['client'][0]['client_info']['mobilesdk_app_id'])")
+          echo "Crashlytics app id: $APP_ID"
+          npx --yes firebase-tools@13 crashlytics:symbols:upload --app="$APP_ID" build/app/outputs/symbols
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
       - name: Upload debug symbols
         continue-on-error: true
         uses: actions/upload-artifact@v4
