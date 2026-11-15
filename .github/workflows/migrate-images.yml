@@ -1,0 +1,53 @@
+name: Migrate product images
+
+# One-off maintenance job: moves base64 product photos out of Firestore
+# documents into product_images/{id} (full, compressed) + product.thumb.
+# Runs with the project owner's token, so it bypasses security rules.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report what would change (no writes)"
+        type: boolean
+        default: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow
+        run: pip install --quiet pillow
+
+      - name: Exchange FIREBASE_TOKEN for an access token
+        id: auth
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          RESP=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -d "grant_type=refresh_token" \
+            -d "refresh_token=${FIREBASE_TOKEN}" \
+            -d "client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com" \
+            -d "client_secret=j9iVZfS8kkCEFUPaAeJV0sAi")
+          ACC=$(python3 -c "import json,sys;print(json.loads(sys.argv[1]).get('access_token',''))" "$RESP")
+          if [ -z "$ACC" ]; then echo "token exchange failed"; echo "$RESP" | head -c 300; exit 1; fi
+          echo "::add-mask::$ACC"
+          echo "token=$ACC" >> "$GITHUB_OUTPUT"
+
+      - name: Report (dry run)
+        if: ${{ inputs.dry_run }}
+        env:
+          GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.token }}
+        run: python3 tools/compress_product_images.py --dry-run
+
+      - name: Migrate
+        if: ${{ !inputs.dry_run }}
+        env:
+          GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.token }}
+        run: python3 tools/compress_product_images.py

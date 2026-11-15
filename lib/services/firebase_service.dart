@@ -994,6 +994,24 @@ class FirebaseService {
 
   // =================== ريلز/اكتشف (منتجات الفيديو) ===================
 
+  /// معرض صور المنتج الكامل — محفوظ خارج مستند المنتج
+  /// (product_images/{productId}) كي لا يتحمّل الكتالوج ملايين البايتات.
+  Future<List<String>> getProductGallery(String productId) async {
+    try {
+      final doc = await firestore
+          .collection('product_images')
+          .doc(productId)
+          .get();
+      final imgs = doc.data()?['images'];
+      if (imgs is List) {
+        return imgs.whereType<String>().toList();
+      }
+    } catch (e) {
+      debugPrint('⚠️ gallery fetch failed: $e');
+    }
+    return const <String>[];
+  }
+
   /// جلب المنتجات التي تحتوي فيديو (تبويب اكتشف)
   /// بدون orderBy لتجنب الحاجة إلى فهرس مركب — الفلترة في Dart
   Future<List<Product>> getReelsProducts() async {

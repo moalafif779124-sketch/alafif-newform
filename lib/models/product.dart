@@ -8,6 +8,10 @@ class Product {
   final String categoryId;
   final String categoryName;
   final List<String> images;
+
+  /// صورة مصغّرة (≈10KB) للشبكات والقوائم — تُحمَّل بدل الصورة الكاملة
+  /// لأن الصور الكاملة انتقلت إلى product_images/{id}
+  final String thumb;
   final List<String> sizes;          // مقاسات قياسية (M, L, XL, 52, 54...)
   final String sizeRange;            // نطاق مقاس (1-60)
   final List<String> colors;         // أكواد الألوان hex
@@ -47,6 +51,7 @@ class Product {
     required this.categoryId,
     required this.categoryName,
     required this.images,
+    this.thumb = '',
     required this.sizes,
     this.sizeRange = '',
     required this.colors,
@@ -85,7 +90,12 @@ class Product {
       oldPrice: map['oldPrice']?.toDouble(),
       categoryId: map['categoryId'] ?? '',
       categoryName: map['categoryName'] ?? '',
-      images: List<String>.from(map['images'] ?? []),
+      images: (map['images'] as List?)?.isNotEmpty == true
+          ? List<String>.from(map['images'])
+          : (((map['thumb'] ?? '') as String).isNotEmpty
+              ? [map['thumb'] as String]
+              : const <String>[]),
+      thumb: map['thumb'] ?? '',
       sizes: List<String>.from(map['sizes'] ?? []),
       sizeRange: map['sizeRange'] ?? '',
       colors: List<String>.from(map['colors'] ?? []),

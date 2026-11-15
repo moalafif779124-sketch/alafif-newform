@@ -58,12 +58,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       _selectedSize = product.sizes.first;
     }
     _checkPendingRestock();
+    _loadGallery();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  /// صور المعرض الكاملة (تُجلب من product_images/{id})؛ تسقط إلى المصغّرة.
+  List<String> _gallery = const [];
+  List<String> get _images => _gallery.isNotEmpty ? _gallery : product.images;
+
+  Future<void> _loadGallery() async {
+    try {
+      final imgs =
+          await FirebaseService().getProductGallery(product.id);
+      if (!mounted || imgs.isEmpty) return;
+      setState(() => _gallery = imgs);
+    } catch (_) {
+      // نبقى على المصغّرة
+    }
   }
 
   double get _totalPrice => product.price * _quantity;
@@ -357,14 +373,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             // معرض الصور المنزلقة
             PageView.builder(
               controller: _pageController,
-              itemCount: product.images.isNotEmpty ? product.images.length : 1,
+              itemCount: _images.isNotEmpty ? _images.length : 1,
               onPageChanged: (index) {
                 setState(() => _currentPage = index);
               },
               itemBuilder: (context, index) {
-                final imageUrl = product.images.isNotEmpty
-                    ? product.images[index]
-                    : '';
+                final imageUrl = _images.isNotEmpty ? _images[index] : '';
                 final imageWidget = AppImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
@@ -395,7 +409,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   // ======================== Page Indicator ========================
 
   Widget _buildPageIndicator() {
-    final imageCount = product.images.isNotEmpty ? product.images.length : 1;
+    final imageCount = _images.isNotEmpty ? _images.length : 1;
     return Container(
       height: 24,
       alignment: Alignment.center,
