@@ -102,8 +102,10 @@ service cloud.firestore {
           'name', 'fullName', 'phone', 'email', 'photoUrl', 'avatar',
           'address', 'addresses', 'city', 'district', 'street', 'notes',
           'fcmTokens', 'lastLogin', 'lastSeen', 'createdAt', 'updatedAt',
-          'points', 'lifetimePoints', 'referralCode', 'referredBy',
-          'preferredLanguage', 'notificationsEnabled', 'darkMode', 'settings'
+          'points', 'lifetimePoints', 'streakDays', 'lastCheckin', 'badges',
+          'referralCode', 'referredBy', 'notificationTopics',
+          'preferredLanguage', 'notificationsEnabled', 'darkMode', 'settings',
+          'id'
         ]);
       }
       allow read: if isOwner(userId) || isAdmin();
