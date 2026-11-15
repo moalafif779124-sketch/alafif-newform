@@ -89,15 +89,50 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // users - owner or admin; legacy phone_* docs readable for migration
+    // users - owner or admin; legacy phone_* docs readable for migration.
+    // SECURITY: a customer must NEVER be able to change their own privilege or
+    // moderation fields (isAdmin/role/status/...). Anything not whitelisted
+    // below is admin-only.
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      function selfOrLegacy() {
+        return isOwner(userId) || (isSignedIn() && userId.matches('^phone_.*'));
+      }
+      function profileFieldsOnly() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'fullName', 'phone', 'email', 'photoUrl', 'avatar',
+          'address', 'addresses', 'city', 'district', 'street', 'notes',
+          'fcmTokens', 'lastLogin', 'lastSeen', 'createdAt', 'updatedAt',
+          'points', 'lifetimePoints', 'referralCode', 'referredBy',
+          'preferredLanguage', 'notificationsEnabled', 'darkMode', 'settings'
+        ]);
+      }
+      allow read: if isOwner(userId) || isAdmin();
       allow read: if isSignedIn() && userId.matches('^phone_.*');
+      // cannot self-register as admin
+      allow create: if selfOrLegacy()
+        && request.resource.data.get('isAdmin', false) == false;
+      // role can only be granted by an admin, never by the account holder
+      allow update: if isAdmin() || (selfOrLegacy()
+        && request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false)
+        && profileFieldsOnly());
+      allow delete: if isAdmin();
     }
+    // orders - a customer may only CANCEL their own order; totals, status and
+    // items are admin-only after creation. Discount is capped at 50% of the
+    // subtotal so a tampered client cannot self-approve a free order.
     match /orders/{orderId} {
-      allow create: if isSignedIn() &&
-        request.resource.data.userId == request.auth.uid;
-      allow read, update: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && (!('discount' in request.resource.data)
+            || request.resource.data.discount >= 0)
+        && (!('discount' in request.resource.data)
+            || !('subtotal' in request.resource.data)
+            || request.resource.data.discount <= request.resource.data.subtotal * 0.5);
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow update: if isAdmin() || (isOwner(resource.data.userId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'cancelReason', 'cancelledAt'])
+        && request.resource.data.status == 'cancelled');
       allow delete: if isAdmin();
     }
     match /addresses/{docId} {
@@ -131,8 +166,10 @@ service cloud.firestore {
       allow read: if isSignedIn() &&
         (resource.data.refereeUid == request.auth.uid ||
          resource.data.referrerUid == request.auth.uid);
+      // no self-referral: referrer must be someone else
       allow create: if isSignedIn() &&
-        request.resource.data.refereeUid == request.auth.uid;
+        request.resource.data.refereeUid == request.auth.uid &&
+        request.resource.data.referrerUid != request.auth.uid;
       allow update: if isSignedIn() &&
         resource.data.referrerUid == request.auth.uid;
       allow delete: if false;
