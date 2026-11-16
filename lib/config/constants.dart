@@ -17,54 +17,25 @@ class AppConstants {
 
   // =========== فئات المنتجات ===========
   static const List<Map<String, dynamic>> categories = [
-    {
-      'id': 'shamzan',
-      'name': 'شمزان',
-      'nameEn': 'Shamzan',
-      'icon': 'shamzan',
-    },
-    {
-      'id': 'fanail',
-      'name': 'فنايل',
-      'nameEn': 'T-Shirts',
-      'icon': 'fanail',
-    },
-    {
-      'id': 'aqwat',
-      'name': 'اكوات',
-      'nameEn': 'Aqwat',
-      'icon': 'aqwat',
-    },
-    {
-      'id': 'pajamas',
-      'name': 'بجائم',
-      'nameEn': 'Pajamas',
-      'icon': 'pajamas',
-    },
-    {
-      'id': 'belts',
-      'name': 'حزامات',
-      'nameEn': 'Belts',
-      'icon': 'belts',
-    },
-    {
-      'id': 'jackets',
-      'name': 'جاكتات',
-      'nameEn': 'Jackets',
-      'icon': 'jackets',
-    },
-    {
-      'id': 'underwear',
-      'name': 'ملابس داخليه',
-      'nameEn': 'Underwear',
-      'icon': 'underwear',
-    },
-    {
-      'id': 'mawaz',
-      'name': 'معاوز',
-      'nameEn': 'Mawaz',
-      'icon': 'mawaz',
-    },
+    {'id': 'shamzan', 'name': 'شمزان', 'nameEn': 'Shamzan', 'icon': 'shamzan'},
+    {'id': 'fanail', 'name': 'فنايل', 'nameEn': 'T-Shirts', 'icon': 'fanail'},
+    {'id': 'aZ1VDCIdr7OO7mGSPHjj', 'name': 'بنطلونات', 'nameEn': 'Trousers', 'icon': 'trousers'},
+    {'id': 'pajamas', 'name': 'بجائم', 'nameEn': 'Pajamas', 'icon': 'pajamas'},
+    {'id': 'jackets', 'name': 'جاكتات', 'nameEn': 'Jackets', 'icon': 'jackets'},
+    {'id': 'o1K8AwlMOJeOw7qtudSR', 'name': 'بدلات رجالي رسميه', 'nameEn': 'Suits', 'icon': 'suits'},
+    {'id': 'mawaz', 'name': 'معاوز', 'nameEn': 'Mawaz', 'icon': 'mawaz'},
+    {'id': 'DZZDQjYw71wPF0m6BvVw', 'name': 'يلقات', 'nameEn': 'Waistcoat', 'icon': 'waistcoat'},
+    {'id': 'aqwat', 'name': 'اكوات', 'nameEn': 'Aqwat', 'icon': 'aqwat'},
+    {'id': 'belts', 'name': 'حزامات', 'nameEn': 'Belts', 'icon': 'belts'},
+    {'id': 'tbCunvuDkYf8xs2ICPcV', 'name': 'جوارب', 'nameEn': 'Socks', 'icon': 'socks'},
+    {'id': 'shemagh', 'name': 'غتر وشماغ', 'nameEn': 'Ghutra & Shemagh', 'icon': 'shemagh'},
+    {'id': 'thobes', 'name': 'ثياب رجالية', 'nameEn': "Men's Thobes", 'icon': 'thobes'},
+    {'id': 'underwear', 'name': 'ملابس داخليه', 'nameEn': 'Underwear', 'icon': 'underwear'},
+    {'id': 'gramat', 'name': 'جرامات', 'nameEn': 'Gramat', 'icon': 'underwear'},
+    {'id': 'shorts', 'name': 'شورت', 'nameEn': 'Shorts', 'icon': 'shorts'},
+    {'id': 'shawls', 'name': 'شيلان', 'nameEn': 'Shawls', 'icon': 'shawls'},
+    {'id': 'bermuda', 'name': 'برموداء', 'nameEn': 'Bermuda Shorts', 'icon': 'shorts'},
+    {'id': 'tracksuits', 'name': 'ترنجات', 'nameEn': 'Tracksuits', 'icon': 'tracksuits'},
   ];
 
   // =========== خيارات المقاسات ===========
