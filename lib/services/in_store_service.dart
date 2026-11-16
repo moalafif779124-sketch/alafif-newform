@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/product.dart';
+import 'catalog_service.dart';
 
 /// فرع المتجر
 class StoreBranch {
@@ -38,13 +39,22 @@ class StoreBranch {
 /// نتيجة مسح بطاقة منتج: المنتج + كيف تم مطابقته
 class ScanLookupResult {
   final Product product;
-  final String matchedBy; // 'id' | 'barcode' | 'sku' | 'name'
+  final String matchedBy; // 'id' | 'barcode' | 'sku' | 'name' | 'catalog'
   final String rawCode;
+
+  /// true عندما يكون المنتج من كتالوج الأصناف المضمّن (كشف الأصناف) —
+  /// لا يملك صوراً أو مخزوناً مفصّلاً، فيُعرض كبطاقة سعر بسيطة.
+  final bool catalogOnly;
+
+  /// اسم الفئة من الكتالوج (عند catalogOnly).
+  final String catalogCategory;
 
   const ScanLookupResult({
     required this.product,
     required this.matchedBy,
     required this.rawCode,
+    this.catalogOnly = false,
+    this.catalogCategory = '',
   });
 }
 
@@ -146,6 +156,37 @@ class InStoreService {
       }
     } catch (e) {
       debugPrint('⚠️ lookupBySuffix error: $e');
+    }
+
+    // 4) كتالوج الأصناف المضمّن (كشف الأصناف) — يغطي كل أصناف المتجر
+    // المطابقة هنا محلية ولحظية (بلا إنترنت) وتعيد الاسم وسعر البيع.
+    try {
+      final entry = await CatalogService.instance.lookup(code);
+      if (entry != null) {
+        final product = Product(
+          id: entry.code,
+          name: entry.name,
+          description: '',
+          price: entry.currentPrice,
+          oldPrice: entry.originalPrice,
+          categoryId: '',
+          categoryName: entry.category,
+          images: const [],
+          sizes: const [],
+          colors: const [],
+          stockQuantity: 0,
+          brand: 'ALAFIF NEWFORM',
+        );
+        return ScanLookupResult(
+          product: product,
+          matchedBy: 'catalog',
+          rawCode: entry.code,
+          catalogOnly: true,
+          catalogCategory: entry.category,
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ catalog lookup error: $e');
     }
 
     return null;

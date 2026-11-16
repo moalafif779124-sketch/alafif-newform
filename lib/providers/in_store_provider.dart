@@ -21,6 +21,10 @@ class InStoreProvider extends ChangeNotifier {
   bool _scanning = false;
   String _error = '';
 
+  /// هل نتيجة المسح من كتالوج الأصناف المضمّن (بلا مخزون/صور)؟
+  bool _catalogOnly = false;
+  String _catalogCategory = '';
+
   // فيديو الإطلالة المرتبط
   String _videoUrl = '';
   bool _loadingVideo = false;
@@ -48,6 +52,8 @@ class InStoreProvider extends ChangeNotifier {
   bool get sendingRequest => _sendingRequest;
   String get lastRequestId => _lastRequestId;
   bool get hasScan => _scannedProduct != null;
+  bool get catalogOnly => _catalogOnly;
+  String get catalogCategory => _catalogCategory;
 
   // ==================== تفعيل الوضع ====================
 
@@ -90,6 +96,8 @@ class InStoreProvider extends ChangeNotifier {
     _scanning = true;
     _error = '';
     _scannedProduct = null;
+    _catalogOnly = false;
+    _catalogCategory = '';
     _videoUrl = '';
     _lastRequestId = '';
     notifyListeners();
@@ -112,8 +120,13 @@ class InStoreProvider extends ChangeNotifier {
 
       _scannedProduct = scan.product;
       _matchedBy = scan.matchedBy;
+      _catalogOnly = scan.catalogOnly;
+      _catalogCategory = scan.catalogCategory;
       _scanning = false;
       notifyListeners();
+
+      // نتيجة من كتالوج الأصناف — لا فيديو/غرفة قياس (لا مخزون مفصّل)
+      if (scan.catalogOnly) return;
 
       // فيديو الإطلالة — لا نُجمّد الشاشة بانتظاره
       _loadingVideo = true;

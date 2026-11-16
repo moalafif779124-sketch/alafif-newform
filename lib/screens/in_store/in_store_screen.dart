@@ -59,11 +59,15 @@ class InStoreScreen extends StatelessWidget {
                       if (store.error.isNotEmpty)
                         _ErrorCard(message: store.error),
                       if (store.scannedProduct != null) ...[
-                        _ProductResultCard(store: store),
-                        const SizedBox(height: 14),
-                        _StylistVideoCard(store: store),
-                        const SizedBox(height: 16),
-                        _FittingRoomRequestCard(store: store),
+                        if (store.catalogOnly)
+                          _CatalogResultCard(store: store)
+                        else ...[
+                          _ProductResultCard(store: store),
+                          const SizedBox(height: 14),
+                          _StylistVideoCard(store: store),
+                          const SizedBox(height: 16),
+                          _FittingRoomRequestCard(store: store),
+                        ],
                       ] else if (store.error.isEmpty && !store.scanning) ...[
                         const _EmptyHint(),
                       ],
@@ -222,6 +226,141 @@ class _ScanCard extends StatelessWidget {
               style: const TextStyle(color: Colors.white70, fontSize: 11.5),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ====================================================================
+// بطاقة نتيجة «كشف الأصناف» — الاسم وسعر البيع من الكتالوج المضمّن
+// ====================================================================
+class _CatalogResultCard extends StatelessWidget {
+  const _CatalogResultCard({required this.store});
+  final InStoreProvider store;
+
+  @override
+  Widget build(BuildContext context) {
+    final product = store.scannedProduct!;
+    final hasOld = product.oldPrice != null &&
+        product.oldPrice! > 0 &&
+        (product.oldPrice! - product.price).abs() > 0.5;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.inventory_2_outlined,
+                        size: 13, color: AppColors.primary),
+                    const SizedBox(width: 5),
+                    Text(
+                      'الرمز: ${product.id}',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              if (product.categoryName.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    product.categoryName,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            product.name,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              height: 1.45,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const Divider(height: 22),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'سعر البيع',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    product.price > 0
+                        ? '${product.price.toStringAsFixed(0)} ريال'
+                        : 'السعر عند الفرع',
+                    style: TextStyle(
+                      fontSize: product.price > 0 ? 22 : 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              if (hasOld) ...[
+                const SizedBox(width: 14),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text(
+                    'قبل الخصم ${product.oldPrice!.toStringAsFixed(0)} ريال',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'هذا الصنف من كتالوج المتجر. تواصل مع الفرع للتوفّر والشراء.',
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.5,
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
