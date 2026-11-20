@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'stock_calculator.dart';
+import '../utils/order_request_id.dart';
 
 // يُصبح StockUnavailableException متاحاً لمن يستورد firebase_service.dart
 export 'stock_calculator.dart' show StockUnavailableException, computeStockUpdate;
@@ -387,10 +388,23 @@ class FirebaseService {
   Future<String> createOrderWithStock({
     required Map<String, dynamic> orderData,
     required List<Map<String, dynamic>> stockItems,
+    // معرّف الطلب الثابت لكل محاولة شراء (OrderRequestId). وجوده يجعل الإنشاء
+    // عادياً: إعادة المحاولة بعد خطأ شبكة أو بعد العودة من محفظة جيب تكتب على
+    // نفس المستند، فلا تتكرر الطلبات ولا يُخصم المخزون مرتين.
+    String? requestId,
   }) async {
-    final orderRef = firestore.collection('orders').doc();
+    final orderRef = OrderRequestId.isValid(requestId)
+        ? firestore.collection('orders').doc(requestId)
+        : firestore.collection('orders').doc();
 
-    await firestore.runTransaction((tx) async {
+    final existing = await firestore.runTransaction<String?>((tx) async {
+      // 0) إن كان الطلب قد حُفظ فعلاً (محاولة سابقة نجحت والتطبيق لم يعلم)
+      //    نرجع فوراً: لا كتابة، ولا خصم مخزون ثانٍ.
+      final orderSnap = await tx.get(orderRef);
+      if (orderSnap.exists) {
+        return orderRef.id;
+      }
+
       // 1) كل القراءات أولاً (شرط Firestore للمعاملات)
       final snapshots = <String, DocumentSnapshot>{};
       for (final item in stockItems) {
@@ -468,9 +482,10 @@ class FirebaseService {
       for (final u in updates.entries) {
         tx.update(u.key, u.value);
       }
+      return null; // null = أُنشئ الآن (ليس مستنداً موجوداً مسبقاً)
     });
 
-    return orderRef.id;
+    return existing ?? orderRef.id;
   }
 
   Stream<List<Map<String, dynamic>>> getUserOrdersStream(String userId) {

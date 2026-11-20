@@ -63,6 +63,9 @@ class OrderProvider with ChangeNotifier {
     // بصمت بينما الطلب موجود.
     Map<String, dynamic>? deliveryInfo,
     Map<String, dynamic>? transferProof,
+    // معرّف ثابت لهذه المحاولة (OrderRequestId). يُمرَّر إلى خدمة Firestore
+    // فيصبح معرّف مستند الطلب: إعادة المحاولة لا تنشئ طلباً ثانياً.
+    String? requestId,
   }) async {
     _isLoading = true;
     _error = null;
@@ -153,6 +156,7 @@ class OrderProvider with ChangeNotifier {
       try {
         orderId = await _firebaseService.createOrderWithStock(
           orderData: orderMap,
+          requestId: requestId,
           stockItems: cartItems
               .map((item) => <String, dynamic>{
                     'productId': item.product.id,

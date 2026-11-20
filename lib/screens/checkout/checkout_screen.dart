@@ -17,6 +17,7 @@ import '../../services/coupon_service.dart';
 import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
 import '../../services/analytics_service.dart';
+import '../../utils/order_request_id.dart';
 import '../shell_screen.dart';
 
 /// شاشة إتمام الطلب (Checkout)
@@ -43,6 +44,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _selectedPaymentMethod = 'cod';
   bool _isDefaultAddress = false;
   bool _isSubmitting = false;
+
+  // معرّف ثابت لمحاولة الشراء الحالية: يُولَّد عند أول ضغطة على «تأكيد الطلب»
+  // ويُعاد استخدامه في كل إعادة محاولة، ثم يُصفَّر بعد النجاح. هكذا لا تتحول
+  // محاولة فاشلة ظاهرياً (انقطاع شبكة، عودة من محفظة جيب) إلى طلبين فعليين.
+  String? _orderRequestId;
 
   // =========== التوصيل الإقليمي ===========
   String? _selectedCity = DeliveryConfig.defaultCityId;
@@ -311,6 +317,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       // إنشاء الطلب — كل شيء في كتابة واحدة (ذرّية): الطلب + المخزون +
       // عنوان التوصيل + إثبات التحويل. لا تحديثات لاحقة يمكن أن تفشل بصمت.
+      // المعرّف الثابت يجعل إعادة المحاولة آمنة (نفس المستند، بلا خصم مزدوج).
+      final requestId = _orderRequestId ??= OrderRequestId.generate();
       final orderId = await orderProvider.createOrder(
         userId: authProvider.userId ?? '',
         cartItems: cartProvider.items,
@@ -326,11 +334,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         couponCode: _coupon.ok ? _coupon.code : null,
         deliveryInfo: deliveryInfo,
         transferProof: transferProof,
+        requestId: requestId,
       );
 
       setState(() => _isSubmitting = false);
 
       if (orderId != null && mounted) {
+        // نجح الطلب: أي شراء قادم يحتاج معرّفاً جديداً.
+        _orderRequestId = null;
         // ملاحظة: بيانات التوصيل وإثبات التحويل أصبحت جزءاً من مستند الطلب
         // وقت الإنشاء (deliveryInfo/transferProof) — لا تحديثات لاحقة.
 
