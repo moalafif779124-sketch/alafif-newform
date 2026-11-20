@@ -157,9 +157,56 @@ service cloud.firestore {
         'pointsUsed', 'pointsDiscount'
       ]);
     }
+
+    // ===== الأرقام المالية (تُحقَّق هنا كي لا يعتمد المتجر على حساب العميل) =====
+    // المدينة → سعر التوصيل، مطابق حرفياً لـ DeliveryConfig في التطبيق.
+    // cityId الغائب يُعامل كصنعاء (الافتراضي في التطبيق).
+    function expectedShipping(d) {
+      let sub = d.get('subtotal', 0);
+      let city = d.get('cityId', 'sanaa');
+      return sub >= 50000 ? 0
+        : city == 'ibb' ? 1500
+        : city == 'aden' ? 3000
+        : city == 'taiz' ? 2500
+        : city == 'other' ? 3500
+        : 2000; // sanaa أو أي معرف غير معروف → الافتراضي
+    }
+
+    // مقارنة أرقام بتسامح كسري صغير (العميل يحسب بـ double: 6725 × 5% = 336.25)
+    function approx(a, b) {
+      return (a - b) < 0.05 && (b - a) < 0.05;
+    }
+
+    // مجموع خصم الطقم المخزَّن داخل حقل bundle (0 إن لم يوجد طقم)
+    function bundleDiscount(d) {
+      return ('bundle' in d && d.bundle is map && 'discount' in d.bundle)
+        ? d.bundle.discount : 0;
+    }
+
+    // هوية الإجمالي: total = subtotal + tax + shipping − discount،
+    // مع حصر كل مكوّن: الضريبة 5% بعد خصم الطقم، والتوصيل بسعر المحافظة،
+    // والنقاط بحد 20% من المجموع الفرعي.
+    function orderMoneyValid() {
+      let d = request.resource.data;
+      let sub = d.get('subtotal', 0);
+      let tax = d.get('tax', 0);
+      let ship = d.get('shippingCost', 0);
+      let disc = d.get('discount', 0);
+      let total = d.get('total', 0);
+      return sub > 0
+        && total > 0
+        && tax >= 0 && ship >= 0 && disc >= 0
+        && approx(tax, (sub - bundleDiscount(d)) * 0.05)
+        && approx(ship, expectedShipping(d))
+        && approx(total, sub + tax + ship - disc)
+        && (!('pointsDiscount' in d) || d.pointsDiscount <= sub * 0.20)
+        && (!('couponDiscount' in d) || d.couponDiscount <= sub * 0.50)
+        && (!('pointsUsed' in d) || d.pointsUsed >= 0);
+    }
     match /orders/{orderId} {
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
+        && orderMoneyValid()
         && (!('discount' in request.resource.data)
             || request.resource.data.discount >= 0)
         && (!('discount' in request.resource.data)
