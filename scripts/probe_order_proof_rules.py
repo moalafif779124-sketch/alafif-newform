@@ -57,13 +57,19 @@ def anon_token():
 
 
 def order_doc(user_id, status="pending"):
+    # يجب أن يطابق `orderMoneyValid()` في firestore.rules:
+    # الضريبة 5% من المجموع الفرعي، والتوصيل سعر المحافظة، والإجمالي = مجموعهما.
     return {"fields": {
         "userId": {"stringValue": user_id},
         "status": {"stringValue": status},
         "subtotal": {"doubleValue": 20000},
-        "total": {"doubleValue": 20000},
+        "tax": {"doubleValue": 1000},
+        "shippingCost": {"doubleValue": 2000},
+        "cityId": {"stringValue": "sanaa"},
+        "total": {"doubleValue": 23000},
         "discount": {"doubleValue": 0},
         "paymentMethod": {"stringValue": "cod"},
+        "paymentStatus": {"stringValue": "pending"},
         "createdAt": {"integerValue": "1"},
     }}
 
