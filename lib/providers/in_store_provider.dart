@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/product.dart';
 import '../services/in_store_service.dart';
+import '../services/analytics_service.dart';
 
 /// حالة «الوضع الذكي داخل الفرع»
 ///
@@ -124,6 +125,12 @@ class InStoreProvider extends ChangeNotifier {
       _catalogCategory = scan.catalogCategory;
       _scanning = false;
       notifyListeners();
+
+      // 📊 مسح باركود داخل الفرع — يغذّي تقرير «أي المنتجات تُمسح ولا تُباع»
+      AnalyticsService.instance.logScan(
+        _rawCode,
+        foundName: scan.product?.name,
+      );
 
       // نتيجة من كتالوج الأصناف — لا فيديو/غرفة قياس (لا مخزون مفصّل)
       if (scan.catalogOnly) return;
