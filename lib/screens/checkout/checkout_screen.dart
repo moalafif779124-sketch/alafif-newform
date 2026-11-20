@@ -16,6 +16,7 @@ import '../../providers/points_provider.dart';
 import '../../services/coupon_service.dart';
 import '../../services/firebase_service.dart';
 import '../../services/payment_service.dart';
+import '../../services/analytics_service.dart';
 import '../shell_screen.dart';
 
 /// شاشة إتمام الطلب (Checkout)
@@ -78,6 +79,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return ((discount / PointsProvider.pointsToYerRate) *
             PointsProvider.pointsPerUnit)
         .ceil();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // 📊 بداية إتمام الشراء — بعد أول إطار كي يكون الـ CartProvider جاهزاً
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final cart = context.read<CartProvider>();
+      AnalyticsService.instance.logBeginCheckout(
+        cart.totalAmount,
+        items: cart.itemCount,
+      );
+    });
   }
 
   @override
@@ -354,6 +369,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             (_coupon.ok ? _coupon.discount : 0);
 
         // تفريغ السلة
+        // 📊 حدث الشراء — قبل تفريغ السلة كي يُسجَّل عدد القطع
+        AnalyticsService.instance.logPurchase(
+          orderId: orderId,
+          value: finalTotal,
+          coupon: _coupon.ok ? _coupon.code : null,
+          paymentMethod: _selectedPaymentMethod,
+          items: cartProvider.itemCount,
+        );
         cartProvider.clearCart();
 
         // إظهار حوار النجاح مع زر الواتساب (للتحويلات)

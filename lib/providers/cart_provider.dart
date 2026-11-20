@@ -7,6 +7,7 @@ import '../models/bundle_pricing.dart';
 import '../services/firebase_service.dart';
 import '../config/constants.dart';
 import '../config/delivery_config.dart';
+import '../services/analytics_service.dart';
 
 /// مزود حالة سلة التسوق
 class CartProvider with ChangeNotifier {
@@ -61,6 +62,14 @@ class CartProvider with ChangeNotifier {
       _items.add(item);
     }
 
+    // 📊 حدث add_to_cart — لا يجوز أن يفشل الإدراج بسبب التحليلات (كلها داخل try)
+    AnalyticsService.instance.logAddToCart(
+      id: item.product.id,
+      name: item.product.name,
+      price: item.product.price,
+      quantity: item.quantity,
+      variant: [item.size, item.color].where((v) => v.isNotEmpty).join(' / '),
+    );
     _saveToLocal();
     _syncToFirebase();
     notifyListeners();
@@ -87,6 +96,17 @@ class CartProvider with ChangeNotifier {
       } else {
         _items.add(item);
       }
+    }
+
+    // 📊 حدث add_to_cart لكل قطعة في الطقم (الحدث الموصى به لـ «إضافة إطلالة كاملة»)
+    for (final item in newItems) {
+      AnalyticsService.instance.logAddToCart(
+        id: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        variant: [item.size, item.color].where((v) => v.isNotEmpty).join(' / '),
+      );
     }
 
     _saveToLocal();

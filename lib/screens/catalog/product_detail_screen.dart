@@ -12,6 +12,7 @@ import '../../providers/review_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../services/firebase_service.dart';
+import '../../services/analytics_service.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/app_image.dart';
 import '../../widgets/virtual_size_guide_sheet.dart';
@@ -59,6 +60,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
     _checkPendingRestock();
     _loadGallery();
+    // 📊 مشاهدة المنتج — أول حدث في مسار التحويل
+    AnalyticsService.instance.logViewItem(
+      id: product.id,
+      name: product.name,
+      category: product.categoryId,
+      price: product.price,
+    );
   }
 
   @override

@@ -7,6 +7,7 @@ export 'stock_calculator.dart' show StockUnavailableException, computeStockUpdat
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'analytics_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
@@ -64,6 +65,11 @@ class FirebaseService {
     } catch (e) {
       debugPrint('⚠️ Crashlytics enable: $e');
     }
+
+    // ===== التحليلات =====
+    // نفس النقطة: Firebase جاهز الآن. لا نؤجّل أكثر لأن هذاموقع التهيئة
+    // الوحيد المضمون قبل أي شاشة تطبيقية.
+    await AnalyticsService.instance.init();
 
     // إعدادات Firestore
     FirebaseFirestore.instance.settings = const Settings(

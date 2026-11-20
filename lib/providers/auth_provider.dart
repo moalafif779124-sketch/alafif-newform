@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/notification_service.dart';
+import '../services/analytics_service.dart';
 
 /// مزود حالة المصادقة - يدعم OTP عبر واتساب والبريد الإلكتروني
 /// يحفظ جلسة OTP في SharedPreferences ويقرأها منها مباشرة عند التحقق
@@ -69,6 +70,8 @@ class AuthProvider with ChangeNotifier {
       await prefs.setString('saved_user_name', _user!.fullName);
       await prefs.setString('saved_user_phone', _user!.phone);
       await prefs.setBool('saved_user_admin', _user!.isAdmin);
+      // 📊 إسناد جلسة Analytics للمستخدم — بلا حدث (يحدث عند كل استرجاع جلسة أيضاً)
+      await AnalyticsService.instance.setUserId(_user!.id);
       debugPrint('💾 User session saved to SharedPreferences');
     } catch (e) {
       debugPrint('⚠️ Failed to save user session: $e');
@@ -309,6 +312,7 @@ class AuthProvider with ChangeNotifier {
         phone: pendingPhoneNumber,
         fullName: fullName,
       );
+      await AnalyticsService.instance.logEvent('login', {'method': 'otp'});
       
       // 💾 حفظ الجلسة بعد تسجيل الدخول
       await _saveUserSession();
@@ -363,6 +367,7 @@ class AuthProvider with ChangeNotifier {
         fullName: fullName,
         phone: phone,
       );
+      await AnalyticsService.instance.logEvent('sign_up', {'method': 'email'});
       await _saveUserSession();
       // 🔔 ربط FCM token بالمستخدم بعد تسجيل الدخول/استرجاع الجلسة
       await _registerUserNotifications();
@@ -392,6 +397,7 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
       );
+      await AnalyticsService.instance.logEvent('login', {'method': 'email'});
       await _saveUserSession();
       // 🔔 ربط FCM token بالمستخدم بعد تسجيل الدخول/استرجاع الجلسة
       await _registerUserNotifications();
@@ -439,6 +445,7 @@ class AuthProvider with ChangeNotifier {
       // 🔔 ربط FCM token بجلسة الزائر — بدونه لا يصل أي إشعار للزائر
       // (مثال: إشعار «طلبك في غرفة القياس» من الوضع الذكي داخل الفرع)
       await _registerUserNotifications();
+      await AnalyticsService.instance.setUserId(_user?.id, loginMethod: 'guest');
     } catch (e) {
       debugPrint('⚠️ Guest sign-in error: $e');
     }

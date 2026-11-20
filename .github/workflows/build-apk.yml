@@ -11,7 +11,30 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # بوابة الاختبارات: أي خطأ منطقي في دوال التسعير/المخزون يوقف البناء قبل
+  # إهدار 10 دقائق في تجميع APK. الاختبارات pure Dart — لا Firebase ولا جهاز.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: 'stable'
+
+      - name: Install deps
+        run: flutter pub get
+
+      - name: Analyze (errors only)
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+
+      - name: Unit tests
+        run: flutter test --reporter expanded
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
