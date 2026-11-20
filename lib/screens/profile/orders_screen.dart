@@ -310,6 +310,45 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  /// شارة حالة التحقق من تحويل المحفظة.
+  Widget _buildPaymentReviewChip(Order order) {
+    final verified = order.paymentVerified;
+    final color = verified ? AppColors.success : Colors.orange;
+    final label = verified
+        ? 'تم التحقق من التحويل ✅'
+        : 'قيد مراجعة التحويل — أُرفق السند';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            verified ? Icons.verified_outlined : Icons.hourglass_top_outlined,
+            size: 15,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOrderCard(Order order) {
     final maxVisibleItems = 3;
     final remainingCount = order.items.length - maxVisibleItems;
@@ -382,6 +421,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
               ],
             ),
+
+            // ===== حالة التحقق من التحويل (كريمي/جيب) =====
+            // تظهر في قائمة الطلبات نفسها، لا في شاشة التفاصيل وحدها: العميل
+            // الذي حوّل يريد أن يعرف من النظرة الأولى أن السند وصل وقيد المراجعة.
+            if (order.isTransfer && order.transactionRef != null) ...[
+              const SizedBox(height: 10),
+              _buildPaymentReviewChip(order),
+            ],
 
             Padding(
               padding: EdgeInsets.symmetric(vertical: 12),

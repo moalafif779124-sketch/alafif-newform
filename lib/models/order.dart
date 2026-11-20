@@ -20,6 +20,9 @@ class Order {
   final String? paymentReference;
   /// رقم الحوالة/السند الذي أدخله العميل عند التحويل (كريمي/جيب).
   final String? transactionRef;
+
+  /// متى تحقق المتجر من التحويل (يختمه تطبيق الإدارة).
+  final DateTime? paymentVerifiedAt;
   final AddressInfo shippingAddress;
   final String? notes;
   final DateTime createdAt;
@@ -42,6 +45,7 @@ class Order {
     required this.paymentStatus,
     this.paymentReference,
     this.transactionRef,
+    this.paymentVerifiedAt,
     required this.shippingAddress,
     this.notes,
     required this.createdAt,
@@ -67,6 +71,18 @@ class Order {
         return status;
     }
   }
+
+  /// هل هذا الطلب دُفع بتحويل محفظة (كريمي/جيب)؟
+  bool get isTransfer =>
+      paymentMethod == 'kuraimi' || paymentMethod == 'jeeb';
+
+  /// العميل أرفق السند والمتجر لم يتحقق بعد — الحالة التي يجب أن يراها
+  /// العميل بوضوح كي لا يعيد التحويل أو يسأل الدعم.
+  bool get isAwaitingPaymentReview =>
+      isTransfer && paymentStatus != 'paid' && transactionRef != null;
+
+  /// تحقق المتجر من التحويل (أو عُلِّم الطلب مدفوعاً).
+  bool get paymentVerified => isTransfer && paymentStatus == 'paid';
 
   String get paymentStatusText {
     // الدفع عند الاستلام: لا يُعدّ مدفوعاً حتى استلام النقد — نتجاهل أي حالة
@@ -115,6 +131,10 @@ class Order {
       transactionRef: (map['transactionRef'] as String?)?.trim().isEmpty ?? true
           ? null
           : (map['transactionRef'] as String).trim(),
+      paymentVerifiedAt: map['paymentVerifiedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(
+              (map['paymentVerifiedAt'] as num).toInt())
+          : null,
       shippingAddress: AddressInfo.fromMap(map['shippingAddress'] ?? {}),
       notes: map['notes'],
       createdAt: map['createdAt'] != null

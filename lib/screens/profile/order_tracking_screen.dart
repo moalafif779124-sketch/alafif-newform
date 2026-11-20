@@ -210,13 +210,22 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                         const Divider(height: 16),
                         _buildInfoRow(
                           Icons.verified_user_outlined,
-                          order.paymentStatus == 'paid'
+                          order.paymentVerified
                               ? 'تم التحقق من التحويل من قبل المتجر'
+                                  '${order.paymentVerifiedAt != null ? ' — ${_shortDateTime(order.paymentVerifiedAt!)}' : ''}'
                               : 'أُرسل إثبات التحويل — بانتظار مراجعة المتجر',
-                          valueColor: order.paymentStatus == 'paid'
+                          valueColor: order.paymentVerified
                               ? AppColors.success
                               : Colors.orange,
                         ),
+                        if (!order.paymentVerified) ...[
+                          const Divider(height: 16),
+                          _buildInfoRow(
+                            Icons.info_outline,
+                            'سيصلك إشعار فور التحقق من التحويل — لا تُعد التحويل.',
+                            valueColor: Colors.orange,
+                          ),
+                        ],
                       ],
                     ],
                   ),
@@ -295,6 +304,13 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
         ),
       ),
     );
+  }
+
+  /// وقت قصير للعرض (يوم/شهر/سنة ساعة:دقيقة) بلا اعتماد على intl.
+  String _shortDateTime(DateTime dt) {
+    final d = dt.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${d.year}/${two(d.month)}/${two(d.day)} ${two(d.hour)}:${two(d.minute)}';
   }
 
   Widget _buildInfoRow(IconData icon, String text, {Color? valueColor}) {
