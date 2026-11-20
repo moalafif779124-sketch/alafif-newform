@@ -195,7 +195,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     // ===== تحقق من رقم الحوالة عند التحويل (كريمي/جيب) =====
     if (_selectedPaymentMethod == 'kuraimi' ||
         _selectedPaymentMethod == 'jeeb') {
-      if (!_transferFormKey.currentState!.validate()) {
+      // رقم الحوالة إلزامي للتحويل. نقرأه من المتحكم مباشرة (لا يوجد اعتماد
+      // على Form key قد لا يكون مبنيّاً بعد) — الـ validator في الحقل نفسه
+      // يعرض رسالة الخطأ تحت الحقل إن كان القسم مرئياً.
+      _transferFormKey.currentState?.validate();
+      if (_transferRefController.text.trim().isEmpty) {
         _showSnackBar('يرجى إدخال رقم الحوالة / السند لإكمال الطلب');
         return;
       }
@@ -293,7 +297,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'pointsDiscount': _redeemPoints ? pointsDiscount : 0.0,
       };
 
-      // إنشاء الطلب
+      // ===== إثبات التحويل (كريمي/جيب) — يُرسل مع الإنشاء نفسه =====
+      final isTransfer = _selectedPaymentMethod == 'kuraimi' ||
+          _selectedPaymentMethod == 'jeeb';
+      final Map<String, dynamic>? transferProof = isTransfer
+          ? {
+              'transactionRef': _transferRefController.text.trim(),
+              'transferMethod': _selectedPaymentMethod,
+              if (_receiptBase64.isNotEmpty)
+                'receiptImageBase64': _receiptBase64,
+            }
+          : null;
+
+      // إنشاء الطلب — كل شيء في كتابة واحدة (ذرّية): الطلب + المخزون +
+      // عنوان التوصيل + إثبات التحويل. لا تحديثات لاحقة يمكن أن تفشل بصمت.
       final orderId = await orderProvider.createOrder(
         userId: authProvider.userId ?? '',
         cartItems: cartProvider.items,
@@ -307,41 +324,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         pointsDiscount: pointsDiscount,
         couponDiscount: _coupon.ok ? _coupon.discount : 0,
         couponCode: _coupon.ok ? _coupon.code : null,
+        deliveryInfo: deliveryInfo,
+        transferProof: transferProof,
       );
 
       setState(() => _isSubmitting = false);
 
       if (orderId != null && mounted) {
-        // ===== حفظ بيانات التوصيل الإقليمي في مستند الطلب =====
-        try {
-          await FirebaseService().firestore
-              .collection('orders')
-              .doc(orderId)
-              .update(deliveryInfo);
-        } catch (e) {
-          debugPrint('⚠️ Failed to save delivery info: $e');
-        }
-
-        // ===== حفظ إثبات التحويل (كريمي/جيب) =====
-        final isTransfer = _selectedPaymentMethod == 'kuraimi' ||
-            _selectedPaymentMethod == 'jeeb';
-        if (isTransfer) {
-          final ref = _transferRefController.text.trim();
-          final updates = <String, dynamic>{
-            'transactionRef': ref,
-            'transferMethod': _selectedPaymentMethod,
-            if (_receiptBase64.isNotEmpty)
-              'receiptImageBase64': _receiptBase64,
-          };
-          try {
-            await FirebaseService().firestore
-                .collection('orders')
-                .doc(orderId)
-                .update(updates);
-          } catch (e) {
-            debugPrint('⚠️ Failed to save transfer proof: $e');
-          }
-        }
+        // ملاحظة: بيانات التوصيل وإثبات التحويل أصبحت جزءاً من مستند الطلب
+        // وقت الإنشاء (deliveryInfo/transferProof) — لا تحديثات لاحقة.
 
         // ===== تسجيل استخدام كود الخصم (عدّاد maxUses) =====
         if (_coupon.ok) {

@@ -56,6 +56,13 @@ class OrderProvider with ChangeNotifier {
     // يُمرَّر كي يطابق الإجمالي المحفوظ ما رآه العميل، ويُسجَّل الكود في الطلب.
     double couponDiscount = 0,
     String? couponCode,
+    // بيانات التوصيل الإقليمي (المحافظة/العنوان/الملاحظات) وإثبات التحويل
+    // (رقم الحوالة/الطريقة/صورة الإيصال). تُكتب داخل مستند الطلب نفسه وقت
+    // الإنشاء — لا كتحديث لاحق: التحديث اللاحق يحتاج صلاحية منفصلة، وأي فشل
+    // فيه (أو خروج التطبيق للخلفية عند فتح محفظة جيب) يعني ضياع الإثبات
+    // بصمت بينما الطلب موجود.
+    Map<String, dynamic>? deliveryInfo,
+    Map<String, dynamic>? transferProof,
   }) async {
     _isLoading = true;
     _error = null;
@@ -133,6 +140,14 @@ class OrderProvider with ChangeNotifier {
         orderMap['couponCode'] = couponCode;
         orderMap['couponDiscount'] = couponDiscount;
       }
+      // إثبات التحويل + بيانات التوصيل الإقليمي داخل نفس مستند الإنشاء.
+      if (deliveryInfo != null) orderMap.addAll(deliveryInfo);
+      if (transferProof != null) {
+        orderMap.addAll({
+          for (final e in transferProof.entries)
+            if (e.value != null && e.value != '') e.key: e.value,
+        });
+      }
 
       final String orderId;
       try {
@@ -155,28 +170,23 @@ class OrderProvider with ChangeNotifier {
         return null;
       }
 
-      // معالجة الدفع
-      final paymentResult = await _paymentService.processPayment(
-        method: paymentMethod,
-        amount: total,
-        orderId: orderId,
-        customerPhone: shippingAddress['phone'] ?? '',
-        customerName: shippingAddress['fullName'] ?? '',
-      );
-
-      // تحديث حالة الدفع
-      // الدفع عند الاستلام (cod) لا يُعلَّم «مدفوعاً» أبداً — يبقى معلّقاً حتى
-      // استلام النقد عند التسليم (كان يُعلَّم paid خطأً فيُظهر «تم الدفع»).
-      if (paymentResult['success'] == true) {
-        final isCod = paymentMethod == 'cod';
-        await _firebaseService.firestore
-            .collection('orders')
-            .doc(orderId)
-            .update({
-          if (!isCod) 'paymentStatus': 'paid',
-          if (!isCod) 'paymentReference': paymentResult['transaction_id'],
-          'status': 'confirmed',
-        });
+      // ===== فتح محفظة جيب / كريمي (إن اختير التحويل) =====
+      // الغرض هنا فتح تطبيق المحفظة فقط. لا نكتب أي حقل حياة على الطلب:
+      // العميل لا يملك تغيير status/paymentStatus في القواعد (وهذا صحيح —
+      // تحويل يدوي يُراجَع لاحقاً). سابقاً كانت الكتابة هنا ترمي
+      // PERMISSION_DENIED فيصل الطلب لكن الشاشة تعرض «فشل إنشاء الطلب»،
+      // وكانت التحديثات اللاحقة (العنوان/الإيصال) لا تُنفَّذ فتضيع بصمت.
+      try {
+        await _paymentService.processPayment(
+          method: paymentMethod,
+          amount: total,
+          orderId: orderId,
+          customerPhone: shippingAddress['phone'] ?? '',
+          customerName: shippingAddress['fullName'] ?? '',
+        );
+      } catch (e) {
+        // فشل فتح المحفظة لا يُلغي الطلب — الدفع يدوي بالتحويل على أي حال.
+        debugPrint('⚠️ payment launch failed (order kept): $e');
       }
 
       // إضافة الطلب إلى القائمة المحلية
