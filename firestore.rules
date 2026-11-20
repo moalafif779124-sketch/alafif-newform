@@ -145,6 +145,18 @@ service cloud.firestore {
     // orders - a customer may only CANCEL their own order; totals, status and
     // items are admin-only after creation. Discount is capped at 50% of the
     // subtotal so a tampered client cannot self-approve a free order.
+    // While the order is still `pending` the customer may also attach the
+    // transfer receipt (transactionRef/transferMethod/receiptImageBase64) and
+    // the regional delivery details — those are proof-of-payment metadata, not
+    // money or lifecycle fields.
+    function orderProofFieldsOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'transactionRef', 'transferMethod', 'receiptImageBase64',
+        'city', 'cityId', 'streetAddress', 'district', 'nearestLandmark',
+        'recipientPhone', 'deliveryNotes', 'shippingCost',
+        'pointsUsed', 'pointsDiscount'
+      ]);
+    }
     match /orders/{orderId} {
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
@@ -155,9 +167,10 @@ service cloud.firestore {
             || request.resource.data.discount <= request.resource.data.subtotal * 0.5);
       allow read: if isOwner(resource.data.userId) || isAdmin();
       allow update: if isAdmin() || (isOwner(resource.data.userId)
-        && request.resource.data.diff(resource.data).affectedKeys()
+        && ((request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'cancelReason', 'cancelledAt'])
-        && request.resource.data.status == 'cancelled');
+             && request.resource.data.status == 'cancelled')
+          || (resource.data.status == 'pending' && orderProofFieldsOnly())));
       allow delete: if isAdmin();
     }
     match /addresses/{docId} {
